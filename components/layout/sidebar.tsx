@@ -67,7 +67,7 @@ const navItems = [
   { title: "Vision AI", href: "/vision-ai", icon: "ScanEye" },
   { title: "SOP Gen", href: "/sop-gen", icon: "BookOpen" },
   { title: "Reports", href: "/reports", icon: "FileBarChart" },
-  { title: "Statistics", href: "/reports/templates", icon: "BarChart3" },
+  { title: "Statistics", href: "/statistics", icon: "BarChart3" },
   { title: "RCA", href: "/rca", icon: "SearchCheck" },
   { title: "Complaints", href: "/complaints", icon: "MessageSquareWarning" },
   { title: "Chatbot", href: "/chatbot", icon: "MessageCircle" },
