@@ -1,0 +1,642 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// Core: Users & Roles
+// ============================================================================
+
+enum UserRole {
+  ADMIN
+  LAB_MANAGER
+  TECHNICIAN
+  AUDITOR
+}
+
+model User {
+  id             String    @id @default(cuid())
+  name           String
+  email          String    @unique
+  hashedPassword String
+  role           UserRole  @default(TECHNICIAN)
+  department     String?
+  avatar         String?
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relations
+  samples            Sample[]
+  testExecutions     TestExecution[]
+  documents          Document[]
+  capasCreated       CAPA[]             @relation("CAPACreator")
+  capasAssigned      CAPA[]             @relation("CAPAAssignee")
+  auditPlans         AuditPlan[]        @relation("AuditLead")
+  auditFindings      AuditFinding[]
+  ncrsRaised         NCR[]              @relation("NCRRaisedBy")
+  ncrsAssigned       NCR[]              @relation("NCRAssignedTo")
+  projects           Project[]          @relation("ProjectManager")
+  defectReports      DefectReport[]
+  sops               SOP[]
+  testReports        TestReport[]
+  purchaseOrders     PurchaseOrder[]
+
+  @@map("users")
+}
+
+// ============================================================================
+// Module 1: LIMS
+// ============================================================================
+
+enum SampleStatus {
+  REGISTERED
+  IN_TESTING
+  COMPLETED
+  ON_HOLD
+  REJECTED
+}
+
+model Sample {
+  id              String       @id @default(cuid())
+  sampleId        String       @unique
+  clientName      String
+  clientRef       String?
+  moduleType      String
+  manufacturer    String?
+  power           Float?
+  description     String?
+  status          SampleStatus @default(REGISTERED)
+  receivedDate    DateTime     @default(now())
+  completedDate   DateTime?
+  createdById     String
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  createdBy       User           @relation(fields: [createdById], references: [id])
+  testExecutions  TestExecution[]
+  testReports     TestReport[]
+
+  @@map("samples")
+}
+
+model TestTemplate {
+  id              String   @id @default(cuid())
+  name            String
+  standard        String
+  version         String   @default("1.0")
+  category        String
+  parameters      Json
+  procedures      Json
+  acceptCriteria  Json?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  testExecutions  TestExecution[]
+
+  @@map("test_templates")
+}
+
+enum TestStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model TestExecution {
+  id              String     @id @default(cuid())
+  executionId     String     @unique
+  sampleId        String
+  templateId      String
+  technicianId    String
+  status          TestStatus @default(PENDING)
+  startDate       DateTime?
+  endDate         DateTime?
+  results         Json?
+  notes           String?
+  equipmentUsed   String[]
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  sample          Sample       @relation(fields: [sampleId], references: [id])
+  template        TestTemplate @relation(fields: [templateId], references: [id])
+  technician      User         @relation(fields: [technicianId], references: [id])
+
+  @@map("test_executions")
+}
+
+enum EquipmentStatus {
+  ACTIVE
+  UNDER_CALIBRATION
+  OUT_OF_SERVICE
+  RETIRED
+}
+
+model Equipment {
+  id                String          @id @default(cuid())
+  equipmentId       String          @unique
+  name              String
+  type              String
+  manufacturer      String?
+  model             String?
+  serialNumber      String?
+  location          String?
+  status            EquipmentStatus @default(ACTIVE)
+  lastCalibration   DateTime?
+  nextCalibration   DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  calibrations      CalibrationRecord[]
+
+  @@map("equipment")
+}
+
+model CalibrationRecord {
+  id              String   @id @default(cuid())
+  equipmentId     String
+  calibrationDate DateTime
+  nextDueDate     DateTime
+  certificateNo   String?
+  calibratedBy    String
+  agency          String?
+  results         Json?
+  status          String   @default("VALID")
+  createdAt       DateTime @default(now())
+
+  equipment       Equipment @relation(fields: [equipmentId], references: [id])
+
+  @@map("calibration_records")
+}
+
+// ============================================================================
+// Module 2: QMS
+// ============================================================================
+
+enum DocumentStatus {
+  DRAFT
+  UNDER_REVIEW
+  APPROVED
+  OBSOLETE
+}
+
+enum DocumentType {
+  SOP
+  WORK_INSTRUCTION
+  FORM
+  POLICY
+  MANUAL
+  RECORD
+}
+
+model Document {
+  id              String         @id @default(cuid())
+  documentId      String         @unique
+  title           String
+  type            DocumentType
+  category        String?
+  version         String         @default("1.0")
+  status          DocumentStatus @default(DRAFT)
+  content         String?
+  filePath        String?
+  authorId        String
+  approvedBy      String?
+  approvedDate    DateTime?
+  effectiveDate   DateTime?
+  reviewDate      DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  author          User @relation(fields: [authorId], references: [id])
+
+  @@map("documents")
+}
+
+enum CAPAType {
+  CORRECTIVE
+  PREVENTIVE
+}
+
+enum CAPAStatus {
+  OPEN
+  INVESTIGATION
+  ACTION_PLANNED
+  IN_PROGRESS
+  VERIFICATION
+  CLOSED
+}
+
+model CAPA {
+  id              String     @id @default(cuid())
+  capaId          String     @unique
+  type            CAPAType
+  title           String
+  description     String
+  source          String?
+  rootCause       String?
+  proposedAction  String?
+  status          CAPAStatus @default(OPEN)
+  priority        String     @default("MEDIUM")
+  createdById     String
+  assignedToId    String?
+  dueDate         DateTime?
+  closedDate      DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  createdBy       User  @relation("CAPACreator", fields: [createdById], references: [id])
+  assignedTo      User? @relation("CAPAAssignee", fields: [assignedToId], references: [id])
+
+  @@map("capas")
+}
+
+// ============================================================================
+// Module 3: Audit
+// ============================================================================
+
+enum AuditType {
+  INTERNAL
+  EXTERNAL
+  SURVEILLANCE
+  FOLLOW_UP
+}
+
+enum AuditStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model AuditPlan {
+  id              String      @id @default(cuid())
+  auditId         String      @unique
+  title           String
+  type            AuditType
+  standard        String
+  scope           String?
+  status          AuditStatus @default(PLANNED)
+  leadAuditorId   String
+  plannedDate     DateTime
+  completedDate   DateTime?
+  department      String?
+  notes           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  leadAuditor     User           @relation("AuditLead", fields: [leadAuditorId], references: [id])
+  findings        AuditFinding[]
+
+  @@map("audit_plans")
+}
+
+enum FindingSeverity {
+  MAJOR
+  MINOR
+  OBSERVATION
+  OFI
+}
+
+model AuditFinding {
+  id              String          @id @default(cuid())
+  findingId       String          @unique
+  auditPlanId     String
+  clause          String?
+  description     String
+  severity        FindingSeverity
+  evidence        String?
+  auditorId       String
+  status          String          @default("OPEN")
+  response        String?
+  closedDate      DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  auditPlan       AuditPlan @relation(fields: [auditPlanId], references: [id])
+  auditor         User      @relation(fields: [auditorId], references: [id])
+  ncrs            NCR[]
+
+  @@map("audit_findings")
+}
+
+enum NCRStatus {
+  OPEN
+  UNDER_REVIEW
+  CORRECTIVE_ACTION
+  VERIFICATION
+  CLOSED
+}
+
+model NCR {
+  id              String    @id @default(cuid())
+  ncrId           String    @unique
+  findingId       String?
+  title           String
+  description     String
+  severity        String
+  rootCause       String?
+  correctiveAction String?
+  status          NCRStatus @default(OPEN)
+  raisedById      String
+  assignedToId    String?
+  dueDate         DateTime?
+  closedDate      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  finding         AuditFinding? @relation(fields: [findingId], references: [id])
+  raisedBy        User          @relation("NCRRaisedBy", fields: [raisedById], references: [id])
+  assignedTo      User?         @relation("NCRAssignedTo", fields: [assignedToId], references: [id])
+
+  @@map("ncrs")
+}
+
+// ============================================================================
+// Module 4: Project Management
+// ============================================================================
+
+enum ProjectStatus {
+  PLANNING
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+model Project {
+  id              String        @id @default(cuid())
+  projectId       String        @unique
+  name            String
+  clientName      String
+  description     String?
+  status          ProjectStatus @default(PLANNING)
+  managerId       String
+  startDate       DateTime?
+  endDate         DateTime?
+  budget          Float?
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  manager         User        @relation("ProjectManager", fields: [managerId], references: [id])
+  milestones      Milestone[]
+
+  @@map("projects")
+}
+
+model Milestone {
+  id              String   @id @default(cuid())
+  projectId       String
+  title           String
+  description     String?
+  dueDate         DateTime
+  completedDate   DateTime?
+  status          String   @default("PENDING")
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  project         Project @relation(fields: [projectId], references: [id])
+
+  @@map("milestones")
+}
+
+// ============================================================================
+// Module 5: Uncertainty Calculator
+// ============================================================================
+
+model UncertaintyBudget {
+  id              String   @id @default(cuid())
+  budgetId        String   @unique
+  title           String
+  measurand       String
+  method          String?
+  standard        String?
+  components      Json
+  combinedUncertainty Float?
+  expandedUncertainty Float?
+  coverageFactor  Float?   @default(2.0)
+  coverageProbability Float? @default(0.95)
+  unit            String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("uncertainty_budgets")
+}
+
+// ============================================================================
+// Module 6: AI Vision / Defect Detection
+// ============================================================================
+
+enum DefectType {
+  CRACK
+  HOTSPOT
+  SNAIL_TRAIL
+  PID
+  DELAMINATION
+  DISCOLORATION
+  BROKEN_CELL
+  SOLDER_ISSUE
+  OTHER
+}
+
+model DefectReport {
+  id              String     @id @default(cuid())
+  reportId        String     @unique
+  imageUrl        String?
+  imagePath       String?
+  inspectionType  String
+  defects         Json
+  defectType      DefectType?
+  severity        String?
+  confidence      Float?
+  modelUsed       String?
+  analysisResult  Json?
+  notes           String?
+  createdById     String
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  createdBy       User @relation(fields: [createdById], references: [id])
+
+  @@map("defect_reports")
+}
+
+// ============================================================================
+// Module 7: SOP Generator
+// ============================================================================
+
+enum SOPStatus {
+  DRAFT
+  REVIEW
+  APPROVED
+  PUBLISHED
+}
+
+model SOP {
+  id              String    @id @default(cuid())
+  sopId           String    @unique
+  title           String
+  standard        String?
+  department      String?
+  content         Json
+  version         String    @default("1.0")
+  status          SOPStatus @default(DRAFT)
+  generatedByAI   Boolean   @default(false)
+  authorId        String
+  approvedBy      String?
+  approvedDate    DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  author          User @relation(fields: [authorId], references: [id])
+
+  @@map("sops")
+}
+
+// ============================================================================
+// Module 8: Test Report Automation
+// ============================================================================
+
+enum ReportStatus {
+  DRAFT
+  REVIEW
+  APPROVED
+  ISSUED
+}
+
+model TestReport {
+  id              String       @id @default(cuid())
+  reportId        String       @unique
+  sampleId        String
+  title           String
+  standard        String
+  reportData      Json?
+  templateUsed    String?
+  status          ReportStatus @default(DRAFT)
+  authorId        String
+  reviewedBy      String?
+  approvedBy      String?
+  issuedDate      DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  sample          Sample @relation(fields: [sampleId], references: [id])
+  author          User   @relation(fields: [authorId], references: [id])
+
+  @@map("test_reports")
+}
+
+// ============================================================================
+// Module 9: Sun Simulator Classifier
+// ============================================================================
+
+model SunSimClassification {
+  id                    String   @id @default(cuid())
+  classificationId      String   @unique
+  simulatorName         String
+  manufacturer          String?
+  model                 String?
+  spectralMatch         Json
+  spatialUniformity     Json
+  temporalStability     Json
+  overallClass          String
+  spectralClass         String
+  spatialClass          String
+  temporalClass         String
+  testDate              DateTime @default(now())
+  notes                 String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@map("sun_sim_classifications")
+}
+
+// ============================================================================
+// Module 10: Chamber Configurator
+// ============================================================================
+
+model ChamberConfig {
+  id              String   @id @default(cuid())
+  configId        String   @unique
+  name            String
+  chamberType     String
+  testStandard    String?
+  temperatureRange Json?
+  humidityRange   Json?
+  uvSpec          Json?
+  dimensions      Json?
+  specifications  Json
+  estimatedCost   Float?
+  status          String   @default("DRAFT")
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("chamber_configs")
+}
+
+// ============================================================================
+// Module 11: Procurement
+// ============================================================================
+
+model Vendor {
+  id              String   @id @default(cuid())
+  vendorId        String   @unique
+  name            String
+  contactPerson   String?
+  email           String?
+  phone           String?
+  address         String?
+  category        String?
+  rating          Float?
+  isApproved      Boolean  @default(false)
+  qualifications  Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  purchaseOrders  PurchaseOrder[]
+
+  @@map("vendors")
+}
+
+enum POStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  ORDERED
+  DELIVERED
+  CLOSED
+  CANCELLED
+}
+
+model PurchaseOrder {
+  id              String   @id @default(cuid())
+  poNumber        String   @unique
+  vendorId        String
+  title           String
+  items           Json
+  totalAmount     Float?
+  currency        String   @default("INR")
+  status          POStatus @default(DRAFT)
+  requestedById   String
+  approvedBy      String?
+  orderDate       DateTime?
+  deliveryDate    DateTime?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  vendor          Vendor @relation(fields: [vendorId], references: [id])
+  requestedBy     User   @relation(fields: [requestedById], references: [id])
+
+  @@map("purchase_orders")
+}
