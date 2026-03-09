@@ -74,6 +74,12 @@ export const NAV_MODULES = [
     icon: "ShoppingCart",
     description: "Procurement Management",
   },
+  {
+    title: "Statistics",
+    href: "/statistics",
+    icon: "BarChart3",
+    description: "Statistical Analysis & SPC",
+  },
 ] as const;
 
 export const IEC_STANDARDS = [

@@ -16,6 +16,7 @@ import {
   Sun,
   Thermometer,
   ShoppingCart,
+  BarChart3,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -42,6 +43,7 @@ const iconMap = {
   Sun,
   Thermometer,
   ShoppingCart,
+  BarChart3,
 } as const;
 
 const navItems = [
@@ -57,6 +59,7 @@ const navItems = [
   { title: "Sun Simulator", href: "/sun-simulator", icon: "Sun" },
   { title: "Chamber Config", href: "/chamber-config", icon: "Thermometer" },
   { title: "Procurement", href: "/procurement", icon: "ShoppingCart" },
+  { title: "Statistics", href: "/statistics", icon: "BarChart3" },
 ] as const;
 
 interface SidebarProps {
