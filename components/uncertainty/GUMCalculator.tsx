@@ -323,7 +323,7 @@ export default function GUMCalculator({ onCalculate, initialTemplate }: GUMCalcu
                   className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border"
                 >
                   <div className="flex items-center gap-3">
-                    <Badge variant={c.type === "typeA" ? "info" : "warning"}>
+                    <Badge variant={c.type === "typeA" ? "outline" : "secondary"}>
                       {c.type === "typeA" ? "A" : "B"}
                     </Badge>
                     <span className="font-medium text-sm">{c.name}</span>

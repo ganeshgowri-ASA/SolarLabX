@@ -1,5 +1,8 @@
 import { DetectionResult } from "@/components/vision/DetectionResultCard";
 
+// Re-export LIMS/QMS mock data
+export { mockSamples, mockTestExecutions, mockEquipment, mockDocuments, mockCAPAs, mockComplianceRequirements } from "./mock-data-lims";
+
 // Sample detection results for demo purposes
 export const sampleDetectionResults: DetectionResult[] = [
   {

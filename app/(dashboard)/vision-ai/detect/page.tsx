@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/select";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { ImageUploader } from "@/components/vision/ImageUploader";
 import { DefectOverlay, Detection } from "@/components/vision/DefectOverlay";
@@ -120,12 +120,17 @@ export default function DetectPage() {
             <CardContent className="space-y-4">
               <div>
                 <label className="text-sm font-medium mb-1.5 block">Inspection Type</label>
-                <Select value={inspectionType} onChange={(e) => setInspectionType(e.target.value)}>
-                  {INSPECTION_TYPES.map((type) => (
-                    <option key={type.id} value={type.id}>
-                      {type.label}
-                    </option>
-                  ))}
+                <Select value={inspectionType} onValueChange={setInspectionType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select inspection type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {INSPECTION_TYPES.map((type) => (
+                      <SelectItem key={type.id} value={type.id}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </div>
               <div>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { STANDARDS } from "@/lib/constants";
@@ -48,22 +48,30 @@ export function SOPForm({ onGenerate, isGenerating }: SOPFormProps) {
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="text-sm font-medium mb-1.5 block">Standard *</label>
-              <Select value={standard} onChange={(e) => { setStandard(e.target.value); setClause(""); }} required>
-                <option value="">Select standard...</option>
-                {STANDARDS.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.label} - {s.title}
-                  </option>
-                ))}
+              <Select value={standard} onValueChange={(value) => { setStandard(value); setClause(""); }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select standard..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {STANDARDS.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.label} - {s.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </div>
             <div>
               <label className="text-sm font-medium mb-1.5 block">Clause / Test Method *</label>
-              <Select value={clause} onChange={(e) => setClause(e.target.value)} required disabled={!standard}>
-                <option value="">Select clause...</option>
-                {clauses.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
+              <Select value={clause} onValueChange={setClause} disabled={!standard}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select clause..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {clauses.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </div>
           </div>

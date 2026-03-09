@@ -47,7 +47,7 @@ export default function UncertaintyBudgetTable({ budget }: UncertaintyBudgetTabl
           <TableRow key={c.id}>
             <TableCell className="font-medium text-sm">{c.name}</TableCell>
             <TableCell>
-              <Badge variant={c.type === "typeA" ? "info" : "warning"}>
+              <Badge variant={c.type === "typeA" ? "outline" : "secondary"}>
                 {c.type === "typeA" ? "A" : "B"}
               </Badge>
             </TableCell>

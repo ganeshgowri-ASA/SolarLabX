@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { DetectionResultCard } from "@/components/vision/DetectionResultCard";
 import { sampleDetectionResults } from "@/lib/mock-data";
 import { DEFECT_TYPES, INSPECTION_TYPES } from "@/lib/constants";
@@ -77,29 +77,44 @@ export default function ResultsPage() {
             </div>
             <div>
               <label className="text-sm font-medium mb-1.5 block">Inspection Type</label>
-              <Select value={inspectionFilter} onChange={(e) => setInspectionFilter(e.target.value)}>
-                <option value="all">All Types</option>
-                {INSPECTION_TYPES.map((t) => (
-                  <option key={t.id} value={t.id}>{t.label}</option>
-                ))}
+              <Select value={inspectionFilter} onValueChange={setInspectionFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  {INSPECTION_TYPES.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </div>
             <div>
               <label className="text-sm font-medium mb-1.5 block">Defect Type</label>
-              <Select value={defectFilter} onChange={(e) => setDefectFilter(e.target.value)}>
-                <option value="all">All Defects</option>
-                {DEFECT_TYPES.map((dt) => (
-                  <option key={dt.id} value={dt.id}>{dt.label}</option>
-                ))}
+              <Select value={defectFilter} onValueChange={setDefectFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Defects" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Defects</SelectItem>
+                  {DEFECT_TYPES.map((dt) => (
+                    <SelectItem key={dt.id} value={dt.id}>{dt.label}</SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </div>
             <div>
               <label className="text-sm font-medium mb-1.5 block">Severity</label>
-              <Select value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)}>
-                <option value="all">All Severities</option>
-                <option value="critical">Critical</option>
-                <option value="major">Major</option>
-                <option value="minor">Minor</option>
+              <Select value={severityFilter} onValueChange={setSeverityFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Severities" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Severities</SelectItem>
+                  <SelectItem value="critical">Critical</SelectItem>
+                  <SelectItem value="major">Major</SelectItem>
+                  <SelectItem value="minor">Minor</SelectItem>
+                </SelectContent>
               </Select>
             </div>
             <div>

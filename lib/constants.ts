@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 export const APP_NAME = "SolarLabX";
 export const APP_DESCRIPTION = "Solar PV Lab Operations Suite";
 
