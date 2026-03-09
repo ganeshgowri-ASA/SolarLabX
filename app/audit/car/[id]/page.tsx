@@ -4,7 +4,7 @@ import Link from "next/link";
 import { carReports } from "@/lib/data/audit-data";
 import CARWorkflow, { IshikawaDiagram, FiveWhyAnalysis } from "@/components/audit/CARWorkflow";
 import { cn, formatDate } from "@/lib/utils";
-import { use } from "react";
+
 
 const priorityStyles: Record<string, string> = {
   Critical: "bg-red-100 text-red-800",
@@ -20,8 +20,8 @@ const actionStatusStyles: Record<string, string> = {
   Verified: "bg-blue-100 text-blue-700",
 };
 
-export default function CARDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function CARDetailPage({ params }: { params: { id: string } }) {
+  const { id } = params;
   const car = carReports.find((c) => c.id === id);
 
   if (!car) {

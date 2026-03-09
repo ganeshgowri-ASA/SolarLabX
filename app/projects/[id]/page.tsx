@@ -6,7 +6,7 @@ import GanttChart from "@/components/projects/GanttChart";
 import MilestoneTracker from "@/components/projects/MilestoneTracker";
 import ResourceAllocationView from "@/components/projects/ResourceAllocation";
 import { formatDate, formatCurrency, cn } from "@/lib/utils";
-import { use } from "react";
+
 
 const statusStyles: Record<string, string> = {
   Planning: "bg-gray-100 text-gray-700",
@@ -24,8 +24,8 @@ const taskStatusStyles: Record<string, string> = {
   Overdue: "bg-red-100 text-red-800",
 };
 
-export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function ProjectDetailPage({ params }: { params: { id: string } }) {
+  const { id } = params;
   const project = projects.find((p) => p.id === id);
 
   if (!project) {

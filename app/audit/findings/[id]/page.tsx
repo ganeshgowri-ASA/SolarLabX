@@ -4,10 +4,10 @@ import Link from "next/link";
 import { auditFindings, carReports } from "@/lib/data/audit-data";
 import { FindingSeverityBadge, FindingStatusBadge } from "@/components/audit/FindingSeverityBadge";
 import { formatDate } from "@/lib/utils";
-import { use } from "react";
 
-export default function FindingDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+
+export default function FindingDetailPage({ params }: { params: { id: string } }) {
+  const { id } = params;
   const finding = auditFindings.find((f) => f.id === id);
 
   if (!finding) {
