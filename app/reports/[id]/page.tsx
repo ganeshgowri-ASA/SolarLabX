@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ReportViewer } from "@/components/reports/ReportViewer";
@@ -8,8 +8,8 @@ import { SignatureBlock } from "@/components/reports/SignatureBlock";
 import { PDFGenerator } from "@/components/reports/PDFGenerator";
 import { sampleReports } from "@/lib/mock-data";
 
-export default function ReportDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function ReportDetailPage({ params }: { params: { id: string } }) {
+  const { id } = params;
   const report = sampleReports.find((r) => r.id === id);
 
   if (!report) {

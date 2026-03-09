@@ -16,8 +16,14 @@ import {
   Sun,
   Thermometer,
   ShoppingCart,
+  Wrench,
+  SearchCheck,
   ChevronLeft,
   ChevronRight,
+  BarChart3,
+  Search,
+  MessageSquareWarning,
+  MessageCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -42,6 +48,12 @@ const iconMap = {
   Sun,
   Thermometer,
   ShoppingCart,
+  Wrench,
+  SearchCheck,
+  BarChart3,
+  Search,
+  MessageSquareWarning,
+  MessageCircle,
 } as const;
 
 const navItems = [
@@ -50,10 +62,15 @@ const navItems = [
   { title: "QMS", href: "/qms", icon: "FileCheck" },
   { title: "Audit", href: "/audit", icon: "ClipboardCheck" },
   { title: "Projects", href: "/projects", icon: "FolderKanban" },
+  { title: "Equipment", href: "/equipment", icon: "Wrench" },
   { title: "Uncertainty", href: "/uncertainty", icon: "Calculator" },
   { title: "Vision AI", href: "/vision-ai", icon: "ScanEye" },
   { title: "SOP Gen", href: "/sop-gen", icon: "BookOpen" },
   { title: "Reports", href: "/reports", icon: "FileBarChart" },
+  { title: "Statistics", href: "/statistics", icon: "BarChart3" },
+  { title: "RCA", href: "/rca", icon: "SearchCheck" },
+  { title: "Complaints", href: "/complaints", icon: "MessageSquareWarning" },
+  { title: "Chatbot", href: "/chatbot", icon: "MessageCircle" },
   { title: "Sun Simulator", href: "/sun-simulator", icon: "Sun" },
   { title: "Chamber Config", href: "/chamber-config", icon: "Thermometer" },
   { title: "Procurement", href: "/procurement", icon: "ShoppingCart" },

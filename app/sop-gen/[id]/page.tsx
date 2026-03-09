@@ -1,6 +1,5 @@
 "use client";
 
-import { use } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { SOPViewer } from "@/components/sop/SOPViewer";
@@ -8,8 +7,8 @@ import { ApprovalWorkflow } from "@/components/sop/ApprovalWorkflow";
 import { SOPExporter } from "@/components/sop/SOPExporter";
 import { sampleSOPs } from "@/lib/mock-data";
 
-export default function SOPDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function SOPDetailPage({ params }: { params: { id: string } }) {
+  const { id } = params;
   const sop = sampleSOPs.find((s) => s.id === id);
 
   if (!sop) {

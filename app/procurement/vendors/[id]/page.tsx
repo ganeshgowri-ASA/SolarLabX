@@ -4,10 +4,10 @@ import Link from "next/link";
 import { vendors } from "@/lib/data/procurement-data";
 import VendorScorecard from "@/components/procurement/VendorScorecard";
 import { formatCurrency, formatDate, cn } from "@/lib/utils";
-import { use } from "react";
 
-export default function VendorDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+
+export default function VendorDetailPage({ params }: { params: { id: string } }) {
+  const { id } = params;
   const vendor = vendors.find((v) => v.id === id);
 
   if (!vendor) {

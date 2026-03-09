@@ -6,7 +6,7 @@ import AuditChecklist from "@/components/audit/AuditChecklist";
 import { FindingSeverityBadge, FindingStatusBadge } from "@/components/audit/FindingSeverityBadge";
 import { formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-import { use } from "react";
+
 
 const statusStyles: Record<string, string> = {
   Planned: "bg-blue-100 text-blue-700",
@@ -14,8 +14,8 @@ const statusStyles: Record<string, string> = {
   Completed: "bg-green-100 text-green-700",
 };
 
-export default function AuditPlanDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function AuditPlanDetailPage({ params }: { params: { id: string } }) {
+  const { id } = params;
   const audit = auditPlans.find((a) => a.id === id);
 
   if (!audit) {

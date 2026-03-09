@@ -4,10 +4,10 @@ import Link from "next/link";
 import { purchaseOrders } from "@/lib/data/procurement-data";
 import POTimeline from "@/components/procurement/POTimeline";
 import { formatCurrency, formatDate, cn } from "@/lib/utils";
-import { use } from "react";
 
-export default function PODetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+
+export default function PODetailPage({ params }: { params: { id: string } }) {
+  const { id } = params;
   const po = purchaseOrders.find((p) => p.id === id);
 
   if (!po) {

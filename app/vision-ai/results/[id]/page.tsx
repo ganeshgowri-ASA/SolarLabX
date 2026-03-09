@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,8 +11,8 @@ import { DefectOverlay } from "@/components/vision/DefectOverlay";
 import { sampleDetectionResults } from "@/lib/mock-data";
 import { DEFECT_TYPES, SEVERITY_LEVELS } from "@/lib/constants";
 
-export default function DetectionDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function DetectionDetailPage({ params }: { params: { id: string } }) {
+  const { id } = params;
   const result = sampleDetectionResults.find((r) => r.id === id);
 
   if (!result) {
