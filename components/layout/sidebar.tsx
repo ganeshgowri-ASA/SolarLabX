@@ -16,6 +16,7 @@ import {
   Sun,
   Thermometer,
   ShoppingCart,
+  Wrench,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -42,6 +43,7 @@ const iconMap = {
   Sun,
   Thermometer,
   ShoppingCart,
+  Wrench,
 } as const;
 
 const navItems = [
@@ -50,6 +52,7 @@ const navItems = [
   { title: "QMS", href: "/qms", icon: "FileCheck" },
   { title: "Audit", href: "/audit", icon: "ClipboardCheck" },
   { title: "Projects", href: "/projects", icon: "FolderKanban" },
+  { title: "Equipment", href: "/equipment", icon: "Wrench" },
   { title: "Uncertainty", href: "/uncertainty", icon: "Calculator" },
   { title: "Vision AI", href: "/vision-ai", icon: "ScanEye" },
   { title: "SOP Gen", href: "/sop-gen", icon: "BookOpen" },
