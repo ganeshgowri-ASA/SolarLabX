@@ -53,6 +53,7 @@ import {
   Thermometer,
   Wind,
   FlaskConical,
+  ClipboardList,
 } from "lucide-react"
 import { SPCControlCharts } from "./SPCControlCharts"
 import { StatisticsOverview } from "./StatisticsOverview"
@@ -60,6 +61,7 @@ import { IVCurveTab } from "./IVCurveTab"
 import { NMOTCalculator } from "./NMOTCalculator"
 import { PeelTestAnalysis } from "./PeelTestAnalysis"
 import { WeatherQA } from "./WeatherQA"
+import TestProtocolsManager from "@/components/lims/TestProtocolsManager"
 import {
   generateMockData,
   calculateStatistics,
@@ -462,6 +464,10 @@ export default function DataAnalysisPage() {
           <TabsTrigger value="weather" className="text-xs">
             <Sun className="mr-1 h-3 w-3" />
             Weather QA
+          </TabsTrigger>
+          <TabsTrigger value="protocols" className="text-xs">
+            <ClipboardList className="mr-1 h-3 w-3" />
+            Test Protocols
           </TabsTrigger>
         </TabsList>
 
@@ -1594,6 +1600,17 @@ export default function DataAnalysisPage() {
             </p>
           </div>
           <WeatherQA />
+        </TabsContent>
+
+        {/* ===================== TAB: TEST PROTOCOLS ===================== */}
+        <TabsContent value="protocols" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Test Protocols</h2>
+            <p className="text-sm text-muted-foreground">
+              IEC 61215 / 61730 / 61853 / 61701 — Protocol library, route cards, scheduling &amp; status tracking
+            </p>
+          </div>
+          <TestProtocolsManager />
         </TabsContent>
       </Tabs>
     </div>
