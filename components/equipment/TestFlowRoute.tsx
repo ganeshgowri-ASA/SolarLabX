@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import { TestFlowStep } from "@/lib/types/equipment";

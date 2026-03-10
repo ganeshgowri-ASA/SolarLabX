@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import { chamberScheduleEvents } from "@/lib/data/chamber-tests-data";

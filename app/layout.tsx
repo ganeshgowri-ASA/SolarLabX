@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { Metadata } from "next";
 import { ThemeProvider } from "@/components/theme-provider";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";

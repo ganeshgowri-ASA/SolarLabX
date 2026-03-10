@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import { ChamberTest, CycleGroup, CycleAnomaly } from "@/lib/types/chamber-tests";

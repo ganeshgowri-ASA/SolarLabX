@@ -1,0 +1,295 @@
+// ---------------------------------------------------------------------------
+// Test Report Template Library data
+// ---------------------------------------------------------------------------
+
+export type TemplateCategory = "test_report" | "calibration" | "audit" | "safety" | "environmental" | "energy_rating";
+
+export interface TemplateField {
+  id: string;
+  name: string;
+  type: "text" | "number" | "date" | "select" | "textarea" | "checkbox" | "signature" | "image" | "table";
+  required: boolean;
+  section: string;
+  placeholder?: string;
+  options?: string[];
+  autoPopulate?: boolean;
+  conditionalOn?: string;
+}
+
+export interface TemplateSection {
+  id: string;
+  name: string;
+  description: string;
+  required: boolean;
+  conditional: boolean;
+  conditionField?: string;
+}
+
+export interface ReportTemplateConfig {
+  id: string;
+  name: string;
+  standard: string;
+  category: TemplateCategory;
+  description: string;
+  version: string;
+  versionHistory: { version: string; date: string; changes: string; author: string }[];
+  lastUpdated: string;
+  author: string;
+  status: "active" | "draft" | "deprecated";
+  sections: TemplateSection[];
+  fields: TemplateField[];
+  tags: string[];
+  usageCount: number;
+}
+
+export const templateCategories: { value: TemplateCategory; label: string; color: string }[] = [
+  { value: "test_report", label: "Test Report", color: "bg-blue-100 text-blue-800" },
+  { value: "calibration", label: "Calibration", color: "bg-purple-100 text-purple-800" },
+  { value: "audit", label: "Audit Report", color: "bg-orange-100 text-orange-800" },
+  { value: "safety", label: "Safety Qualification", color: "bg-red-100 text-red-800" },
+  { value: "environmental", label: "Environmental Test", color: "bg-green-100 text-green-800" },
+  { value: "energy_rating", label: "Energy Rating", color: "bg-yellow-100 text-yellow-800" },
+];
+
+export const reportTemplateLibrary: ReportTemplateConfig[] = [
+  {
+    id: "tpl-lib-001",
+    name: "IEC 61215 Design Qualification Report",
+    standard: "IEC 61215:2021",
+    category: "test_report",
+    description: "Complete design qualification and type approval test report for crystalline silicon terrestrial PV modules per IEC 61215:2021.",
+    version: "3.2",
+    versionHistory: [
+      { version: "3.2", date: "2026-02-15", changes: "Added extended MQT sequence table, updated uncertainty section", author: "Dr. Ganesh Kumar" },
+      { version: "3.1", date: "2026-01-10", changes: "Updated for IEC 61215:2021 Ed.2 amendments", author: "Dr. Ganesh Kumar" },
+      { version: "3.0", date: "2025-10-01", changes: "Major revision for IEC 61215:2021 alignment", author: "Dr. Ganesh Kumar" },
+      { version: "2.0", date: "2025-03-15", changes: "Added bifacial module test support", author: "Lab Manager" },
+      { version: "1.0", date: "2024-06-01", changes: "Initial template release", author: "Lab Director" },
+    ],
+    lastUpdated: "2026-02-15",
+    author: "Dr. Ganesh Kumar",
+    status: "active",
+    sections: [
+      { id: "s1", name: "Cover Page", description: "Report identification, lab logo, accreditation marks", required: true, conditional: false },
+      { id: "s2", name: "Module Identification", description: "Module specifications, nameplate data, photographs", required: true, conditional: false },
+      { id: "s3", name: "Manufacturer Details", description: "Client information, factory details", required: true, conditional: false },
+      { id: "s4", name: "Test Sequence Summary", description: "MQT sequence with pass/fail status per clause", required: true, conditional: false },
+      { id: "s5", name: "Pre-Test Characterization", description: "Initial I-V data, visual inspection, EL imaging", required: true, conditional: false },
+      { id: "s6", name: "Test Results", description: "Detailed results for each MQT test performed", required: true, conditional: false },
+      { id: "s7", name: "Post-Test Characterization", description: "Final I-V data, visual inspection, EL imaging", required: true, conditional: false },
+      { id: "s8", name: "Power Degradation Analysis", description: "Pre vs post power comparison with limits", required: true, conditional: false },
+      { id: "s9", name: "Uncertainty Statements", description: "Measurement uncertainty budget per ISO 17025", required: true, conditional: false },
+      { id: "s10", name: "Environmental Conditions", description: "Lab conditions during testing", required: true, conditional: false },
+      { id: "s11", name: "Equipment Used", description: "Calibrated equipment list with traceability", required: true, conditional: false },
+      { id: "s12", name: "Bifacial Module Data", description: "Rear-side measurements and bifaciality factor", required: false, conditional: true, conditionField: "is_bifacial" },
+      { id: "s13", name: "I-V Curves", description: "Forward and reverse I-V curve plots", required: false, conditional: false },
+      { id: "s14", name: "Photographs", description: "Pre/post test photographic evidence", required: true, conditional: false },
+      { id: "s15", name: "Conclusion & Verdict", description: "Overall pass/fail verdict and remarks", required: true, conditional: false },
+      { id: "s16", name: "Signatures & Approval", description: "Three-tier signoff chain", required: true, conditional: false },
+    ],
+    fields: [
+      { id: "f1", name: "Report Number", type: "text", required: true, section: "s1", autoPopulate: true },
+      { id: "f2", name: "Lab Logo", type: "image", required: true, section: "s1" },
+      { id: "f3", name: "Module Model", type: "text", required: true, section: "s2", placeholder: "e.g., ST-400M-72" },
+      { id: "f4", name: "Module Serial Number", type: "text", required: true, section: "s2" },
+      { id: "f5", name: "Rated Power (Wp)", type: "number", required: true, section: "s2" },
+      { id: "f6", name: "Cell Type", type: "select", required: true, section: "s2", options: ["Mono-PERC", "Mono-TOPCon", "Mono-HJT", "Poly-Si", "Thin-Film CdTe", "Thin-Film CIGS"] },
+      { id: "f7", name: "Is Bifacial", type: "checkbox", required: false, section: "s2" },
+      { id: "f8", name: "Test Date From", type: "date", required: true, section: "s4", autoPopulate: true },
+      { id: "f9", name: "Test Date To", type: "date", required: true, section: "s4", autoPopulate: true },
+      { id: "f10", name: "MQT Results Table", type: "table", required: true, section: "s6" },
+      { id: "f11", name: "Uncertainty Budget", type: "table", required: true, section: "s9" },
+      { id: "f12", name: "Prepared By", type: "signature", required: true, section: "s16" },
+      { id: "f13", name: "Reviewed By", type: "signature", required: true, section: "s16" },
+      { id: "f14", name: "Approved By", type: "signature", required: true, section: "s16" },
+    ],
+    tags: ["IEC 61215", "design qualification", "type approval", "MQT", "crystalline silicon"],
+    usageCount: 42,
+  },
+  {
+    id: "tpl-lib-002",
+    name: "IEC 61730 Safety Qualification Report",
+    standard: "IEC 61730:2016",
+    category: "safety",
+    description: "Safety qualification report for PV modules covering electrical, mechanical, and fire safety tests per IEC 61730.",
+    version: "2.1",
+    versionHistory: [
+      { version: "2.1", date: "2026-01-20", changes: "Added extended fire test classification", author: "Dr. Ganesh Kumar" },
+      { version: "2.0", date: "2025-08-15", changes: "Updated MST test sequence and numbering", author: "Lab Manager" },
+      { version: "1.0", date: "2025-01-10", changes: "Initial template release", author: "Lab Director" },
+    ],
+    lastUpdated: "2026-01-20",
+    author: "Dr. Ganesh Kumar",
+    status: "active",
+    sections: [
+      { id: "s1", name: "Cover Page", description: "Report identification with safety classification", required: true, conditional: false },
+      { id: "s2", name: "Module Identification", description: "Module specs, application class, system voltage", required: true, conditional: false },
+      { id: "s3", name: "Safety Classification", description: "Application class (A/B/C) and system voltage class", required: true, conditional: false },
+      { id: "s4", name: "MST Test Summary", description: "Safety test sequence with pass/fail per MST", required: true, conditional: false },
+      { id: "s5", name: "Electrical Safety Tests", description: "Ground continuity, impulse voltage, insulation, leakage", required: true, conditional: false },
+      { id: "s6", name: "Mechanical Safety Tests", description: "Accessibility, cut susceptibility, module breakage", required: true, conditional: false },
+      { id: "s7", name: "Fire Classification", description: "Fire test results and classification per IEC 61730", required: false, conditional: true, conditionField: "fire_test_required" },
+      { id: "s8", name: "Thermal Tests", description: "Temperature test, hot-spot safety test", required: true, conditional: false },
+      { id: "s9", name: "Conclusion", description: "Overall safety verdict and classification", required: true, conditional: false },
+      { id: "s10", name: "Signatures & Approval", description: "Three-tier signoff chain", required: true, conditional: false },
+    ],
+    fields: [
+      { id: "f1", name: "Report Number", type: "text", required: true, section: "s1", autoPopulate: true },
+      { id: "f2", name: "Application Class", type: "select", required: true, section: "s3", options: ["Class A - General", "Class B - Low Voltage", "Class C - Limited Voltage"] },
+      { id: "f3", name: "System Voltage", type: "number", required: true, section: "s3", placeholder: "Max system voltage (V)" },
+      { id: "f4", name: "Fire Test Required", type: "checkbox", required: false, section: "s7" },
+      { id: "f5", name: "MST Results Table", type: "table", required: true, section: "s4" },
+      { id: "f6", name: "Prepared By", type: "signature", required: true, section: "s10" },
+      { id: "f7", name: "Reviewed By", type: "signature", required: true, section: "s10" },
+      { id: "f8", name: "Approved By", type: "signature", required: true, section: "s10" },
+    ],
+    tags: ["IEC 61730", "safety", "MST", "electrical safety", "fire classification"],
+    usageCount: 38,
+  },
+  {
+    id: "tpl-lib-003",
+    name: "IEC 61853 Energy Rating Report",
+    standard: "IEC 61853:2018",
+    category: "energy_rating",
+    description: "Comprehensive energy rating report including power matrix, spectral response, angular response, and CSER calculation.",
+    version: "1.4",
+    versionHistory: [
+      { version: "1.4", date: "2026-02-01", changes: "Added climate-specific energy yield projections", author: "Dr. Ganesh Kumar" },
+      { version: "1.3", date: "2025-11-15", changes: "Updated CSER calculation methodology", author: "Lab Manager" },
+      { version: "1.0", date: "2025-06-01", changes: "Initial template release", author: "Dr. Ganesh Kumar" },
+    ],
+    lastUpdated: "2026-02-01",
+    author: "Dr. Ganesh Kumar",
+    status: "active",
+    sections: [
+      { id: "s1", name: "Cover Page", description: "Report identification and module rating summary", required: true, conditional: false },
+      { id: "s2", name: "Module Identification", description: "Module specs and nameplate data", required: true, conditional: false },
+      { id: "s3", name: "Power Rating Matrix", description: "22-point I-T matrix per Clause 7", required: true, conditional: false },
+      { id: "s4", name: "Temperature Coefficients", description: "α, β, γ coefficients per Clause 11", required: true, conditional: false },
+      { id: "s5", name: "Spectral Response", description: "Spectral response data per Clause 9", required: true, conditional: false },
+      { id: "s6", name: "Angular Response (IAM)", description: "Incidence angle modifier per Clause 10", required: true, conditional: false },
+      { id: "s7", name: "NMOT Determination", description: "Nominal module operating temperature", required: true, conditional: false },
+      { id: "s8", name: "Energy Rating (CSER)", description: "Climate-specific energy rating calculation", required: true, conditional: false },
+      { id: "s9", name: "Uncertainty Analysis", description: "Uncertainty budget for energy rating", required: true, conditional: false },
+      { id: "s10", name: "Signatures & Approval", description: "Three-tier signoff chain", required: true, conditional: false },
+    ],
+    fields: [
+      { id: "f1", name: "Report Number", type: "text", required: true, section: "s1", autoPopulate: true },
+      { id: "f2", name: "Power Matrix Data", type: "table", required: true, section: "s3" },
+      { id: "f3", name: "Spectral Data", type: "table", required: true, section: "s5" },
+      { id: "f4", name: "IAM Data", type: "table", required: true, section: "s6" },
+      { id: "f5", name: "CSER Values", type: "table", required: true, section: "s8" },
+      { id: "f6", name: "Prepared By", type: "signature", required: true, section: "s10" },
+      { id: "f7", name: "Reviewed By", type: "signature", required: true, section: "s10" },
+      { id: "f8", name: "Approved By", type: "signature", required: true, section: "s10" },
+    ],
+    tags: ["IEC 61853", "energy rating", "power matrix", "CSER", "spectral response"],
+    usageCount: 24,
+  },
+  {
+    id: "tpl-lib-004",
+    name: "IEC 61701 Salt Mist Corrosion Report",
+    standard: "IEC 61701:2020",
+    category: "environmental",
+    description: "Salt mist corrosion testing report for PV modules at various severity levels per IEC 61701.",
+    version: "1.2",
+    versionHistory: [
+      { version: "1.2", date: "2026-01-05", changes: "Added severity 6 extended protocol", author: "Lab Manager" },
+      { version: "1.0", date: "2025-04-01", changes: "Initial template release", author: "Dr. Ganesh Kumar" },
+    ],
+    lastUpdated: "2026-01-05",
+    author: "Lab Manager",
+    status: "active",
+    sections: [
+      { id: "s1", name: "Cover Page", description: "Report identification and severity level", required: true, conditional: false },
+      { id: "s2", name: "Module Identification", description: "Module specs and corrosion resistance class", required: true, conditional: false },
+      { id: "s3", name: "Test Configuration", description: "Severity level, cycle count, chamber parameters", required: true, conditional: false },
+      { id: "s4", name: "Pre-Test Baseline", description: "Initial power, visual, insulation measurements", required: true, conditional: false },
+      { id: "s5", name: "Cycle Monitoring", description: "Per-cycle inspection and measurement records", required: true, conditional: false },
+      { id: "s6", name: "Post-Test Results", description: "Final characterization and comparison", required: true, conditional: false },
+      { id: "s7", name: "Corrosion Assessment", description: "Visual and microscopic corrosion analysis", required: true, conditional: false },
+      { id: "s8", name: "Conclusion", description: "Pass/fail verdict per severity classification", required: true, conditional: false },
+      { id: "s9", name: "Signatures & Approval", description: "Three-tier signoff chain", required: true, conditional: false },
+    ],
+    fields: [
+      { id: "f1", name: "Report Number", type: "text", required: true, section: "s1", autoPopulate: true },
+      { id: "f2", name: "Severity Level", type: "select", required: true, section: "s3", options: ["Severity 1 (4 cycles)", "Severity 2 (8 cycles)", "Severity 3 (16 cycles)", "Severity 6 (96 cycles)"] },
+      { id: "f3", name: "Prepared By", type: "signature", required: true, section: "s9" },
+      { id: "f4", name: "Approved By", type: "signature", required: true, section: "s9" },
+    ],
+    tags: ["IEC 61701", "salt mist", "corrosion", "environmental", "coastal"],
+    usageCount: 15,
+  },
+  {
+    id: "tpl-lib-005",
+    name: "IEC 62804 PID Test Report",
+    standard: "IEC 62804:2015",
+    category: "environmental",
+    description: "Potential Induced Degradation (PID) test report for PV modules per IEC 62804 (TS).",
+    version: "1.1",
+    versionHistory: [
+      { version: "1.1", date: "2025-12-20", changes: "Added recovery test protocol section", author: "Dr. Ganesh Kumar" },
+      { version: "1.0", date: "2025-07-01", changes: "Initial template release", author: "Lab Manager" },
+    ],
+    lastUpdated: "2025-12-20",
+    author: "Dr. Ganesh Kumar",
+    status: "active",
+    sections: [
+      { id: "s1", name: "Cover Page", description: "Report identification", required: true, conditional: false },
+      { id: "s2", name: "Module Identification", description: "Module specs, cell technology, system voltage", required: true, conditional: false },
+      { id: "s3", name: "Test Setup", description: "Bias voltage, temperature, humidity parameters", required: true, conditional: false },
+      { id: "s4", name: "Pre-Test Data", description: "Initial I-V, EL imaging, insulation", required: true, conditional: false },
+      { id: "s5", name: "Stress Test Results", description: "96h stress test data and monitoring", required: true, conditional: false },
+      { id: "s6", name: "Post-Test Data", description: "Final I-V, EL imaging, insulation", required: true, conditional: false },
+      { id: "s7", name: "Recovery Test", description: "Post-PID recovery measurement", required: false, conditional: true, conditionField: "include_recovery" },
+      { id: "s8", name: "Degradation Analysis", description: "Power loss calculation and EL comparison", required: true, conditional: false },
+      { id: "s9", name: "Conclusion", description: "PID classification and verdict", required: true, conditional: false },
+      { id: "s10", name: "Signatures & Approval", description: "Three-tier signoff chain", required: true, conditional: false },
+    ],
+    fields: [
+      { id: "f1", name: "Report Number", type: "text", required: true, section: "s1", autoPopulate: true },
+      { id: "f2", name: "System Voltage", type: "number", required: true, section: "s3", placeholder: "Applied bias voltage (V)" },
+      { id: "f3", name: "Include Recovery", type: "checkbox", required: false, section: "s7" },
+      { id: "f4", name: "Prepared By", type: "signature", required: true, section: "s10" },
+      { id: "f5", name: "Approved By", type: "signature", required: true, section: "s10" },
+    ],
+    tags: ["IEC 62804", "PID", "potential induced degradation", "system voltage"],
+    usageCount: 11,
+  },
+  {
+    id: "tpl-lib-006",
+    name: "ISO 17025 Calibration Certificate",
+    standard: "ISO/IEC 17025:2017",
+    category: "calibration",
+    description: "Accredited calibration certificate template for reference cells, pyranometers, and measurement instruments.",
+    version: "2.5",
+    versionHistory: [
+      { version: "2.5", date: "2026-02-10", changes: "Updated NABL accreditation scope reference", author: "Lab Director" },
+      { version: "2.0", date: "2025-09-01", changes: "Added multi-instrument support", author: "Lab Manager" },
+      { version: "1.0", date: "2024-12-01", changes: "Initial template release", author: "Lab Director" },
+    ],
+    lastUpdated: "2026-02-10",
+    author: "Lab Director",
+    status: "active",
+    sections: [
+      { id: "s1", name: "Certificate Header", description: "Certificate number, accreditation logos, unique ID", required: true, conditional: false },
+      { id: "s2", name: "Instrument Details", description: "Equipment identification, make, model, serial number", required: true, conditional: false },
+      { id: "s3", name: "Calibration Method", description: "Procedure reference and method description", required: true, conditional: false },
+      { id: "s4", name: "Environmental Conditions", description: "Temperature, humidity during calibration", required: true, conditional: false },
+      { id: "s5", name: "Measurement Results", description: "Calibration data with uncertainty statements", required: true, conditional: false },
+      { id: "s6", name: "Traceability Statement", description: "Chain of metrological traceability", required: true, conditional: false },
+      { id: "s7", name: "Calibration Interval", description: "Recommended recalibration interval", required: false, conditional: false },
+      { id: "s8", name: "Authorized Signatory", description: "Authorized signatory and accreditation statement", required: true, conditional: false },
+    ],
+    fields: [
+      { id: "f1", name: "Certificate Number", type: "text", required: true, section: "s1", autoPopulate: true },
+      { id: "f2", name: "Instrument Make", type: "text", required: true, section: "s2" },
+      { id: "f3", name: "Instrument Model", type: "text", required: true, section: "s2" },
+      { id: "f4", name: "Serial Number", type: "text", required: true, section: "s2" },
+      { id: "f5", name: "Calibration Date", type: "date", required: true, section: "s3" },
+      { id: "f6", name: "Authorized Signatory", type: "signature", required: true, section: "s8" },
+    ],
+    tags: ["ISO 17025", "calibration", "certificate", "traceability", "NABL"],
+    usageCount: 56,
+  },
+];

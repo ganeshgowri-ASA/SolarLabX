@@ -1,6 +1,6 @@
 export type ProjectStatus = "Planning" | "Active" | "On Hold" | "Completed" | "Cancelled";
-export type KanbanColumn = "Backlog" | "To Do" | "In Progress" | "Review" | "Done";
-export type TaskPriority = "P0" | "P1" | "P2" | "P3" | "P4";
+export type TaskStatus = "Not Started" | "In Progress" | "Completed" | "Blocked" | "Overdue";
+export type TaskPriority = "Critical" | "High" | "Medium" | "Low";
 export type ResourceType = "Chamber" | "Simulator" | "Staff" | "Equipment";
 
 export interface Project {
@@ -17,11 +17,9 @@ export interface Project {
   completionPercent: number;
   projectManager: string;
   description: string;
-  template: string;
   samples: SampleInfo[];
   milestones: Milestone[];
   tasks: Task[];
-  sprints: Sprint[];
   resources: ResourceAllocation[];
   createdAt: string;
 }
@@ -45,44 +43,23 @@ export interface Milestone {
 export interface Task {
   id: string;
   name: string;
-  column: KanbanColumn;
+  status: TaskStatus;
   priority: TaskPriority;
   assignee: string;
-  assigneeAvatar: string;
   startDate: string;
   endDate: string;
   duration: number;
   dependencies: string[];
   completionPercent: number;
   description: string;
-  labels: string[];
-  subtasks: Subtask[];
-  comments: TaskComment[];
-  timeSpent: number;
-  timeEstimate: number;
-  sprintId: string | null;
-}
-
-export interface Subtask {
-  id: string;
-  name: string;
-  done: boolean;
-}
-
-export interface TaskComment {
-  id: string;
-  author: string;
-  text: string;
-  timestamp: string;
-}
-
-export interface Sprint {
-  id: string;
-  name: string;
-  startDate: string;
-  endDate: string;
-  goals: string[];
-  status: "Planning" | "Active" | "Completed";
+  column?: KanbanColumn;
+  subtasks?: { id: string; name: string; done: boolean }[];
+  tags?: string[];
+  labels?: string[];
+  estimatedHours?: number;
+  loggedHours?: number;
+  attachments?: number;
+  comments?: number;
 }
 
 export interface ResourceAllocation {
@@ -93,14 +70,4 @@ export interface ResourceAllocation {
   allocatedTo: string;
   utilizationPercent: number;
 }
-
-export interface TeamMember {
-  id: string;
-  name: string;
-  role: string;
-  avatar: string;
-  skills: string[];
-  tasksAssigned: number;
-  hoursLogged: number;
-  hoursCapacity: number;
-}
+export type KanbanColumn = "Backlog" | "To Do" | "In Progress" | "Review" | "Done";

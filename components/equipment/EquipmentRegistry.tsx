@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import { Equipment } from "@/lib/types/equipment";

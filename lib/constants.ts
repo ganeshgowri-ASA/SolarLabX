@@ -75,10 +75,22 @@ export const NAV_MODULES = [
     description: "Procurement Management",
   },
   {
+    title: "Data Analysis",
+    href: "/data-analysis",
+    icon: "BarChart3",
+    description: "Statistical Data Analysis & SPC",
+  },
+  {
     title: "Statistics",
     href: "/statistics",
     icon: "BarChart3",
     description: "Statistical Analysis & SPC",
+  },
+  {
+    title: "Traceability",
+    href: "/traceability",
+    icon: "GitBranch",
+    description: "Document Control & Traceability",
   },
 ] as const;
 

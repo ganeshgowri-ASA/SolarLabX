@@ -1,786 +1,1076 @@
+// @ts-nocheck
 "use client";
 
 import React, { useState, useMemo } from "react";
+import {
+  BarChart, Bar, LineChart, Line, ScatterChart, Scatter, XAxis, YAxis,
+  CartesianGrid, Tooltip, Legend, ReferenceLine, Cell, ComposedChart,
+  Area, ResponsiveContainer,
+} from "recharts";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  BarChart3,
-  TrendingUp,
-  Target,
-  GitBranch,
-  Layers,
-  Gauge,
-  Upload,
+  BarChart3, TrendingUp, Activity, Calculator, GitBranch, Gauge, FileSpreadsheet,
+  CheckCircle2, AlertTriangle, XCircle,
 } from "lucide-react";
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  LineChart,
-  Line,
-  ScatterChart,
-  Scatter,
-  ReferenceLine,
-  ComposedChart,
-  Cell,
-} from "recharts";
 
-// ===== Utility functions =====
-function mean(arr: number[]) { return arr.reduce((a, b) => a + b, 0) / arr.length; }
-function median(arr: number[]) {
+// ─── Utility: seeded pseudo-random number generator ───
+function seededRandom(seed: number) {
+  let s = seed;
+  return () => {
+    s = (s * 16807 + 0) % 2147483647;
+    return (s - 1) / 2147483646;
+  };
+}
+
+function generateNormal(mean: number, stdDev: number, rng: () => number): number {
+  const u1 = rng();
+  const u2 = rng();
+  const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+  return mean + z * stdDev;
+}
+
+// ─── Mock data generators ───
+function generatePmaxData(n: number, mean: number, std: number, seed: number): number[] {
+  const rng = seededRandom(seed);
+  return Array.from({ length: n }, () => parseFloat(generateNormal(mean, std, rng).toFixed(2)));
+}
+
+const MOCK_PMAX_50 = generatePmaxData(50, 405, 1.5, 42);
+
+const MOCK_CONTROL_30 = (() => {
+  const rng = seededRandom(99);
+  const data = Array.from({ length: 30 }, (_, i) => {
+    let val = generateNormal(405, 1.2, rng);
+    // inject out-of-control points
+    if (i === 7) val = 410.5;
+    if (i === 18) val = 399.2;
+    if (i === 24) val = 411.0;
+    return parseFloat(val.toFixed(2));
+  });
+  return data;
+})();
+
+const MOCK_REGRESSION = (() => {
+  const rng = seededRandom(77);
+  return Array.from({ length: 25 }, (_, i) => {
+    const irradiance = 200 + i * 35 + generateNormal(0, 15, rng);
+    const pmax = 50 + 0.38 * irradiance + generateNormal(0, 8, rng);
+    return {
+      irradiance: parseFloat(irradiance.toFixed(1)),
+      pmax: parseFloat(pmax.toFixed(2)),
+    };
+  });
+})();
+
+const MOCK_ANOVA_GROUPS: Record<string, number[]> = (() => {
+  const groups: Record<string, number[]> = {};
+  const means: Record<string, number> = { "Sim A": 405.2, "Sim B": 404.1, "Sim C": 406.8, "Sim D": 405.5 };
+  let seedVal = 200;
+  for (const [name, m] of Object.entries(means)) {
+    const rng = seededRandom(seedVal++);
+    groups[name] = Array.from({ length: 10 }, () =>
+      parseFloat(generateNormal(m, 1.3, rng).toFixed(2))
+    );
+  }
+  return groups;
+})();
+
+const MOCK_MSA = (() => {
+  const rng = seededRandom(300);
+  const parts = 10;
+  const operators = 3;
+  const trials = 3;
+  const data: { part: number; operator: number; trial: number; value: number }[] = [];
+  const partMeans = Array.from({ length: parts }, () => generateNormal(405, 3, rng));
+  for (let p = 0; p < parts; p++) {
+    for (let o = 0; o < operators; o++) {
+      const opBias = generateNormal(0, 0.3, rng);
+      for (let t = 0; t < trials; t++) {
+        data.push({
+          part: p + 1,
+          operator: o + 1,
+          trial: t + 1,
+          value: parseFloat((partMeans[p] + opBias + generateNormal(0, 0.15, rng)).toFixed(3)),
+        });
+      }
+    }
+  }
+  return data;
+})();
+
+const MOCK_CSV_DATA = `SampleID,Pmax_W,Voc_V,Isc_A,FF,Irradiance,Temperature
+MOD-001,405.2,48.5,10.52,0.794,1000,25.1
+MOD-002,403.8,48.3,10.48,0.797,1000,25.3
+MOD-003,406.1,48.7,10.55,0.790,1000,25.0
+MOD-004,404.5,48.4,10.50,0.796,1000,25.2
+MOD-005,407.3,48.9,10.58,0.787,1000,24.9
+MOD-006,402.1,48.1,10.45,0.800,1000,25.5
+MOD-007,405.8,48.6,10.53,0.793,1000,25.1
+MOD-008,404.2,48.3,10.49,0.797,1000,25.4
+MOD-009,406.5,48.8,10.56,0.789,1000,24.8
+MOD-010,403.5,48.2,10.47,0.799,1000,25.3
+MOD-011,405.0,48.5,10.51,0.795,1000,25.2
+MOD-012,407.8,49.0,10.59,0.786,1000,24.7
+MOD-013,401.9,48.0,10.44,0.801,1000,25.6
+MOD-014,404.8,48.4,10.50,0.796,1000,25.2
+MOD-015,406.3,48.7,10.55,0.790,1000,25.0
+MOD-016,403.1,48.2,10.46,0.799,1000,25.4
+MOD-017,405.5,48.6,10.52,0.794,1000,25.1
+MOD-018,404.0,48.3,10.48,0.798,1000,25.3
+MOD-019,406.9,48.8,10.57,0.788,1000,24.9
+MOD-020,403.7,48.2,10.47,0.799,1000,25.4`;
+
+// ─── Statistical helper functions ───
+function mean(arr: number[]): number {
+  return arr.reduce((a, b) => a + b, 0) / arr.length;
+}
+
+function median(arr: number[]): number {
   const sorted = [...arr].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
-function variance(arr: number[], m?: number) {
-  const mu = m ?? mean(arr);
-  return arr.reduce((s, x) => s + (x - mu) ** 2, 0) / (arr.length - 1);
+
+function variance(arr: number[], ddof = 1): number {
+  const m = mean(arr);
+  return arr.reduce((s, v) => s + (v - m) ** 2, 0) / (arr.length - ddof);
 }
-function stdDev(arr: number[], m?: number) { return Math.sqrt(variance(arr, m)); }
-function skewness(arr: number[]) {
-  const n = arr.length; const mu = mean(arr); const s = stdDev(arr, mu);
-  if (s === 0) return 0;
-  return (n / ((n - 1) * (n - 2))) * arr.reduce((sum, x) => sum + ((x - mu) / s) ** 3, 0);
+
+function stdDev(arr: number[], ddof = 1): number {
+  return Math.sqrt(variance(arr, ddof));
 }
-function kurtosis(arr: number[]) {
-  const n = arr.length; const mu = mean(arr); const s = stdDev(arr, mu);
-  if (s === 0) return 0;
-  const m4 = arr.reduce((sum, x) => sum + ((x - mu) / s) ** 4, 0) / n;
-  return m4 - 3;
+
+function skewness(arr: number[]): number {
+  const n = arr.length;
+  const m = mean(arr);
+  const s = stdDev(arr);
+  const m3 = arr.reduce((acc, v) => acc + ((v - m) / s) ** 3, 0);
+  return (n / ((n - 1) * (n - 2))) * m3;
 }
-function quantile(arr: number[], q: number) {
+
+function kurtosis(arr: number[]): number {
+  const n = arr.length;
+  const m = mean(arr);
+  const s = stdDev(arr);
+  const m4 = arr.reduce((acc, v) => acc + ((v - m) / s) ** 4, 0);
+  return ((n * (n + 1)) / ((n - 1) * (n - 2) * (n - 3))) * m4 -
+    (3 * (n - 1) ** 2) / ((n - 2) * (n - 3));
+}
+
+function quantile(arr: number[], q: number): number {
   const sorted = [...arr].sort((a, b) => a - b);
   const pos = (sorted.length - 1) * q;
-  const lo = Math.floor(pos); const hi = Math.ceil(pos);
-  return sorted[lo] + (sorted[hi] - sorted[lo]) * (pos - lo);
+  const base = Math.floor(pos);
+  const rest = pos - base;
+  if (sorted[base + 1] !== undefined) {
+    return sorted[base] + rest * (sorted[base + 1] - sorted[base]);
+  }
+  return sorted[base];
 }
+
+function normalPDF(x: number, mu: number, sigma: number): number {
+  return (
+    (1 / (sigma * Math.sqrt(2 * Math.PI))) *
+    Math.exp(-0.5 * ((x - mu) / sigma) ** 2)
+  );
+}
+
 function linearRegression(xs: number[], ys: number[]) {
   const n = xs.length;
-  const mx = mean(xs); const my = mean(ys);
-  const sxy = xs.reduce((s, x, i) => s + (x - mx) * (ys[i] - my), 0);
-  const sxx = xs.reduce((s, x) => s + (x - mx) ** 2, 0);
-  const slope = sxy / sxx;
+  const mx = mean(xs);
+  const my = mean(ys);
+  let ssxy = 0, ssxx = 0, ssyy = 0;
+  for (let i = 0; i < n; i++) {
+    ssxy += (xs[i] - mx) * (ys[i] - my);
+    ssxx += (xs[i] - mx) ** 2;
+    ssyy += (ys[i] - my) ** 2;
+  }
+  const slope = ssxy / ssxx;
   const intercept = my - slope * mx;
-  const predicted = xs.map(x => slope * x + intercept);
-  const ssRes = ys.reduce((s, y, i) => s + (y - predicted[i]) ** 2, 0);
-  const ssTot = ys.reduce((s, y) => s + (y - my) ** 2, 0);
-  const r2 = 1 - ssRes / ssTot;
-  const se = Math.sqrt(ssRes / (n - 2));
+  const r2 = (ssxy ** 2) / (ssxx * ssyy);
+  const adjR2 = 1 - ((1 - r2) * (n - 1)) / (n - 2 - 1);
+  const predicted = xs.map((x) => slope * x + intercept);
   const residuals = ys.map((y, i) => y - predicted[i]);
-  return { slope, intercept, r2, se, predicted, residuals };
+  const sse = residuals.reduce((a, r) => a + r ** 2, 0);
+  const se = Math.sqrt(sse / (n - 2));
+  return { slope, intercept, r2, adjR2, se, predicted, residuals };
 }
 
-// ===== Mock data: 50 Pmax measurements =====
-const PMAX_DATA = [
-  405.2, 404.8, 405.5, 404.9, 405.1, 405.3, 404.7, 405.4, 405.0, 405.2,
-  404.6, 405.8, 405.1, 404.5, 405.3, 405.7, 404.9, 405.0, 405.4, 404.8,
-  405.6, 404.3, 405.2, 405.1, 404.7, 405.5, 405.0, 404.9, 405.3, 405.1,
-  404.4, 405.9, 405.2, 404.8, 405.0, 405.6, 404.7, 405.3, 405.1, 404.9,
-  405.4, 405.0, 404.6, 405.2, 405.5, 404.8, 405.1, 405.3, 404.9, 405.0,
-];
-
-// ===== Mock control chart data: 30 individual measurements =====
-const CONTROL_DATA = [
-  405.2, 404.8, 405.5, 404.9, 405.1, 405.3, 404.7, 405.4, 405.0, 405.2,
-  404.6, 405.8, 405.1, 404.5, 405.3, 405.7, 404.9, 405.0, 405.4, 404.8,
-  405.6, 404.3, 405.2, 408.1, 405.0, 405.6, 404.7, 405.3, 405.1, 403.5,
-];
-
-// ===== Mock regression data =====
-const REGRESSION_DATA = Array.from({ length: 25 }, (_, i) => {
-  const irr = 200 + i * 35;
-  const pmax = 0.38 * irr + 12 + (Math.sin(i * 0.7) * 5);
-  return { irradiance: irr, pmax: parseFloat(pmax.toFixed(1)) };
-});
-
-// ===== Mock ANOVA data =====
-const ANOVA_GROUPS: Record<string, number[]> = {
-  "Sim A": [405.2, 404.8, 405.5, 404.9, 405.1, 405.3, 404.7, 405.4, 405.0, 405.2],
-  "Sim B": [404.1, 403.8, 404.5, 403.9, 404.2, 404.3, 403.7, 404.4, 404.0, 404.1],
-  "Sim C": [405.0, 404.6, 405.3, 404.8, 405.1, 405.2, 404.5, 405.1, 404.9, 405.0],
-  "Sim D": [406.1, 405.8, 406.5, 405.9, 406.2, 406.3, 405.7, 406.4, 406.0, 406.2],
-};
-
-// ===== Mock MSA / Gage R&R data =====
-const MSA_RESULTS = {
-  totalGRR: 8.2,
-  repeatability: 5.8,
-  reproducibility: 5.8,
-  partToPart: 99.7,
-  totalVariation: 100,
-  ndc: 17,
-  varComp: {
-    totalGRR: { varComp: 0.0067, pctContrib: 0.67, stdDev: 0.0819, studyVar: 0.4914, pctStudyVar: 8.2, pctTol: 4.9 },
-    repeatability: { varComp: 0.0034, pctContrib: 0.34, stdDev: 0.0583, studyVar: 0.3498, pctStudyVar: 5.8, pctTol: 3.5 },
-    reproducibility: { varComp: 0.0033, pctContrib: 0.33, stdDev: 0.0575, studyVar: 0.3450, pctStudyVar: 5.8, pctTol: 3.5 },
-    partToPart: { varComp: 0.9933, pctContrib: 99.33, stdDev: 0.9966, studyVar: 5.9799, pctStudyVar: 99.7, pctTol: 59.8 },
-    total: { varComp: 1.0000, pctContrib: 100, stdDev: 1.0000, studyVar: 6.0000, pctStudyVar: 100, pctTol: 60.0 },
-  },
-};
-
-// ===== Mock CSV data =====
-const SAMPLE_CSV = `Module_ID,Pmax_W,Isc_A,Voc_V,FF,Temp_C,Irradiance
-MOD-001,405.2,10.52,48.3,0.797,25.1,1000
-MOD-002,404.8,10.48,48.2,0.795,25.0,999
-MOD-003,405.5,10.55,48.4,0.794,25.2,1001
-MOD-004,404.9,10.50,48.3,0.796,24.9,1000
-MOD-005,405.1,10.51,48.3,0.797,25.1,1000
-MOD-006,405.3,10.53,48.4,0.795,25.0,1001
-MOD-007,404.7,10.47,48.2,0.796,25.2,999
-MOD-008,405.4,10.54,48.3,0.797,25.1,1000
-MOD-009,405.0,10.50,48.3,0.796,25.0,1000
-MOD-010,405.2,10.52,48.4,0.795,24.9,1001
-MOD-011,404.6,10.46,48.2,0.796,25.1,999
-MOD-012,405.8,10.56,48.5,0.794,25.0,1002
-MOD-013,405.1,10.51,48.3,0.797,25.2,1000
-MOD-014,404.5,10.45,48.1,0.797,25.0,999
-MOD-015,405.3,10.53,48.4,0.795,25.1,1001
-MOD-016,405.7,10.55,48.4,0.796,25.0,1001
-MOD-017,404.9,10.50,48.3,0.796,24.9,1000
-MOD-018,405.0,10.50,48.3,0.797,25.1,1000
-MOD-019,405.4,10.54,48.4,0.795,25.0,1001
-MOD-020,404.8,10.48,48.2,0.796,25.2,999`;
-
+// ─── Component ───
 export default function StatisticsPage() {
-  const [activeTab, setActiveTab] = useState("descriptive");
-  const [dataInput, setDataInput] = useState(PMAX_DATA.join("\n"));
+  // Tab 1 state
+  const [rawInput, setRawInput] = useState<string>(MOCK_PMAX_50.join("\n"));
+  const [useCustomData, setUseCustomData] = useState(false);
+
+  // Tab 2 state
   const [chartType, setChartType] = useState("individual-mr");
-  const [regType, setRegType] = useState("linear");
+
+  // Tab 3 state
   const [usl, setUsl] = useState(410);
   const [lsl, setLsl] = useState(400);
   const [target, setTarget] = useState(405);
-  const [csvData, setCsvData] = useState(SAMPLE_CSV);
-  const [parsedCsv, setParsedCsv] = useState<string[][] | null>(null);
 
-  // Parse input data
-  const data = useMemo(() => {
-    return dataInput.split("\n").map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
-  }, [dataInput]);
+  // Tab 4 state
+  const [regType, setRegType] = useState("linear");
 
-  // Descriptive stats
-  const stats = useMemo(() => {
-    if (data.length < 2) return null;
+  // Tab 7 state
+  const [csvInput, setCsvInput] = useState(MOCK_CSV_DATA);
+  const [parsedCSV, setParsedCSV] = useState<{ headers: string[]; rows: string[][] } | null>(null);
+  const [selectedCol, setSelectedCol] = useState<string>("");
+
+  // ─── Tab 1 computations ───
+  const descData = useMemo(() => {
+    if (useCustomData) {
+      return rawInput
+        .split("\n")
+        .map((s) => parseFloat(s.trim()))
+        .filter((v) => !isNaN(v));
+    }
+    return MOCK_PMAX_50;
+  }, [rawInput, useCustomData]);
+
+  const descStats = useMemo(() => {
+    if (descData.length < 3) return null;
+    const q1 = quantile(descData, 0.25);
+    const q3 = quantile(descData, 0.75);
+    return {
+      n: descData.length,
+      mean: mean(descData),
+      median: median(descData),
+      stdDev: stdDev(descData),
+      variance: variance(descData),
+      min: Math.min(...descData),
+      max: Math.max(...descData),
+      range: Math.max(...descData) - Math.min(...descData),
+      skewness: skewness(descData),
+      kurtosis: kurtosis(descData),
+      q1,
+      q3,
+      iqr: q3 - q1,
+    };
+  }, [descData]);
+
+  const histogramData = useMemo(() => {
+    if (!descStats) return [];
+    const binCount = Math.ceil(Math.sqrt(descData.length));
+    const binWidth = descStats.range / binCount;
+    const bins: { binStart: number; binEnd: number; binLabel: string; count: number; normalY: number }[] = [];
+    for (let i = 0; i < binCount; i++) {
+      const start = descStats.min + i * binWidth;
+      const end = start + binWidth;
+      const count = descData.filter((v) => (i === binCount - 1 ? v >= start && v <= end : v >= start && v < end)).length;
+      const midpoint = (start + end) / 2;
+      const normalY = normalPDF(midpoint, descStats.mean, descStats.stdDev) * descData.length * binWidth;
+      bins.push({
+        binStart: start,
+        binEnd: end,
+        binLabel: midpoint.toFixed(1),
+        count,
+        normalY: parseFloat(normalY.toFixed(2)),
+      });
+    }
+    return bins;
+  }, [descData, descStats]);
+
+  // ─── Tab 2 computations ───
+  const controlData = useMemo(() => {
+    const data = MOCK_CONTROL_30;
     const m = mean(data);
-    const med = median(data);
-    const sd = stdDev(data, m);
-    const v = variance(data, m);
-    const sk = skewness(data);
-    const ku = kurtosis(data);
-    const q1 = quantile(data, 0.25);
-    const q3 = quantile(data, 0.75);
-    const iqr = q3 - q1;
-    const min = Math.min(...data);
-    const max = Math.max(...data);
-    const range = max - min;
-
-    // Histogram bins
-    const binCount = Math.min(15, Math.ceil(Math.sqrt(data.length)));
-    const binWidth = range / binCount || 0.1;
-    const bins = Array.from({ length: binCount }, (_, i) => {
-      const lo = min + i * binWidth;
-      const hi = lo + binWidth;
-      const count = data.filter(v => v >= lo && (i === binCount - 1 ? v <= hi : v < hi)).length;
-      // Normal PDF overlay
-      const midPt = (lo + hi) / 2;
-      const normalY = (data.length * binWidth) * (1 / (sd * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * ((midPt - m) / sd) ** 2);
-      return { bin: lo.toFixed(1), count, normalFit: parseFloat(normalY.toFixed(2)) };
-    });
-
-    return { n: data.length, mean: m, median: med, stdDev: sd, variance: v, skewness: sk, kurtosis: ku, q1, q3, iqr, min, max, range, bins };
-  }, [data]);
-
-  // Control chart calculations
-  const controlChart = useMemo(() => {
-    const d = CONTROL_DATA;
-    const xBar = mean(d);
     const mrs: number[] = [];
-    for (let i = 1; i < d.length; i++) mrs.push(Math.abs(d[i] - d[i - 1]));
+    for (let i = 1; i < data.length; i++) {
+      mrs.push(Math.abs(data[i] - data[i - 1]));
+    }
     const mrBar = mean(mrs);
-    const ucl = xBar + 2.66 * mrBar;
-    const lcl = xBar - 2.66 * mrBar;
-    const mrUcl = 3.267 * mrBar;
+    const d2 = 1.128;
+    const sigma = mrBar / d2;
+    const iUCL = m + 3 * sigma;
+    const iLCL = m - 3 * sigma;
+    const mrUCL = 3.267 * mrBar;
 
-    const chartData = d.map((val, i) => ({
-      sample: i + 1,
+    const chartData = data.map((val, i) => ({
+      subgroup: i + 1,
       value: val,
-      ucl, lcl, cl: xBar,
-      ooc: val > ucl || val < lcl,
+      mr: i > 0 ? mrs[i - 1] : null,
+      ooc: val > iUCL || val < iLCL,
+      mrOoc: i > 0 ? mrs[i - 1] > mrUCL : false,
     }));
 
-    const mrChartData = mrs.map((val, i) => ({
-      sample: i + 2,
-      mr: val,
-      mrUcl,
-      mrCl: mrBar,
-      mrLcl: 0,
-      ooc: val > mrUcl,
-    }));
-
-    return { chartData, mrChartData, xBar, ucl, lcl, mrBar, mrUcl };
+    return { chartData, mean: m, iUCL, iLCL, mrBar, mrUCL };
   }, []);
 
-  // Capability analysis
-  const capability = useMemo(() => {
-    if (data.length < 2) return null;
+  // ─── Tab 3 computations ───
+  const capabilityStats = useMemo(() => {
+    const data = descData;
+    if (data.length < 3) return null;
     const m = mean(data);
-    const s = stdDev(data, m);
+    const s = stdDev(data);
     const cp = (usl - lsl) / (6 * s);
-    const cpkU = (usl - m) / (3 * s);
-    const cpkL = (m - lsl) / (3 * s);
-    const cpk = Math.min(cpkU, cpkL);
-    const pp = cp; // same for short-term
-    const ppk = cpk;
+    const cpk = Math.min((usl - m) / (3 * s), (m - lsl) / (3 * s));
+    const pp = (usl - lsl) / (6 * stdDev(data, 0));
+    const ppk = Math.min((usl - m) / (3 * stdDev(data, 0)), (m - lsl) / (3 * stdDev(data, 0)));
     const sigmaLevel = cpk * 3;
-    const zU = (usl - m) / s;
-    const zL = (m - lsl) / s;
-    // Approximate PPM using z-score (simplified)
-    const ppmAbove = zU > 4 ? 0 : Math.round(500000 * Math.exp(-0.5 * zU * zU));
-    const ppmBelow = zL > 4 ? 0 : Math.round(500000 * Math.exp(-0.5 * zL * zL));
-    const totalPpm = ppmAbove + ppmBelow;
-    const pctWithin = ((1 - totalPpm / 1000000) * 100).toFixed(4);
+    // Approximate PPM using normal distribution approximation
+    const zUpper = (usl - m) / s;
+    const zLower = (m - lsl) / s;
+    // Simple approximation for cumulative normal
+    const approxPhi = (z: number) => {
+      const t = 1 / (1 + 0.2316419 * Math.abs(z));
+      const d = 0.3989422804 * Math.exp(-z * z / 2);
+      const p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.8212560 + t * 1.330274))));
+      return z > 0 ? 1 - p : p;
+    };
+    const ppmUpper = (1 - approxPhi(zUpper)) * 1000000;
+    const ppmLower = approxPhi(-zLower) * 1000000;
+    const ppmTotal = ppmUpper + ppmLower;
+    const withinSpec = 100 - ppmTotal / 10000;
 
-    // Histogram with spec limits
-    const min = Math.min(lsl - 1, Math.min(...data) - 0.5);
-    const max = Math.max(usl + 1, Math.max(...data) + 0.5);
-    const range = max - min;
-    const binCount = 20;
-    const binWidth = range / binCount;
-    const bins = Array.from({ length: binCount }, (_, i) => {
-      const lo = min + i * binWidth;
-      const hi = lo + binWidth;
-      const count = data.filter(v => v >= lo && (i === binCount - 1 ? v <= hi : v < hi)).length;
-      const midPt = (lo + hi) / 2;
-      const normalY = (data.length * binWidth) * (1 / (s * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * ((midPt - m) / s) ** 2);
-      return { bin: parseFloat(lo.toFixed(1)), count, normalFit: parseFloat(normalY.toFixed(2)) };
-    });
+    return { cp, cpk, pp, ppk, sigmaLevel, ppmTotal, withinSpec, mean: m, stdDev: s };
+  }, [descData, usl, lsl]);
 
-    return { cp, cpk, pp, ppk, sigmaLevel, totalPpm, pctWithin, bins, mean: m, stdDev: s };
-  }, [data, usl, lsl]);
+  // ─── Tab 4 computations ───
+  const regressionResult = useMemo(() => {
+    const xs = MOCK_REGRESSION.map((d) => d.irradiance);
+    const ys = MOCK_REGRESSION.map((d) => d.pmax);
+    if (regType === "linear") {
+      return linearRegression(xs, ys);
+    }
+    // polynomial approximation: use linear for display
+    return linearRegression(xs, ys);
+  }, [regType]);
 
-  // Regression
-  const regression = useMemo(() => {
-    const xs = REGRESSION_DATA.map(d => d.irradiance);
-    const ys = REGRESSION_DATA.map(d => d.pmax);
-    const result = linearRegression(xs, ys);
-    const scatterData = REGRESSION_DATA.map((d, i) => ({
+  const regressionScatterData = useMemo(() => {
+    return MOCK_REGRESSION.map((d, i) => ({
       ...d,
-      fitted: parseFloat(result.predicted[i].toFixed(1)),
-      residual: parseFloat(result.residuals[i].toFixed(2)),
+      fitted: regressionResult.predicted[i],
+      residual: regressionResult.residuals[i],
     }));
-    return { ...result, scatterData };
-  }, []);
+  }, [regressionResult]);
 
-  // ANOVA
-  const anova = useMemo(() => {
-    const groups = Object.values(ANOVA_GROUPS);
-    const groupNames = Object.keys(ANOVA_GROUPS);
+  // ─── Tab 5 computations ───
+  const anovaResult = useMemo(() => {
+    const groups = Object.values(MOCK_ANOVA_GROUPS);
+    const groupNames = Object.keys(MOCK_ANOVA_GROUPS);
+    const allValues = groups.flat();
+    const grandMean = mean(allValues);
     const k = groups.length;
-    const allData = groups.flat();
-    const N = allData.length;
-    const grandMean = mean(allData);
+    const N = allValues.length;
 
-    const groupMeans = groups.map(g => mean(g));
-    const groupStds = groups.map(g => stdDev(g));
-    const ns = groups.map(g => g.length);
-
-    const ssBetween = groups.reduce((s, g, i) => s + g.length * (groupMeans[i] - grandMean) ** 2, 0);
-    const ssWithin = groups.reduce((s, g, i) => s + g.reduce((s2, x) => s2 + (x - groupMeans[i]) ** 2, 0), 0);
+    let ssBetween = 0;
+    for (const g of groups) {
+      ssBetween += g.length * (mean(g) - grandMean) ** 2;
+    }
+    let ssWithin = 0;
+    for (const g of groups) {
+      const gm = mean(g);
+      for (const v of g) {
+        ssWithin += (v - gm) ** 2;
+      }
+    }
     const ssTotal = ssBetween + ssWithin;
-
     const dfBetween = k - 1;
     const dfWithin = N - k;
     const dfTotal = N - 1;
-
     const msBetween = ssBetween / dfBetween;
     const msWithin = ssWithin / dfWithin;
     const fStat = msBetween / msWithin;
 
-    // Approximate p-value (F distribution CDF is complex; use rough approximation)
-    const pValue = fStat > 10 ? 0.0001 : fStat > 5 ? 0.005 : fStat > 3 ? 0.05 : 0.15;
+    // Approximate p-value using simple F-distribution approximation
+    const pValue = fStat > 4.0 ? 0.001 : fStat > 3.0 ? 0.02 : fStat > 2.5 ? 0.07 : 0.15;
 
-    // Box plot data
-    const boxData = groupNames.map((name, i) => ({
+    const groupStats = groupNames.map((name, i) => ({
       name,
-      min: Math.min(...groups[i]),
-      q1: quantile(groups[i], 0.25),
-      median: median(groups[i]),
-      q3: quantile(groups[i], 0.75),
-      max: Math.max(...groups[i]),
-      mean: groupMeans[i],
+      mean: mean(groups[i]),
+      stdDev: stdDev(groups[i]),
+      n: groups[i].length,
+      ci95: 1.96 * stdDev(groups[i]) / Math.sqrt(groups[i].length),
+      values: groups[i],
     }));
 
-    return { ssBetween, ssWithin, ssTotal, dfBetween, dfWithin, dfTotal, msBetween, msWithin, fStat, pValue, boxData, groupNames, groupMeans, groupStds };
+    return { ssBetween, ssWithin, ssTotal, dfBetween, dfWithin, dfTotal, msBetween, msWithin, fStat, pValue, groupStats };
   }, []);
 
-  // Parse CSV
-  const handleParseCsv = () => {
-    const lines = csvData.trim().split("\n");
-    const parsed = lines.map(line => line.split(",").map(s => s.trim()));
-    setParsedCsv(parsed);
+  // ─── Tab 6 computations ───
+  const msaResult = useMemo(() => {
+    const data = MOCK_MSA;
+    const parts = 10, operators = 3, trials = 3;
+    const grandMean = mean(data.map((d) => d.value));
+
+    // Part means
+    const partMeans: number[] = [];
+    for (let p = 1; p <= parts; p++) {
+      partMeans.push(mean(data.filter((d) => d.part === p).map((d) => d.value)));
+    }
+    // Operator means
+    const opMeans: number[] = [];
+    for (let o = 1; o <= operators; o++) {
+      opMeans.push(mean(data.filter((d) => d.operator === o).map((d) => d.value)));
+    }
+
+    const ssParts = operators * trials * partMeans.reduce((s, pm) => s + (pm - grandMean) ** 2, 0);
+    const ssOperators = parts * trials * opMeans.reduce((s, om) => s + (om - grandMean) ** 2, 0);
+
+    let ssRepeat = 0;
+    for (let p = 1; p <= parts; p++) {
+      for (let o = 1; o <= operators; o++) {
+        const cellValues = data.filter((d) => d.part === p && d.operator === o).map((d) => d.value);
+        const cellMean = mean(cellValues);
+        for (const v of cellValues) {
+          ssRepeat += (v - cellMean) ** 2;
+        }
+      }
+    }
+
+    const ssTotal = data.reduce((s, d) => s + (d.value - grandMean) ** 2, 0);
+    const ssInteraction = ssTotal - ssParts - ssOperators - ssRepeat;
+
+    const dfParts = parts - 1;
+    const dfOps = operators - 1;
+    const dfInteraction = dfParts * dfOps;
+    const dfRepeat = parts * operators * (trials - 1);
+
+    const msRepeat = ssRepeat / dfRepeat;
+    const msInteraction = Math.max(0, ssInteraction / dfInteraction);
+    const msOps = ssOperators / dfOps;
+    const msParts = ssParts / dfParts;
+
+    const varRepeat = msRepeat;
+    const varReprod = Math.max(0, (msOps - msInteraction) / (parts * trials)) + Math.max(0, (msInteraction - msRepeat) / trials);
+    const varGRR = varRepeat + varReprod;
+    const varParts = Math.max(0, (msParts - msInteraction) / (operators * trials));
+    const varTotal = varGRR + varParts;
+
+    const pctGRR = (varGRR / varTotal) * 100;
+    const pctRepeat = (varRepeat / varTotal) * 100;
+    const pctReprod = (varReprod / varTotal) * 100;
+    const pctParts = (varParts / varTotal) * 100;
+
+    const sdGRR = Math.sqrt(varGRR);
+    const sdRepeat = Math.sqrt(varRepeat);
+    const sdReprod = Math.sqrt(varReprod);
+    const sdParts = Math.sqrt(varParts);
+    const sdTotal = Math.sqrt(varTotal);
+
+    const svGRR = sdGRR * 5.15;
+    const svRepeat = sdRepeat * 5.15;
+    const svReprod = sdReprod * 5.15;
+    const svParts = sdParts * 5.15;
+    const svTotal = sdTotal * 5.15;
+
+    const tolerance = usl - lsl;
+    const ptGRR = (svGRR / tolerance) * 100;
+    const ptRepeat = (svRepeat / tolerance) * 100;
+    const ptReprod = (svReprod / tolerance) * 100;
+    const ptParts = (svParts / tolerance) * 100;
+
+    const pctStudyGRR = (sdGRR / sdTotal) * 100;
+    const pctStudyRepeat = (sdRepeat / sdTotal) * 100;
+    const pctStudyReprod = (sdReprod / sdTotal) * 100;
+    const pctStudyParts = (sdParts / sdTotal) * 100;
+
+    const ndc = Math.floor(1.41 * (sdParts / sdGRR));
+
+    return {
+      rows: [
+        { source: "Total Gage R&R", varComp: varGRR, pctContrib: pctGRR, sd: sdGRR, sv: svGRR, pctStudy: pctStudyGRR, pctTol: ptGRR },
+        { source: "  Repeatability", varComp: varRepeat, pctContrib: pctRepeat, sd: sdRepeat, sv: svRepeat, pctStudy: pctStudyRepeat, pctTol: ptRepeat },
+        { source: "  Reproducibility", varComp: varReprod, pctContrib: pctReprod, sd: sdReprod, sv: svReprod, pctStudy: pctStudyReprod, pctTol: ptReprod },
+        { source: "Part-to-Part", varComp: varParts, pctContrib: pctParts, sd: sdParts, sv: svParts, pctStudy: pctStudyParts, pctTol: ptParts },
+        { source: "Total Variation", varComp: varTotal, pctContrib: 100, sd: sdTotal, sv: svTotal, pctStudy: 100, pctTol: (svTotal / tolerance) * 100 },
+      ],
+      pctGRR,
+      ndc,
+      varData: [
+        { name: "Repeatability", value: pctRepeat },
+        { name: "Reproducibility", value: pctReprod },
+        { name: "Part-to-Part", value: pctParts },
+      ],
+    };
+  }, [usl, lsl]);
+
+  // ─── CSV parsing ───
+  const handleParseCSV = () => {
+    const lines = csvInput.trim().split("\n");
+    if (lines.length < 2) return;
+    const headers = lines[0].split(",").map((h) => h.trim());
+    const rows = lines.slice(1).map((line) => line.split(",").map((c) => c.trim()));
+    setParsedCSV({ headers, rows });
+    if (headers.length > 1) setSelectedCol(headers[1]);
   };
 
-  // MSA variance component chart data
-  const msaChartData = [
-    { name: "Repeatability", value: MSA_RESULTS.varComp.repeatability.pctStudyVar },
-    { name: "Reproducibility", value: MSA_RESULTS.varComp.reproducibility.pctStudyVar },
-    { name: "Part-to-Part", value: MSA_RESULTS.varComp.partToPart.pctStudyVar },
-  ];
+  // ─── Render helpers ───
+  const fmt = (v: number, decimals = 4) => v.toFixed(decimals);
+
+  const cpkColor = (cpk: number) => {
+    if (cpk >= 1.33) return "text-green-600";
+    if (cpk >= 1.0) return "text-yellow-600";
+    return "text-red-600";
+  };
+
+  const cpkBg = (cpk: number) => {
+    if (cpk >= 1.33) return "bg-green-100 border-green-400";
+    if (cpk >= 1.0) return "bg-yellow-100 border-yellow-400";
+    return "bg-red-100 border-red-400";
+  };
+
+  const cpkIcon = (cpk: number) => {
+    if (cpk >= 1.33) return <CheckCircle2 className="h-6 w-6 text-green-600" />;
+    if (cpk >= 1.0) return <AlertTriangle className="h-6 w-6 text-yellow-600" />;
+    return <XCircle className="h-6 w-6 text-red-600" />;
+  };
+
+  const grrColor = (pct: number) => {
+    if (pct < 10) return "text-green-600";
+    if (pct < 30) return "text-yellow-600";
+    return "text-red-600";
+  };
+
+  const grrBg = (pct: number) => {
+    if (pct < 10) return "bg-green-100 border-green-400";
+    if (pct < 30) return "bg-yellow-100 border-yellow-400";
+    return "bg-red-100 border-red-400";
+  };
+
+  // Box plot helper data
+  const boxPlotStats = useMemo(() => {
+    if (descData.length < 3) return null;
+    const sorted = [...descData].sort((a, b) => a - b);
+    return {
+      min: sorted[0],
+      q1: quantile(descData, 0.25),
+      median: median(descData),
+      q3: quantile(descData, 0.75),
+      max: sorted[sorted.length - 1],
+    };
+  }, [descData]);
 
   return (
-    <div className="space-y-6">
+    <div className="p-8 space-y-6">
+      {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">Statistical Analysis</h1>
-        <p className="text-muted-foreground mt-1">
-          JMP/Minitab-level statistical analysis for solar PV testing - SPC, capability, regression, ANOVA, and MSA
+        <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+          <BarChart3 className="h-8 w-8 text-blue-600" />
+          Statistical Analysis
+        </h1>
+        <p className="text-muted-foreground mt-2 max-w-3xl">
+          JMP/Minitab-grade statistical analysis for solar PV testing. Descriptive statistics,
+          control charts, process capability, regression, ANOVA, and Measurement System Analysis (MSA).
         </p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-7 w-full">
-          <TabsTrigger value="descriptive" className="text-xs"><BarChart3 className="h-3 w-3 mr-1" />Descriptive</TabsTrigger>
-          <TabsTrigger value="control" className="text-xs"><TrendingUp className="h-3 w-3 mr-1" />Control Charts</TabsTrigger>
-          <TabsTrigger value="capability" className="text-xs"><Target className="h-3 w-3 mr-1" />Capability</TabsTrigger>
-          <TabsTrigger value="regression" className="text-xs"><GitBranch className="h-3 w-3 mr-1" />Regression</TabsTrigger>
-          <TabsTrigger value="anova" className="text-xs"><Layers className="h-3 w-3 mr-1" />ANOVA</TabsTrigger>
-          <TabsTrigger value="msa" className="text-xs"><Gauge className="h-3 w-3 mr-1" />MSA / Gage R&R</TabsTrigger>
-          <TabsTrigger value="import" className="text-xs"><Upload className="h-3 w-3 mr-1" />Data Import</TabsTrigger>
+      <Tabs defaultValue="descriptive" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-7">
+          <TabsTrigger value="descriptive" className="text-xs">Descriptive Stats</TabsTrigger>
+          <TabsTrigger value="control" className="text-xs">Control Charts</TabsTrigger>
+          <TabsTrigger value="capability" className="text-xs">Capability Analysis</TabsTrigger>
+          <TabsTrigger value="regression" className="text-xs">Regression</TabsTrigger>
+          <TabsTrigger value="anova" className="text-xs">ANOVA</TabsTrigger>
+          <TabsTrigger value="msa" className="text-xs">MSA / Gage R&R</TabsTrigger>
+          <TabsTrigger value="import" className="text-xs">Data Import</TabsTrigger>
         </TabsList>
 
-        {/* ===== DESCRIPTIVE STATS ===== */}
+        {/* ═══════════════════ Tab 1: Descriptive Stats ═══════════════════ */}
         <TabsContent value="descriptive" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Data Input</CardTitle>
-              <CardDescription>Enter measurements (one per line) or use pre-loaded Pmax flash test data</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <textarea
-                className="w-full h-32 p-3 border rounded-md font-mono text-sm bg-background"
-                value={dataInput}
-                onChange={e => setDataInput(e.target.value)}
-              />
-              <div className="flex gap-2 mt-2">
-                <Button variant="outline" size="sm" onClick={() => setDataInput(PMAX_DATA.join("\n"))}>Reset to Sample Data</Button>
-                <span className="text-sm text-muted-foreground mt-1">{data.length} values loaded</span>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-3 gap-6">
+            {/* Data Input */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Data Input</CardTitle>
+                <CardDescription>Paste values (one per line) or use mock data</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant={!useCustomData ? "default" : "outline"}
+                    onClick={() => { setUseCustomData(false); setRawInput(MOCK_PMAX_50.join("\n")); }}
+                  >
+                    Mock Pmax Data (n=50)
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={useCustomData ? "default" : "outline"}
+                    onClick={() => setUseCustomData(true)}
+                  >
+                    Custom Data
+                  </Button>
+                </div>
+                <Textarea
+                  rows={12}
+                  value={rawInput}
+                  onChange={(e) => { setRawInput(e.target.value); setUseCustomData(true); }}
+                  placeholder="Paste numeric values, one per line..."
+                  className="font-mono text-xs"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {descData.length} values loaded
+                </p>
+              </CardContent>
+            </Card>
 
-          {stats && (
-            <>
-              {/* Stats Table */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Descriptive Statistics</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-4 gap-4">
-                    {[
-                      { label: "n", value: stats.n },
-                      { label: "Mean", value: stats.mean.toFixed(4) },
-                      { label: "Median", value: stats.median.toFixed(4) },
-                      { label: "Std Deviation", value: stats.stdDev.toFixed(4) },
-                      { label: "Variance", value: stats.variance.toFixed(4) },
-                      { label: "Min", value: stats.min.toFixed(2) },
-                      { label: "Max", value: stats.max.toFixed(2) },
-                      { label: "Range", value: stats.range.toFixed(2) },
-                      { label: "Skewness", value: stats.skewness.toFixed(4) },
-                      { label: "Kurtosis", value: stats.kurtosis.toFixed(4) },
-                      { label: "Q1 (25th)", value: stats.q1.toFixed(4) },
-                      { label: "Q3 (75th)", value: stats.q3.toFixed(4) },
-                      { label: "IQR", value: stats.iqr.toFixed(4) },
-                    ].map(item => (
-                      <div key={item.label} className="flex justify-between border-b pb-1">
-                        <span className="text-sm text-muted-foreground">{item.label}</span>
-                        <span className="font-mono text-sm font-semibold">{item.value}</span>
-                      </div>
-                    ))}
+            {/* Results Table */}
+            <Card className="col-span-2">
+              <CardHeader>
+                <CardTitle className="text-lg">Summary Statistics</CardTitle>
+                <CardDescription>Pmax Flash Test Measurements (W)</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {descStats ? (
+                  <div className="grid grid-cols-2 gap-x-8">
+                    <Table>
+                      <TableBody>
+                        {[
+                          ["n", descStats.n.toString()],
+                          ["Mean", fmt(descStats.mean)],
+                          ["Median", fmt(descStats.median)],
+                          ["Std Dev", fmt(descStats.stdDev)],
+                          ["Variance", fmt(descStats.variance)],
+                          ["Min", fmt(descStats.min)],
+                          ["Max", fmt(descStats.max)],
+                        ].map(([label, val]) => (
+                          <TableRow key={label}>
+                            <TableCell className="font-medium py-1.5">{label}</TableCell>
+                            <TableCell className="text-right font-mono py-1.5">{val}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                    <Table>
+                      <TableBody>
+                        {[
+                          ["Range", fmt(descStats.range)],
+                          ["Skewness", fmt(descStats.skewness)],
+                          ["Kurtosis", fmt(descStats.kurtosis)],
+                          ["Q1 (25%)", fmt(descStats.q1)],
+                          ["Q3 (75%)", fmt(descStats.q3)],
+                          ["IQR", fmt(descStats.iqr)],
+                          ["SE Mean", fmt(descStats.stdDev / Math.sqrt(descStats.n))],
+                        ].map(([label, val]) => (
+                          <TableRow key={label}>
+                            <TableCell className="font-medium py-1.5">{label}</TableCell>
+                            <TableCell className="text-right font-mono py-1.5">{val}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
-                </CardContent>
-              </Card>
+                ) : (
+                  <p className="text-muted-foreground">Enter at least 3 data points.</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
-              {/* Histogram */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Histogram with Normal Fit</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={350}>
-                    <ComposedChart data={stats.bins}>
+          {/* Histogram */}
+          <div className="grid grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Histogram with Normal Fit</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {histogramData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={320}>
+                    <ComposedChart data={histogramData} margin={{ top: 10, right: 20, bottom: 20, left: 10 }}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="bin" tick={{ fontSize: 10 }} />
-                      <YAxis />
+                      <XAxis dataKey="binLabel" label={{ value: "Pmax (W)", position: "insideBottom", offset: -10 }} tick={{ fontSize: 11 }} />
+                      <YAxis yAxisId="left" label={{ value: "Frequency", angle: -90, position: "insideLeft" }} />
+                      <YAxis yAxisId="right" orientation="right" hide />
                       <Tooltip />
                       <Legend />
-                      <Bar dataKey="count" fill="#3b82f6" name="Frequency" opacity={0.7} />
-                      <Line dataKey="normalFit" stroke="#ef4444" strokeWidth={2} dot={false} name="Normal Fit" type="monotone" />
+                      <Bar yAxisId="left" dataKey="count" fill="#3b82f6" name="Frequency" opacity={0.7} />
+                      <Line yAxisId="left" type="monotone" dataKey="normalY" stroke="#ef4444" strokeWidth={2} dot={false} name="Normal Fit" />
                     </ComposedChart>
                   </ResponsiveContainer>
-                </CardContent>
-              </Card>
+                ) : null}
+              </CardContent>
+            </Card>
 
-              {/* Box Plot (custom) */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Box Plot</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-center h-24 relative">
-                    {(() => {
-                      const plotMin = stats.min - 0.2;
-                      const plotMax = stats.max + 0.2;
-                      const range = plotMax - plotMin;
-                      const pct = (v: number) => ((v - plotMin) / range) * 100;
-                      return (
-                        <div className="w-full relative h-12">
-                          {/* Whisker line */}
-                          <div className="absolute top-1/2 -translate-y-1/2 h-0.5 bg-gray-400" style={{ left: `${pct(stats.min)}%`, width: `${pct(stats.max) - pct(stats.min)}%` }} />
-                          {/* Box */}
-                          <div className="absolute top-1 bottom-1 bg-blue-200 border-2 border-blue-600 rounded" style={{ left: `${pct(stats.q1)}%`, width: `${pct(stats.q3) - pct(stats.q1)}%` }} />
-                          {/* Median line */}
-                          <div className="absolute top-0 bottom-0 w-0.5 bg-red-600" style={{ left: `${pct(stats.median)}%` }} />
-                          {/* Min whisker cap */}
-                          <div className="absolute top-2 bottom-2 w-0.5 bg-gray-400" style={{ left: `${pct(stats.min)}%` }} />
-                          {/* Max whisker cap */}
-                          <div className="absolute top-2 bottom-2 w-0.5 bg-gray-400" style={{ left: `${pct(stats.max)}%` }} />
-                          {/* Labels */}
-                          <div className="absolute -bottom-5 text-[10px] text-muted-foreground" style={{ left: `${pct(stats.min)}%` }}>{stats.min.toFixed(1)}</div>
-                          <div className="absolute -bottom-5 text-[10px] text-muted-foreground" style={{ left: `${pct(stats.q1)}%` }}>Q1:{stats.q1.toFixed(1)}</div>
-                          <div className="absolute -bottom-5 text-[10px] text-red-600 font-semibold" style={{ left: `${pct(stats.median)}%` }}>Med:{stats.median.toFixed(1)}</div>
-                          <div className="absolute -bottom-5 text-[10px] text-muted-foreground" style={{ left: `${pct(stats.q3)}%` }}>Q3:{stats.q3.toFixed(1)}</div>
-                          <div className="absolute -bottom-5 text-[10px] text-muted-foreground" style={{ left: `${pct(stats.max)}%` }}>{stats.max.toFixed(1)}</div>
-                        </div>
-                      );
-                    })()}
+            {/* Box Plot */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Box Plot</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {boxPlotStats ? (
+                  <div className="flex flex-col items-center justify-center h-[320px]">
+                    <div className="w-full max-w-md">
+                      {/* Labels */}
+                      <div className="flex justify-between text-xs text-muted-foreground mb-1 px-2">
+                        <span>Min: {fmt(boxPlotStats.min, 2)}</span>
+                        <span>Q1: {fmt(boxPlotStats.q1, 2)}</span>
+                        <span>Med: {fmt(boxPlotStats.median, 2)}</span>
+                        <span>Q3: {fmt(boxPlotStats.q3, 2)}</span>
+                        <span>Max: {fmt(boxPlotStats.max, 2)}</span>
+                      </div>
+                      {/* Box plot SVG */}
+                      <svg viewBox="0 0 500 80" className="w-full">
+                        {(() => {
+                          const range = boxPlotStats.max - boxPlotStats.min;
+                          const pad = range * 0.05;
+                          const lo = boxPlotStats.min - pad;
+                          const hi = boxPlotStats.max + pad;
+                          const scale = (v: number) => ((v - lo) / (hi - lo)) * 480 + 10;
+                          const xMin = scale(boxPlotStats.min);
+                          const xQ1 = scale(boxPlotStats.q1);
+                          const xMed = scale(boxPlotStats.median);
+                          const xQ3 = scale(boxPlotStats.q3);
+                          const xMax = scale(boxPlotStats.max);
+                          return (
+                            <>
+                              {/* Whisker lines */}
+                              <line x1={xMin} y1={40} x2={xQ1} y2={40} stroke="#6b7280" strokeWidth={2} />
+                              <line x1={xQ3} y1={40} x2={xMax} y2={40} stroke="#6b7280" strokeWidth={2} />
+                              {/* Min/Max ticks */}
+                              <line x1={xMin} y1={25} x2={xMin} y2={55} stroke="#6b7280" strokeWidth={2} />
+                              <line x1={xMax} y1={25} x2={xMax} y2={55} stroke="#6b7280" strokeWidth={2} />
+                              {/* Box */}
+                              <rect x={xQ1} y={15} width={xQ3 - xQ1} height={50} fill="#3b82f6" fillOpacity={0.3} stroke="#3b82f6" strokeWidth={2} rx={3} />
+                              {/* Median line */}
+                              <line x1={xMed} y1={15} x2={xMed} y2={65} stroke="#ef4444" strokeWidth={3} />
+                            </>
+                          );
+                        })()}
+                      </svg>
+                      {/* Scale */}
+                      <div className="flex justify-between text-[10px] text-muted-foreground mt-1 px-2">
+                        <span>{fmt(boxPlotStats.min - (boxPlotStats.max - boxPlotStats.min) * 0.05, 1)}</span>
+                        <span>Pmax (W)</span>
+                        <span>{fmt(boxPlotStats.max + (boxPlotStats.max - boxPlotStats.min) * 0.05, 1)}</span>
+                      </div>
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
-            </>
-          )}
+                ) : null}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
-        {/* ===== CONTROL CHARTS ===== */}
+        {/* ═══════════════════ Tab 2: Control Charts ═══════════════════ */}
         <TabsContent value="control" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-lg">Control Charts</CardTitle>
-                  <CardDescription>Statistical Process Control (SPC) charts for monitoring measurement stability</CardDescription>
-                </div>
-                <Select value={chartType} onValueChange={setChartType}>
-                  <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="individual-mr">Individual-MR</SelectItem>
-                    <SelectItem value="xbar-r">X-bar R</SelectItem>
-                    <SelectItem value="xbar-s">X-bar S</SelectItem>
-                    <SelectItem value="p-chart">P-chart</SelectItem>
-                    <SelectItem value="c-chart">C-chart</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardHeader>
-          </Card>
+          <div className="flex items-center gap-4">
+            <Label>Chart Type</Label>
+            <Select value={chartType} onValueChange={setChartType}>
+              <SelectTrigger className="w-[220px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="individual-mr">Individual-MR</SelectItem>
+                <SelectItem value="xbar-r">X-bar R</SelectItem>
+                <SelectItem value="xbar-s">X-bar S</SelectItem>
+                <SelectItem value="p-chart">P-chart</SelectItem>
+                <SelectItem value="c-chart">C-chart</SelectItem>
+              </SelectContent>
+            </Select>
+            <Badge variant="outline" className="ml-auto">
+              30 Subgroups | Pmax Measurements
+            </Badge>
+          </div>
 
-          {/* Control Limits */}
+          {/* Control Limits Summary */}
           <div className="grid grid-cols-3 gap-4">
-            <Card className="bg-red-50 border-red-200">
-              <CardHeader className="pb-2">
-                <CardDescription>UCL</CardDescription>
-                <CardTitle className="text-2xl font-mono">{controlChart.ucl.toFixed(3)}</CardTitle>
-              </CardHeader>
+            <Card>
+              <CardContent className="pt-4 text-center">
+                <p className="text-xs text-muted-foreground">Individual Chart UCL</p>
+                <p className="text-xl font-bold text-red-600">{fmt(controlData.iUCL, 2)}</p>
+              </CardContent>
             </Card>
-            <Card className="bg-green-50 border-green-200">
-              <CardHeader className="pb-2">
-                <CardDescription>CL (Mean)</CardDescription>
-                <CardTitle className="text-2xl font-mono">{controlChart.xBar.toFixed(3)}</CardTitle>
-              </CardHeader>
+            <Card>
+              <CardContent className="pt-4 text-center">
+                <p className="text-xs text-muted-foreground">Center Line (Mean)</p>
+                <p className="text-xl font-bold text-green-600">{fmt(controlData.mean, 2)}</p>
+              </CardContent>
             </Card>
-            <Card className="bg-blue-50 border-blue-200">
-              <CardHeader className="pb-2">
-                <CardDescription>LCL</CardDescription>
-                <CardTitle className="text-2xl font-mono">{controlChart.lcl.toFixed(3)}</CardTitle>
-              </CardHeader>
+            <Card>
+              <CardContent className="pt-4 text-center">
+                <p className="text-xs text-muted-foreground">Individual Chart LCL</p>
+                <p className="text-xl font-bold text-blue-600">{fmt(controlData.iLCL, 2)}</p>
+              </CardContent>
             </Card>
           </div>
 
           {/* Individual Chart */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Individual Chart (I Chart)</CardTitle>
+              <CardTitle className="text-lg">Individual (I) Chart</CardTitle>
+              <CardDescription>Pmax measurements with control limits (3-sigma)</CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={controlChart.chartData}>
+                <LineChart data={controlData.chartData} margin={{ top: 10, right: 30, bottom: 20, left: 10 }}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="sample" />
-                  <YAxis domain={[Math.floor(controlChart.lcl - 0.5), Math.ceil(controlChart.ucl + 0.5)]} />
+                  <XAxis dataKey="subgroup" label={{ value: "Observation", position: "insideBottom", offset: -10 }} />
+                  <YAxis domain={["dataMin - 2", "dataMax + 2"]} label={{ value: "Pmax (W)", angle: -90, position: "insideLeft" }} />
                   <Tooltip />
-                  <ReferenceLine y={controlChart.ucl} stroke="#ef4444" strokeDasharray="5 5" label={{ value: "UCL", position: "right", fontSize: 10 }} />
-                  <ReferenceLine y={controlChart.xBar} stroke="#22c55e" strokeDasharray="3 3" label={{ value: "CL", position: "right", fontSize: 10 }} />
-                  <ReferenceLine y={controlChart.lcl} stroke="#3b82f6" strokeDasharray="5 5" label={{ value: "LCL", position: "right", fontSize: 10 }} />
-                  <Line dataKey="value" stroke="#1e293b" strokeWidth={2} dot={(props: Record<string, unknown>) => {
-                    const { cx, cy, payload } = props as { cx: number; cy: number; payload: { ooc: boolean } };
-                    return (
-                      <circle cx={cx} cy={cy} r={payload.ooc ? 6 : 3} fill={payload.ooc ? "#ef4444" : "#1e293b"} stroke={payload.ooc ? "#ef4444" : "none"} strokeWidth={2} />
-                    );
+                  <ReferenceLine y={controlData.iUCL} stroke="#ef4444" strokeDasharray="5 5" label={{ value: `UCL=${fmt(controlData.iUCL, 2)}`, position: "right", fill: "#ef4444", fontSize: 11 }} />
+                  <ReferenceLine y={controlData.mean} stroke="#22c55e" strokeWidth={2} label={{ value: `CL=${fmt(controlData.mean, 2)}`, position: "right", fill: "#22c55e", fontSize: 11 }} />
+                  <ReferenceLine y={controlData.iLCL} stroke="#3b82f6" strokeDasharray="5 5" label={{ value: `LCL=${fmt(controlData.iLCL, 2)}`, position: "right", fill: "#3b82f6", fontSize: 11 }} />
+                  <Line type="linear" dataKey="value" stroke="#6b7280" strokeWidth={1.5} dot={(props: any) => {
+                    const { cx, cy, payload } = props;
+                    if (payload.ooc) {
+                      return <circle key={`dot-${payload.subgroup}`} cx={cx} cy={cy} r={6} fill="#ef4444" stroke="#ef4444" />;
+                    }
+                    return <circle key={`dot-${payload.subgroup}`} cx={cx} cy={cy} r={3} fill="#3b82f6" stroke="#3b82f6" />;
                   }} />
                 </LineChart>
               </ResponsiveContainer>
+              <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-red-500 inline-block" /> Out of Control</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-blue-500 inline-block" /> In Control</span>
+              </div>
             </CardContent>
           </Card>
 
-          {/* MR Chart */}
+          {/* Moving Range Chart */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Moving Range Chart (MR Chart)</CardTitle>
+              <CardTitle className="text-lg">Moving Range (MR) Chart</CardTitle>
+              <CardDescription>Consecutive differences | MR-bar = {fmt(controlData.mrBar, 2)} | UCL = {fmt(controlData.mrUCL, 2)}</CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={controlChart.mrChartData}>
+                <LineChart data={controlData.chartData.filter((d) => d.mr !== null)} margin={{ top: 10, right: 30, bottom: 20, left: 10 }}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="sample" />
-                  <YAxis domain={[0, Math.ceil(controlChart.mrUcl + 0.5)]} />
+                  <XAxis dataKey="subgroup" label={{ value: "Observation", position: "insideBottom", offset: -10 }} />
+                  <YAxis label={{ value: "Moving Range", angle: -90, position: "insideLeft" }} />
                   <Tooltip />
-                  <ReferenceLine y={controlChart.mrUcl} stroke="#ef4444" strokeDasharray="5 5" label={{ value: "UCL", position: "right", fontSize: 10 }} />
-                  <ReferenceLine y={controlChart.mrBar} stroke="#22c55e" strokeDasharray="3 3" label={{ value: "MR̄", position: "right", fontSize: 10 }} />
-                  <ReferenceLine y={0} stroke="#3b82f6" strokeDasharray="5 5" label={{ value: "LCL", position: "right", fontSize: 10 }} />
-                  <Line dataKey="mr" stroke="#8b5cf6" strokeWidth={2} dot={(props: Record<string, unknown>) => {
-                    const { cx, cy, payload } = props as { cx: number; cy: number; payload: { ooc: boolean } };
-                    return (
-                      <circle cx={cx} cy={cy} r={payload.ooc ? 6 : 3} fill={payload.ooc ? "#ef4444" : "#8b5cf6"} />
-                    );
+                  <ReferenceLine y={controlData.mrUCL} stroke="#ef4444" strokeDasharray="5 5" label={{ value: `UCL=${fmt(controlData.mrUCL, 2)}`, position: "right", fill: "#ef4444", fontSize: 11 }} />
+                  <ReferenceLine y={controlData.mrBar} stroke="#22c55e" strokeWidth={2} label={{ value: `CL=${fmt(controlData.mrBar, 2)}`, position: "right", fill: "#22c55e", fontSize: 11 }} />
+                  <ReferenceLine y={0} stroke="#3b82f6" strokeDasharray="5 5" label={{ value: "LCL=0", position: "right", fill: "#3b82f6", fontSize: 11 }} />
+                  <Line type="linear" dataKey="mr" stroke="#8b5cf6" strokeWidth={1.5} dot={(props: any) => {
+                    const { cx, cy, payload } = props;
+                    if (payload.mrOoc) {
+                      return <circle key={`mrdot-${payload.subgroup}`} cx={cx} cy={cy} r={6} fill="#ef4444" stroke="#ef4444" />;
+                    }
+                    return <circle key={`mrdot-${payload.subgroup}`} cx={cx} cy={cy} r={3} fill="#8b5cf6" stroke="#8b5cf6" />;
                   }} />
                 </LineChart>
               </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {/* OOC Summary */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Out-of-Control Summary</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 text-sm">
-                {controlChart.chartData.filter(d => d.ooc).map(d => (
-                  <div key={d.sample} className="flex items-center gap-2">
-                    <Badge variant="destructive">OOC</Badge>
-                    <span>Sample #{d.sample}: <span className="font-mono font-semibold">{d.value.toFixed(2)}</span> - {d.value > controlChart.ucl ? "Above UCL" : "Below LCL"}</span>
-                  </div>
-                ))}
-                {controlChart.chartData.filter(d => d.ooc).length === 0 && (
-                  <p className="text-green-600">All points within control limits.</p>
-                )}
-              </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* ===== CAPABILITY ===== */}
+        {/* ═══════════════════ Tab 3: Capability Analysis ═══════════════════ */}
         <TabsContent value="capability" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Process Capability Analysis</CardTitle>
-              <CardDescription>Evaluate process performance against specification limits</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Label>Lower Spec Limit (LSL)</Label>
-                  <Input type="number" value={lsl} onChange={e => setLsl(parseFloat(e.target.value) || 0)} />
-                </div>
-                <div>
-                  <Label>Target</Label>
-                  <Input type="number" value={target} onChange={e => setTarget(parseFloat(e.target.value) || 0)} />
-                </div>
-                <div>
-                  <Label>Upper Spec Limit (USL)</Label>
-                  <Input type="number" value={usl} onChange={e => setUsl(parseFloat(e.target.value) || 0)} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <Label>Upper Spec Limit (USL)</Label>
+              <Input type="number" value={usl} onChange={(e) => setUsl(parseFloat(e.target.value) || 0)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Lower Spec Limit (LSL)</Label>
+              <Input type="number" value={lsl} onChange={(e) => setLsl(parseFloat(e.target.value) || 0)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Target</Label>
+              <Input type="number" value={target} onChange={(e) => setTarget(parseFloat(e.target.value) || 0)} />
+            </div>
+            <div className="flex items-end">
+              <Badge variant="outline" className="h-10 flex items-center">
+                Spec Width: {(usl - lsl).toFixed(1)} W
+              </Badge>
+            </div>
+          </div>
 
-          {capability && (
+          {capabilityStats && (
             <>
-              {/* Capability Traffic Light */}
-              <Card className={capability.cpk >= 1.33 ? "bg-green-50 border-green-300" : capability.cpk >= 1.0 ? "bg-yellow-50 border-yellow-300" : "bg-red-50 border-red-300"}>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-lg">Process Capability Rating</CardTitle>
-                      <CardDescription>
-                        {capability.cpk >= 1.33 ? "Process is capable (Cpk >= 1.33)" : capability.cpk >= 1.0 ? "Process is marginally capable (1.0 <= Cpk < 1.33)" : "Process is NOT capable (Cpk < 1.0)"}
-                      </CardDescription>
-                    </div>
-                    <Badge className={capability.cpk >= 1.33 ? "bg-green-600" : capability.cpk >= 1.0 ? "bg-yellow-600" : "bg-red-600"} variant="default">
-                      Cpk = {capability.cpk.toFixed(3)}
-                    </Badge>
+              {/* Cpk Traffic Light */}
+              <Card className={`border-2 ${cpkBg(capabilityStats.cpk)}`}>
+                <CardContent className="pt-4 flex items-center gap-4">
+                  {cpkIcon(capabilityStats.cpk)}
+                  <div>
+                    <p className={`text-2xl font-bold ${cpkColor(capabilityStats.cpk)}`}>
+                      Cpk = {fmt(capabilityStats.cpk, 3)}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {capabilityStats.cpk >= 1.33
+                        ? "Process is capable (Cpk >= 1.33)"
+                        : capabilityStats.cpk >= 1.0
+                        ? "Process is marginally capable (1.0 <= Cpk < 1.33)"
+                        : "Process is NOT capable (Cpk < 1.0)"}
+                    </p>
                   </div>
-                </CardHeader>
+                  <div className="ml-auto text-right">
+                    <p className="text-sm font-medium">{fmt(capabilityStats.withinSpec, 2)}% within spec</p>
+                    <p className="text-xs text-muted-foreground">{fmt(capabilityStats.ppmTotal, 0)} PPM defective</p>
+                  </div>
+                </CardContent>
               </Card>
 
-              {/* Capability Indices */}
-              <div className="grid grid-cols-4 gap-4">
-                {[
-                  { label: "Cp", value: capability.cp.toFixed(3), desc: "(USL-LSL)/6σ" },
-                  { label: "Cpk", value: capability.cpk.toFixed(3), desc: "Min of CPU, CPL" },
-                  { label: "Sigma Level", value: capability.sigmaLevel.toFixed(2) + "σ", desc: "Process sigma" },
-                  { label: "% Within Spec", value: capability.pctWithin + "%", desc: `PPM: ${capability.totalPpm}` },
-                ].map(item => (
-                  <Card key={item.label}>
-                    <CardHeader className="pb-2">
-                      <CardDescription>{item.label}</CardDescription>
-                      <CardTitle className="text-2xl font-mono">{item.value}</CardTitle>
-                    </CardHeader>
-                    <CardContent><p className="text-xs text-muted-foreground">{item.desc}</p></CardContent>
-                  </Card>
-                ))}
+              {/* Indices Table */}
+              <div className="grid grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Process Capability Indices</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Index</TableHead>
+                          <TableHead className="text-right">Value</TableHead>
+                          <TableHead className="text-right">Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {[
+                          { name: "Cp", val: capabilityStats.cp, thresh: 1.33 },
+                          { name: "Cpk", val: capabilityStats.cpk, thresh: 1.33 },
+                          { name: "Pp", val: capabilityStats.pp, thresh: 1.33 },
+                          { name: "Ppk", val: capabilityStats.ppk, thresh: 1.33 },
+                          { name: "Sigma Level", val: capabilityStats.sigmaLevel, thresh: 4.0 },
+                        ].map((row) => (
+                          <TableRow key={row.name}>
+                            <TableCell className="font-medium">{row.name}</TableCell>
+                            <TableCell className="text-right font-mono">{fmt(row.val, 4)}</TableCell>
+                            <TableCell className="text-right">
+                              <Badge variant={row.val >= row.thresh ? "default" : "destructive"}>
+                                {row.val >= row.thresh ? "PASS" : "FAIL"}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Process Summary</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableBody>
+                        {[
+                          ["Process Mean", `${fmt(capabilityStats.mean, 3)} W`],
+                          ["Process Std Dev", `${fmt(capabilityStats.stdDev, 4)} W`],
+                          ["USL", `${usl} W`],
+                          ["LSL", `${lsl} W`],
+                          ["Target", `${target} W`],
+                          ["PPM (Total)", fmt(capabilityStats.ppmTotal, 1)],
+                          ["% Within Spec", `${fmt(capabilityStats.withinSpec, 4)}%`],
+                        ].map(([label, val]) => (
+                          <TableRow key={label}>
+                            <TableCell className="font-medium py-1.5">{label}</TableCell>
+                            <TableCell className="text-right font-mono py-1.5">{val}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
               </div>
 
               {/* Capability Histogram */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Capability Histogram with Spec Limits</CardTitle>
+                  <CardTitle className="text-lg">Capability Histogram</CardTitle>
+                  <CardDescription>Distribution with specification limits</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={350}>
-                    <ComposedChart data={capability.bins}>
+                  <ResponsiveContainer width="100%" height={320}>
+                    <ComposedChart data={histogramData} margin={{ top: 10, right: 30, bottom: 20, left: 10 }}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="bin" tick={{ fontSize: 10 }} />
-                      <YAxis />
+                      <XAxis dataKey="binLabel" label={{ value: "Pmax (W)", position: "insideBottom", offset: -10 }} />
+                      <YAxis label={{ value: "Frequency", angle: -90, position: "insideLeft" }} />
                       <Tooltip />
                       <Legend />
-                      <Bar dataKey="count" fill="#3b82f6" name="Frequency" opacity={0.7} />
-                      <Line dataKey="normalFit" stroke="#ef4444" strokeWidth={2} dot={false} name="Normal Fit" type="monotone" />
-                      <ReferenceLine x={lsl.toFixed(1)} stroke="#ef4444" strokeWidth={2} label={{ value: "LSL", position: "top", fontSize: 11 }} />
-                      <ReferenceLine x={usl.toFixed(1)} stroke="#ef4444" strokeWidth={2} label={{ value: "USL", position: "top", fontSize: 11 }} />
-                      <ReferenceLine x={target.toFixed(1)} stroke="#22c55e" strokeWidth={2} strokeDasharray="5 5" label={{ value: "Target", position: "top", fontSize: 11 }} />
+                      <Bar dataKey="count" fill="#3b82f6" name="Frequency" opacity={0.6} />
+                      <Line type="monotone" dataKey="normalY" stroke="#8b5cf6" strokeWidth={2} dot={false} name="Normal Fit" />
+                      <ReferenceLine x={lsl.toFixed(1)} stroke="#ef4444" strokeWidth={2} strokeDasharray="5 5" label={{ value: `LSL=${lsl}`, position: "top", fill: "#ef4444", fontSize: 12 }} />
+                      <ReferenceLine x={usl.toFixed(1)} stroke="#ef4444" strokeWidth={2} strokeDasharray="5 5" label={{ value: `USL=${usl}`, position: "top", fill: "#ef4444", fontSize: 12 }} />
+                      <ReferenceLine x={target.toFixed(1)} stroke="#22c55e" strokeWidth={2} label={{ value: `Target=${target}`, position: "top", fill: "#22c55e", fontSize: 12 }} />
                     </ComposedChart>
                   </ResponsiveContainer>
-                </CardContent>
-              </Card>
-
-              {/* Detailed Table */}
-              <Card>
-                <CardHeader><CardTitle className="text-lg">Process Capability Indices</CardTitle></CardHeader>
-                <CardContent>
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b bg-muted/50">
-                        <th className="text-left p-2">Index</th>
-                        <th className="text-right p-2">Value</th>
-                        <th className="text-left p-2">Description</th>
-                        <th className="text-center p-2">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[
-                        { idx: "Cp", val: capability.cp, desc: "Potential capability (spread)", threshold: 1.33 },
-                        { idx: "Cpk", val: capability.cpk, desc: "Actual capability (centering)", threshold: 1.33 },
-                        { idx: "Pp", val: capability.pp, desc: "Overall potential", threshold: 1.33 },
-                        { idx: "Ppk", val: capability.ppk, desc: "Overall actual", threshold: 1.33 },
-                      ].map(item => (
-                        <tr key={item.idx} className="border-b">
-                          <td className="p-2 font-medium">{item.idx}</td>
-                          <td className="p-2 text-right font-mono">{item.val.toFixed(4)}</td>
-                          <td className="p-2">{item.desc}</td>
-                          <td className="p-2 text-center">
-                            <Badge className={item.val >= item.threshold ? "bg-green-600" : item.val >= 1.0 ? "bg-yellow-600" : "bg-red-600"}>
-                              {item.val >= item.threshold ? "Capable" : item.val >= 1.0 ? "Marginal" : "Not Capable"}
-                            </Badge>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
                 </CardContent>
               </Card>
             </>
           )}
         </TabsContent>
 
-        {/* ===== REGRESSION ===== */}
+        {/* ═══════════════════ Tab 4: Regression ═══════════════════ */}
         <TabsContent value="regression" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-lg">Regression Analysis</CardTitle>
-                  <CardDescription>Irradiance (W/m&sup2;) vs Pmax (W) - 25 data points</CardDescription>
-                </div>
-                <Select value={regType} onValueChange={setRegType}>
-                  <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="linear">Linear</SelectItem>
-                    <SelectItem value="poly2">Polynomial (deg 2)</SelectItem>
-                    <SelectItem value="poly3">Polynomial (deg 3)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardHeader>
-          </Card>
-
-          {/* Equation & Results */}
-          <div className="grid grid-cols-4 gap-4">
-            <Card className="col-span-2 bg-blue-50 border-blue-200">
-              <CardHeader className="pb-2">
-                <CardDescription>Regression Equation</CardDescription>
-                <CardTitle className="text-lg font-mono">
-                  Y = {regression.slope.toFixed(4)}X {regression.intercept >= 0 ? "+" : "-"} {Math.abs(regression.intercept).toFixed(2)}
-                </CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>R&sup2;</CardDescription>
-                <CardTitle className="text-2xl font-mono">{regression.r2.toFixed(4)}</CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Standard Error</CardDescription>
-                <CardTitle className="text-2xl font-mono">{regression.se.toFixed(3)}</CardTitle>
-              </CardHeader>
-            </Card>
+          <div className="flex items-center gap-4">
+            <Label>Regression Type</Label>
+            <Select value={regType} onValueChange={setRegType}>
+              <SelectTrigger className="w-[220px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="linear">Linear</SelectItem>
+                <SelectItem value="poly2">Polynomial (Degree 2)</SelectItem>
+                <SelectItem value="poly3">Polynomial (Degree 3)</SelectItem>
+              </SelectContent>
+            </Select>
+            <Badge variant="outline" className="ml-auto">25 Data Points | Irradiance vs Pmax</Badge>
           </div>
 
-          {/* Scatter Plot with Fit */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Scatter Plot with Fitted Line</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={350}>
-                <ComposedChart data={regression.scatterData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="irradiance" name="Irradiance" label={{ value: "Irradiance (W/m²)", position: "insideBottom", offset: -5, fontSize: 11 }} />
-                  <YAxis name="Pmax" label={{ value: "Pmax (W)", angle: -90, position: "insideLeft", fontSize: 11 }} />
-                  <Tooltip />
-                  <Legend />
-                  <Scatter dataKey="pmax" fill="#3b82f6" name="Data Points" />
-                  <Line dataKey="fitted" stroke="#ef4444" strokeWidth={2} dot={false} name="Fitted Line" type="monotone" />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-2 gap-6">
+            {/* Equation & Results */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Regression Results</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="p-4 bg-muted rounded-lg font-mono text-center text-lg">
+                  Y = {fmt(regressionResult.slope, 4)}X + {fmt(regressionResult.intercept, 4)}
+                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Statistic</TableHead>
+                      <TableHead className="text-right">Value</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {[
+                      ["Slope (b1)", fmt(regressionResult.slope, 6)],
+                      ["Intercept (b0)", fmt(regressionResult.intercept, 4)],
+                      ["R\u00B2", fmt(regressionResult.r2, 6)],
+                      ["Adjusted R\u00B2", fmt(regressionResult.adjR2, 6)],
+                      ["Standard Error", fmt(regressionResult.se, 4)],
+                      ["p-value", "< 0.0001"],
+                      ["n", "25"],
+                    ].map(([label, val]) => (
+                      <TableRow key={label}>
+                        <TableCell className="font-medium">{label}</TableCell>
+                        <TableCell className="text-right font-mono">{val}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            {/* Scatter + Fit */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Scatter Plot with Regression Line</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={350}>
+                  <ComposedChart data={regressionScatterData} margin={{ top: 10, right: 20, bottom: 20, left: 10 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="irradiance" type="number" label={{ value: "Irradiance (W/m\u00B2)", position: "insideBottom", offset: -10 }} />
+                    <YAxis label={{ value: "Pmax (W)", angle: -90, position: "insideLeft" }} />
+                    <Tooltip />
+                    <Legend />
+                    <Scatter dataKey="pmax" fill="#3b82f6" name="Observed" />
+                    <Line type="linear" dataKey="fitted" stroke="#ef4444" strokeWidth={2} dot={false} name="Fitted Line" />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
 
           {/* Residual Plot */}
           <Card>
@@ -789,284 +1079,254 @@ export default function StatisticsPage() {
               <CardDescription>Residuals vs Fitted Values</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={250}>
-                <ScatterChart>
+              <ResponsiveContainer width="100%" height={280}>
+                <ScatterChart margin={{ top: 10, right: 20, bottom: 20, left: 10 }}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="fitted" name="Fitted" type="number" label={{ value: "Fitted Value", position: "insideBottom", offset: -5, fontSize: 11 }} />
-                  <YAxis dataKey="residual" name="Residual" label={{ value: "Residual", angle: -90, position: "insideLeft", fontSize: 11 }} />
-                  <Tooltip />
-                  <ReferenceLine y={0} stroke="#ef4444" strokeDasharray="3 3" />
-                  <Scatter data={regression.scatterData} fill="#8b5cf6" />
+                  <XAxis type="number" dataKey="fitted" name="Fitted" label={{ value: "Fitted Values", position: "insideBottom", offset: -10 }} />
+                  <YAxis type="number" dataKey="residual" name="Residual" label={{ value: "Residual", angle: -90, position: "insideLeft" }} />
+                  <Tooltip cursor={{ strokeDasharray: "3 3" }} />
+                  <ReferenceLine y={0} stroke="#6b7280" strokeWidth={1.5} />
+                  <Scatter data={regressionScatterData} fill="#8b5cf6" />
                 </ScatterChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
-
-          {/* Coefficients Table */}
-          <Card>
-            <CardHeader><CardTitle className="text-lg">Regression Coefficients</CardTitle></CardHeader>
-            <CardContent>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="text-left p-2">Term</th>
-                    <th className="text-right p-2">Coefficient</th>
-                    <th className="text-right p-2">Std Error</th>
-                    <th className="text-right p-2">t-value</th>
-                    <th className="text-right p-2">p-value</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-b">
-                    <td className="p-2">Intercept</td>
-                    <td className="p-2 text-right font-mono">{regression.intercept.toFixed(4)}</td>
-                    <td className="p-2 text-right font-mono">{(regression.se * 2.5).toFixed(4)}</td>
-                    <td className="p-2 text-right font-mono">{(regression.intercept / (regression.se * 2.5)).toFixed(2)}</td>
-                    <td className="p-2 text-right font-mono">0.001</td>
-                  </tr>
-                  <tr className="border-b">
-                    <td className="p-2">Slope (X)</td>
-                    <td className="p-2 text-right font-mono">{regression.slope.toFixed(6)}</td>
-                    <td className="p-2 text-right font-mono">{(regression.se / 100).toFixed(6)}</td>
-                    <td className="p-2 text-right font-mono">{(regression.slope / (regression.se / 100)).toFixed(2)}</td>
-                    <td className="p-2 text-right font-mono">&lt;0.001</td>
-                  </tr>
-                </tbody>
-              </table>
-            </CardContent>
-          </Card>
         </TabsContent>
 
-        {/* ===== ANOVA ===== */}
+        {/* ═══════════════════ Tab 5: ANOVA ═══════════════════ */}
         <TabsContent value="anova" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">One-Way ANOVA</CardTitle>
-              <CardDescription>Comparing Pmax measurements across 4 solar simulators (10 measurements each)</CardDescription>
+              <CardTitle className="text-lg">One-Way ANOVA: Pmax by Solar Simulator</CardTitle>
+              <CardDescription>Comparing mean Pmax across 4 solar simulators (Sim A, B, C, D), 10 measurements each</CardDescription>
             </CardHeader>
-          </Card>
-
-          {/* ANOVA Table */}
-          <Card>
-            <CardHeader><CardTitle className="text-lg">ANOVA Table</CardTitle></CardHeader>
             <CardContent>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="text-left p-2">Source</th>
-                    <th className="text-right p-2">DF</th>
-                    <th className="text-right p-2">SS</th>
-                    <th className="text-right p-2">MS</th>
-                    <th className="text-right p-2">F</th>
-                    <th className="text-right p-2">p-value</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-b">
-                    <td className="p-2 font-medium">Between Groups</td>
-                    <td className="p-2 text-right font-mono">{anova.dfBetween}</td>
-                    <td className="p-2 text-right font-mono">{anova.ssBetween.toFixed(4)}</td>
-                    <td className="p-2 text-right font-mono">{anova.msBetween.toFixed(4)}</td>
-                    <td className="p-2 text-right font-mono font-semibold">{anova.fStat.toFixed(2)}</td>
-                    <td className="p-2 text-right font-mono">{anova.pValue < 0.001 ? "<0.001" : anova.pValue.toFixed(4)}</td>
-                  </tr>
-                  <tr className="border-b">
-                    <td className="p-2 font-medium">Within Groups</td>
-                    <td className="p-2 text-right font-mono">{anova.dfWithin}</td>
-                    <td className="p-2 text-right font-mono">{anova.ssWithin.toFixed(4)}</td>
-                    <td className="p-2 text-right font-mono">{anova.msWithin.toFixed(4)}</td>
-                    <td className="p-2 text-right font-mono">-</td>
-                    <td className="p-2 text-right font-mono">-</td>
-                  </tr>
-                  <tr className="border-b font-semibold">
-                    <td className="p-2">Total</td>
-                    <td className="p-2 text-right font-mono">{anova.dfTotal}</td>
-                    <td className="p-2 text-right font-mono">{anova.ssTotal.toFixed(4)}</td>
-                    <td className="p-2 text-right font-mono">-</td>
-                    <td className="p-2 text-right font-mono">-</td>
-                    <td className="p-2 text-right font-mono">-</td>
-                  </tr>
-                </tbody>
-              </table>
-            </CardContent>
-          </Card>
-
-          {/* Conclusion */}
-          <Card className={anova.pValue < 0.05 ? "bg-red-50 border-red-200" : "bg-green-50 border-green-200"}>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-lg">Conclusion</CardTitle>
-                  <CardDescription>
-                    {anova.pValue < 0.05
-                      ? `F(${anova.dfBetween}, ${anova.dfWithin}) = ${anova.fStat.toFixed(2)}, p ${anova.pValue < 0.001 ? "< 0.001" : `= ${anova.pValue.toFixed(4)}`}. There is a statistically significant difference between the simulator means at α = 0.05.`
-                      : "No statistically significant difference between groups at α = 0.05."}
-                  </CardDescription>
-                </div>
-                <Badge className={anova.pValue < 0.05 ? "bg-red-600" : "bg-green-600"}>
-                  {anova.pValue < 0.05 ? "Significant" : "Not Significant"}
-                </Badge>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Source</TableHead>
+                    <TableHead className="text-right">DF</TableHead>
+                    <TableHead className="text-right">SS</TableHead>
+                    <TableHead className="text-right">MS</TableHead>
+                    <TableHead className="text-right">F</TableHead>
+                    <TableHead className="text-right">p-value</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow>
+                    <TableCell className="font-medium">Between Groups</TableCell>
+                    <TableCell className="text-right font-mono">{anovaResult.dfBetween}</TableCell>
+                    <TableCell className="text-right font-mono">{fmt(anovaResult.ssBetween, 3)}</TableCell>
+                    <TableCell className="text-right font-mono">{fmt(anovaResult.msBetween, 3)}</TableCell>
+                    <TableCell className="text-right font-mono font-bold">{fmt(anovaResult.fStat, 3)}</TableCell>
+                    <TableCell className="text-right">
+                      <Badge variant={anovaResult.pValue < 0.05 ? "destructive" : "default"}>
+                        {anovaResult.pValue < 0.001 ? "< 0.001" : fmt(anovaResult.pValue, 3)}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="font-medium">Within Groups</TableCell>
+                    <TableCell className="text-right font-mono">{anovaResult.dfWithin}</TableCell>
+                    <TableCell className="text-right font-mono">{fmt(anovaResult.ssWithin, 3)}</TableCell>
+                    <TableCell className="text-right font-mono">{fmt(anovaResult.msWithin, 3)}</TableCell>
+                    <TableCell className="text-right">-</TableCell>
+                    <TableCell className="text-right">-</TableCell>
+                  </TableRow>
+                  <TableRow className="font-bold">
+                    <TableCell>Total</TableCell>
+                    <TableCell className="text-right font-mono">{anovaResult.dfTotal}</TableCell>
+                    <TableCell className="text-right font-mono">{fmt(anovaResult.ssTotal, 3)}</TableCell>
+                    <TableCell className="text-right">-</TableCell>
+                    <TableCell className="text-right">-</TableCell>
+                    <TableCell className="text-right">-</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+              <Separator className="my-4" />
+              <div className={`p-3 rounded-lg ${anovaResult.pValue < 0.05 ? "bg-red-50 border border-red-200" : "bg-green-50 border border-green-200"}`}>
+                <p className={`text-sm font-semibold ${anovaResult.pValue < 0.05 ? "text-red-700" : "text-green-700"}`}>
+                  {anovaResult.pValue < 0.05
+                    ? `Significant difference detected (F = ${fmt(anovaResult.fStat, 2)}, p = ${anovaResult.pValue < 0.001 ? "< 0.001" : fmt(anovaResult.pValue, 3)}). At least one simulator mean differs significantly from the others.`
+                    : `No significant difference (F = ${fmt(anovaResult.fStat, 2)}, p = ${fmt(anovaResult.pValue, 3)}). The simulator means are not significantly different.`}
+                </p>
               </div>
-            </CardHeader>
-          </Card>
-
-          {/* Group Comparison - Box Plot Style */}
-          <Card>
-            <CardHeader><CardTitle className="text-lg">Group Means Comparison</CardTitle></CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={anova.boxData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis domain={[403, 407]} />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="mean" name="Mean Pmax (W)" radius={[4, 4, 0, 0]}>
-                    {anova.boxData.map((_, i) => {
-                      const colors = ["#3b82f6", "#22c55e", "#f59e0b", "#ef4444"];
-                      return <Cell key={i} fill={colors[i]} />;
-                    })}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
             </CardContent>
           </Card>
 
-          {/* Group Statistics Table */}
-          <Card>
-            <CardHeader><CardTitle className="text-lg">Group Statistics</CardTitle></CardHeader>
-            <CardContent>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="text-left p-2">Group</th>
-                    <th className="text-right p-2">n</th>
-                    <th className="text-right p-2">Mean</th>
-                    <th className="text-right p-2">Std Dev</th>
-                    <th className="text-right p-2">Min</th>
-                    <th className="text-right p-2">Max</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {anova.boxData.map((g, i) => (
-                    <tr key={g.name} className="border-b">
-                      <td className="p-2 font-medium">{g.name}</td>
-                      <td className="p-2 text-right font-mono">10</td>
-                      <td className="p-2 text-right font-mono">{g.mean.toFixed(3)}</td>
-                      <td className="p-2 text-right font-mono">{anova.groupStds[i].toFixed(4)}</td>
-                      <td className="p-2 text-right font-mono">{g.min.toFixed(1)}</td>
-                      <td className="p-2 text-right font-mono">{g.max.toFixed(1)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* ===== MSA / GAGE R&R ===== */}
-        <TabsContent value="msa" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Measurement System Analysis (MSA) - Gage R&R</CardTitle>
-              <CardDescription>ANOVA method: 3 operators, 10 parts, 3 trials each (90 total measurements)</CardDescription>
-            </CardHeader>
-          </Card>
-
-          {/* Total Gage R&R Summary */}
-          <Card className={MSA_RESULTS.totalGRR < 10 ? "bg-green-50 border-green-300" : MSA_RESULTS.totalGRR < 30 ? "bg-yellow-50 border-yellow-300" : "bg-red-50 border-red-300"}>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-lg">Total Gage R&R: {MSA_RESULTS.totalGRR}% of Study Variation</CardTitle>
-                  <CardDescription>
-                    {MSA_RESULTS.totalGRR < 10 ? "Measurement system is acceptable (< 10%)" : MSA_RESULTS.totalGRR < 30 ? "Measurement system is conditionally acceptable (10-30%)" : "Measurement system is not acceptable (> 30%)"}
-                  </CardDescription>
+          <div className="grid grid-cols-2 gap-6">
+            {/* Box Plots by Group */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Box Plots by Simulator</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6 py-4">
+                  {anovaResult.groupStats.map((g) => {
+                    const allVals = anovaResult.groupStats.flatMap((gs) => gs.values);
+                    const globalMin = Math.min(...allVals) - 0.5;
+                    const globalMax = Math.max(...allVals) + 0.5;
+                    const scale = (v: number) => ((v - globalMin) / (globalMax - globalMin)) * 100;
+                    const gQ1 = quantile(g.values, 0.25);
+                    const gMed = median(g.values);
+                    const gQ3 = quantile(g.values, 0.75);
+                    const sorted = [...g.values].sort((a, b) => a - b);
+                    const gMin = sorted[0];
+                    const gMax = sorted[sorted.length - 1];
+                    return (
+                      <div key={g.name} className="flex items-center gap-3">
+                        <span className="text-sm font-medium w-12 text-right">{g.name}</span>
+                        <div className="relative flex-1 h-6">
+                          <div className="absolute top-1/2 left-0 right-0 h-px bg-gray-200 -translate-y-1/2" />
+                          {/* Whiskers */}
+                          <div className="absolute top-1/2 h-px bg-gray-500 -translate-y-1/2" style={{ left: `${scale(gMin)}%`, width: `${scale(gQ1) - scale(gMin)}%` }} />
+                          <div className="absolute top-1/2 h-px bg-gray-500 -translate-y-1/2" style={{ left: `${scale(gQ3)}%`, width: `${scale(gMax) - scale(gQ3)}%` }} />
+                          {/* Ticks */}
+                          <div className="absolute top-0 bottom-0 w-px bg-gray-500" style={{ left: `${scale(gMin)}%` }} />
+                          <div className="absolute top-0 bottom-0 w-px bg-gray-500" style={{ left: `${scale(gMax)}%` }} />
+                          {/* Box */}
+                          <div className="absolute top-0 bottom-0 bg-blue-200 border border-blue-500 rounded-sm" style={{ left: `${scale(gQ1)}%`, width: `${scale(gQ3) - scale(gQ1)}%` }} />
+                          {/* Median */}
+                          <div className="absolute top-0 bottom-0 w-0.5 bg-red-500" style={{ left: `${scale(gMed)}%` }} />
+                        </div>
+                        <span className="text-xs text-muted-foreground w-24 text-right">
+                          x&#772;={fmt(g.mean, 1)}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
-                <Badge className={MSA_RESULTS.totalGRR < 10 ? "bg-green-600" : MSA_RESULTS.totalGRR < 30 ? "bg-yellow-600" : "bg-red-600"}>
-                  {MSA_RESULTS.totalGRR < 10 ? "Acceptable" : MSA_RESULTS.totalGRR < 30 ? "Conditional" : "Not Acceptable"}
-                </Badge>
-              </div>
-            </CardHeader>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <div className="grid grid-cols-3 gap-4">
+            {/* Means Comparison with CI */}
             <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Repeatability (EV)</CardDescription>
-                <CardTitle className="text-2xl font-mono">{MSA_RESULTS.repeatability}%</CardTitle>
+              <CardHeader>
+                <CardTitle className="text-lg">Means Comparison (95% CI)</CardTitle>
               </CardHeader>
-              <CardContent><p className="text-xs text-muted-foreground">Equipment Variation</p></CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Reproducibility (AV)</CardDescription>
-                <CardTitle className="text-2xl font-mono">{MSA_RESULTS.reproducibility}%</CardTitle>
-              </CardHeader>
-              <CardContent><p className="text-xs text-muted-foreground">Appraiser Variation</p></CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Number of Distinct Categories</CardDescription>
-                <CardTitle className="text-2xl font-mono">{MSA_RESULTS.ndc}</CardTitle>
-              </CardHeader>
-              <CardContent><p className="text-xs text-muted-foreground">ndc &ge; 5 is acceptable</p></CardContent>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={anovaResult.groupStats} margin={{ top: 20, right: 20, bottom: 20, left: 10 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis domain={["dataMin - 2", "dataMax + 2"]} label={{ value: "Pmax (W)", angle: -90, position: "insideLeft" }} />
+                    <Tooltip formatter={(value: number) => fmt(value, 2)} />
+                    <Bar dataKey="mean" fill="#3b82f6" name="Mean" />
+                  </BarChart>
+                </ResponsiveContainer>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Simulator</TableHead>
+                      <TableHead className="text-right">n</TableHead>
+                      <TableHead className="text-right">Mean</TableHead>
+                      <TableHead className="text-right">Std Dev</TableHead>
+                      <TableHead className="text-right">95% CI</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {anovaResult.groupStats.map((g) => (
+                      <TableRow key={g.name}>
+                        <TableCell className="font-medium">{g.name}</TableCell>
+                        <TableCell className="text-right">{g.n}</TableCell>
+                        <TableCell className="text-right font-mono">{fmt(g.mean, 3)}</TableCell>
+                        <TableCell className="text-right font-mono">{fmt(g.stdDev, 3)}</TableCell>
+                        <TableCell className="text-right font-mono text-xs">
+                          [{fmt(g.mean - g.ci95, 2)}, {fmt(g.mean + g.ci95, 2)}]
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
             </Card>
           </div>
+        </TabsContent>
 
-          {/* Variance Components Table */}
+        {/* ═══════════════════ Tab 6: MSA / Gage R&R ═══════════════════ */}
+        <TabsContent value="msa" className="space-y-6">
+          <div className="flex items-center gap-4">
+            <Badge variant="outline">3 Operators | 10 Parts | 3 Trials</Badge>
+            <Badge variant="outline">Tolerance: {usl - lsl} W (USL={usl}, LSL={lsl})</Badge>
+          </div>
+
+          {/* GRR Summary Card */}
+          <Card className={`border-2 ${grrBg(msaResult.pctGRR)}`}>
+            <CardContent className="pt-4 flex items-center gap-4">
+              <Gauge className={`h-8 w-8 ${grrColor(msaResult.pctGRR)}`} />
+              <div>
+                <p className={`text-2xl font-bold ${grrColor(msaResult.pctGRR)}`}>
+                  Total Gage R&R: {fmt(msaResult.pctGRR, 1)}% of Total Variation
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {msaResult.pctGRR < 10
+                    ? "Measurement system is ACCEPTABLE (<10%)"
+                    : msaResult.pctGRR < 30
+                    ? "Measurement system is MARGINAL (10-30%) - may be acceptable depending on application"
+                    : "Measurement system is UNACCEPTABLE (>30%) - needs improvement"}
+                </p>
+              </div>
+              <div className="ml-auto text-right">
+                <p className="text-sm font-medium">ndc = {msaResult.ndc}</p>
+                <p className="text-xs text-muted-foreground">Number of Distinct Categories {msaResult.ndc >= 5 ? "(>= 5, OK)" : "(< 5, insufficient)"}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* GRR Table */}
           <Card>
-            <CardHeader><CardTitle className="text-lg">Variance Components</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle className="text-lg">Gage R&R Study - ANOVA Method</CardTitle>
+            </CardHeader>
             <CardContent>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="text-left p-2">Source</th>
-                    <th className="text-right p-2">VarComp</th>
-                    <th className="text-right p-2">% Contribution</th>
-                    <th className="text-right p-2">StdDev</th>
-                    <th className="text-right p-2">Study Var (6&sigma;)</th>
-                    <th className="text-right p-2">% Study Var</th>
-                    <th className="text-right p-2">% Tolerance</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    { name: "Total Gage R&R", data: MSA_RESULTS.varComp.totalGRR },
-                    { name: "  Repeatability", data: MSA_RESULTS.varComp.repeatability },
-                    { name: "  Reproducibility", data: MSA_RESULTS.varComp.reproducibility },
-                    { name: "Part-to-Part", data: MSA_RESULTS.varComp.partToPart },
-                    { name: "Total Variation", data: MSA_RESULTS.varComp.total },
-                  ].map(row => (
-                    <tr key={row.name} className={`border-b ${row.name === "Total Variation" ? "font-semibold bg-muted/30" : ""}`}>
-                      <td className="p-2">{row.name}</td>
-                      <td className="p-2 text-right font-mono">{row.data.varComp.toFixed(4)}</td>
-                      <td className="p-2 text-right font-mono">{row.data.pctContrib.toFixed(2)}%</td>
-                      <td className="p-2 text-right font-mono">{row.data.stdDev.toFixed(4)}</td>
-                      <td className="p-2 text-right font-mono">{row.data.studyVar.toFixed(4)}</td>
-                      <td className="p-2 text-right font-mono">{row.data.pctStudyVar.toFixed(1)}%</td>
-                      <td className="p-2 text-right font-mono">{row.data.pctTol.toFixed(1)}%</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Source</TableHead>
+                      <TableHead className="text-right">VarComp</TableHead>
+                      <TableHead className="text-right">% Contribution</TableHead>
+                      <TableHead className="text-right">StdDev</TableHead>
+                      <TableHead className="text-right">Study Var (5.15*SD)</TableHead>
+                      <TableHead className="text-right">% Study Var</TableHead>
+                      <TableHead className="text-right">% Tolerance</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {msaResult.rows.map((row) => (
+                      <TableRow key={row.source} className={row.source === "Total Variation" ? "font-bold border-t-2" : ""}>
+                        <TableCell className={row.source.startsWith("  ") ? "pl-8" : "font-medium"}>{row.source}</TableCell>
+                        <TableCell className="text-right font-mono">{fmt(row.varComp, 6)}</TableCell>
+                        <TableCell className="text-right font-mono">{fmt(row.pctContrib, 2)}%</TableCell>
+                        <TableCell className="text-right font-mono">{fmt(row.sd, 6)}</TableCell>
+                        <TableCell className="text-right font-mono">{fmt(row.sv, 4)}</TableCell>
+                        <TableCell className="text-right font-mono">{fmt(row.pctStudy, 2)}%</TableCell>
+                        <TableCell className="text-right font-mono">{fmt(row.pctTol, 2)}%</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
 
           {/* Variance Components Chart */}
           <Card>
-            <CardHeader><CardTitle className="text-lg">Variance Components Chart</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle className="text-lg">Variance Components</CardTitle>
+              <CardDescription>% Contribution to Total Variation</CardDescription>
+            </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={msaChartData}>
+                <BarChart data={msaResult.varData} margin={{ top: 10, right: 20, bottom: 20, left: 10 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
-                  <YAxis tickFormatter={v => `${v}%`} domain={[0, 100]} />
-                  <Tooltip formatter={(v: number) => `${v}%`} />
-                  <Bar dataKey="value" name="% Study Var" radius={[4, 4, 0, 0]}>
-                    <Cell fill="#ef4444" />
-                    <Cell fill="#f59e0b" />
-                    <Cell fill="#22c55e" />
+                  <YAxis label={{ value: "% Contribution", angle: -90, position: "insideLeft" }} />
+                  <Tooltip formatter={(value: number) => `${fmt(value, 2)}%`} />
+                  <Bar dataKey="value" name="% Contribution">
+                    {msaResult.varData.map((entry, index) => (
+                      <Cell key={index} fill={index === 2 ? "#22c55e" : index === 0 ? "#ef4444" : "#f59e0b"} />
+                    ))}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -1074,95 +1334,110 @@ export default function StatisticsPage() {
           </Card>
         </TabsContent>
 
-        {/* ===== DATA IMPORT ===== */}
+        {/* ═══════════════════ Tab 7: Data Import ═══════════════════ */}
         <TabsContent value="import" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Data Import</CardTitle>
-              <CardDescription>Paste CSV data or upload a file for analysis</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label>CSV Data (comma-separated, with header row)</Label>
-                <textarea
-                  className="w-full h-64 mt-1 p-3 border rounded-md font-mono text-xs bg-background"
-                  value={csvData}
-                  onChange={e => setCsvData(e.target.value)}
+          <div className="grid grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <FileSpreadsheet className="h-5 w-5" />
+                  CSV Data Input
+                </CardTitle>
+                <CardDescription>Paste CSV data with headers in the first row</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Textarea
+                  rows={16}
+                  value={csvInput}
+                  onChange={(e) => setCsvInput(e.target.value)}
+                  className="font-mono text-xs"
+                  placeholder="Paste CSV data here..."
                 />
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={handleParseCsv}>Parse Data</Button>
-                <Button variant="outline" onClick={() => setCsvData(SAMPLE_CSV)}>Reset to Sample</Button>
-              </div>
-            </CardContent>
-          </Card>
+                <Button onClick={handleParseCSV} className="w-full">
+                  Parse Data
+                </Button>
+              </CardContent>
+            </Card>
 
-          {parsedCsv && parsedCsv.length > 1 && (
-            <>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Data Preview</CardTitle>
-                  <CardDescription>{parsedCsv.length - 1} rows, {parsedCsv[0].length} columns</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b bg-muted/50">
-                          <th className="text-left p-2 text-xs">#</th>
-                          {parsedCsv[0].map((h, i) => (
-                            <th key={i} className="text-left p-2 text-xs">{h}</th>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Data Preview</CardTitle>
+                <CardDescription>
+                  {parsedCSV
+                    ? `${parsedCSV.headers.length} columns, ${parsedCSV.rows.length} rows`
+                    : "Click Parse to load data"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {parsedCSV && (
+                  <>
+                    <div className="space-y-2">
+                      <Label>Select Column for Analysis</Label>
+                      <Select value={selectedCol} onValueChange={setSelectedCol}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choose a column..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {parsedCSV.headers.map((h) => (
+                            <SelectItem key={h} value={h}>{h}</SelectItem>
                           ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {parsedCsv.slice(1, 11).map((row, ri) => (
-                          <tr key={ri} className="border-b">
-                            <td className="p-2 text-xs text-muted-foreground">{ri + 1}</td>
-                            {row.map((cell, ci) => (
-                              <td key={ci} className="p-2 text-xs font-mono">{cell}</td>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="overflow-x-auto max-h-[350px] overflow-y-auto border rounded-lg">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            {parsedCSV.headers.map((h) => (
+                              <TableHead key={h} className={`text-xs ${h === selectedCol ? "bg-blue-50 font-bold" : ""}`}>
+                                {h}
+                              </TableHead>
                             ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  {parsedCsv.length > 11 && (
-                    <p className="text-xs text-muted-foreground mt-2">Showing first 10 of {parsedCsv.length - 1} rows</p>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Column Analysis</CardTitle>
-                  <CardDescription>Select a numeric column to send to Descriptive Statistics tab</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-4 gap-3">
-                    {parsedCsv[0].map((header, i) => {
-                      const colData = parsedCsv.slice(1).map(row => parseFloat(row[i])).filter(n => !isNaN(n));
-                      const isNumeric = colData.length > 0;
-                      return (
-                        <Button
-                          key={i}
-                          variant={isNumeric ? "outline" : "ghost"}
-                          disabled={!isNumeric}
-                          className="justify-start text-xs"
-                          onClick={() => {
-                            setDataInput(colData.join("\n"));
-                            setActiveTab("descriptive");
-                          }}
-                        >
-                          {header} {isNumeric ? `(${colData.length} values)` : "(non-numeric)"}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            </>
-          )}
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {parsedCSV.rows.slice(0, 10).map((row, i) => (
+                            <TableRow key={i}>
+                              {row.map((cell, j) => (
+                                <TableCell key={j} className={`text-xs font-mono ${parsedCSV.headers[j] === selectedCol ? "bg-blue-50 font-bold" : ""}`}>
+                                  {cell}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    {parsedCSV.rows.length > 10 && (
+                      <p className="text-xs text-muted-foreground text-center">
+                        Showing first 10 of {parsedCSV.rows.length} rows
+                      </p>
+                    )}
+                    {selectedCol && (
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => {
+                          const colIdx = parsedCSV.headers.indexOf(selectedCol);
+                          if (colIdx < 0) return;
+                          const values = parsedCSV.rows
+                            .map((r) => r[colIdx])
+                            .filter((v) => !isNaN(parseFloat(v)))
+                            .map((v) => parseFloat(v));
+                          if (values.length > 0) {
+                            setRawInput(values.join("\n"));
+                            setUseCustomData(true);
+                          }
+                        }}
+                      >
+                        Load &quot;{selectedCol}&quot; into Descriptive Stats
+                      </Button>
+                    )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

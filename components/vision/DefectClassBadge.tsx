@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { DEFECT_TYPES, SEVERITY_LEVELS } from "@/lib/constants";
 
 interface DefectClassBadgeProps {

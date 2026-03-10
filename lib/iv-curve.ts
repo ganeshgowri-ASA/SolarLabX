@@ -1,220 +1,304 @@
-// IV Curve Analysis library for solar PV modules
-// Implements single-diode model, parameter extraction, and temperature correction
+// IV Curve Analysis utilities for Solar PV testing
 
-export interface IVPoint {
-  voltage: number;
-  current: number;
-  power: number;
+export const CURVE_COLORS = [
+  '#f97316', '#3b82f6', '#22c55e', '#ef4444', '#a855f7',
+  '#eab308', '#06b6d4', '#ec4899', '#14b8a6', '#f59e0b',
+]
+
+export interface TemperatureCorrectionParams {
+  tempCoeffPmax: number  // %/°C (alias: gammaPmax)
+  tempCoeffVoc: number   // %/°C (alias: betaVoc)
+  tempCoeffIsc: number   // %/°C (alias: alphaIsc)
+  gammaPmax: number      // %/°C
+  betaVoc: number        // %/°C
+  alphaIsc: number       // %/°C
+  nmot: number           // °C
+  noct: number           // °C
+  tAmbient: number       // °C
+  irradiance: number     // W/m²
+}
+
+export const DEFAULT_TEMP_COEFFICIENTS: TemperatureCorrectionParams = {
+  tempCoeffPmax: -0.35,
+  tempCoeffVoc: -0.30,
+  tempCoeffIsc: 0.05,
+  gammaPmax: -0.35,
+  betaVoc: -0.30,
+  alphaIsc: 0.05,
+  nmot: 45,
+  noct: 45,
+  tAmbient: 25,
+  irradiance: 1000,
+}
+
+export interface IVDataPoint {
+  voltage: number
+  current: number
+  power: number
 }
 
 export interface IVCurveData {
-  id: string;
-  label: string;
-  points: IVPoint[];
-  voc: number;
-  isc: number;
-  pmax: number;
-  vmpp: number;
-  impp: number;
-  ff: number;
-  rsh: number; // shunt resistance
-  rs: number;  // series resistance
-  n: number;   // diode ideality factor
-  temperature: number; // °C
-  irradiance: number;  // W/m²
-  color: string;
+  id: string
+  label: string
+  color: string
+  dataPoints: IVDataPoint[]
+  voc: number
+  isc: number
+  pmax: number
+  vmpp: number
+  impp: number
+  ff: number
+  efficiency: number
+  area: number // module area m²
+  irradiance: number // W/m²
+  temperature: number // °C
+  rSeries: number // series resistance Ω
+  rShunt: number // shunt resistance Ω
+  ideality: number // diode ideality factor
 }
 
-export interface TemperatureCorrectionParams {
-  alphaIsc: number;  // %/°C (Isc temp coefficient)
-  betaVoc: number;   // %/°C (Voc temp coefficient)
-  gammaPmax: number; // %/°C (Pmax temp coefficient)
-  nmot: number;      // NMOT in °C
-  noct: number;      // NOCT in °C
+export interface NMOTInputs {
+  tAmbient: number // ambient temperature °C
+  irradiance: number // W/m²
+  windSpeed: number // m/s
+  nmot: number // nominal module operating temp °C (typically 43-48)
+  tempCoeffPmax: number // %/°C (typically -0.3 to -0.5)
+  pmax_stc: number // rated power at STC
 }
 
-const DEFAULT_TEMP_COEFFICIENTS: TemperatureCorrectionParams = {
-  alphaIsc: 0.05,
-  betaVoc: -0.29,
-  gammaPmax: -0.37,
-  nmot: 44,
-  noct: 45,
-};
+export interface NMOTResult {
+  moduleTemp: number
+  pmaxAtNMOT: number
+  performanceRatio: number
+  thermalLoss: number // percentage
+  tempDelta: number
+}
 
-// Generate IV curve from single-diode model parameters
+// Generate a realistic IV curve using single-diode model
 export function generateIVCurve(
   isc: number,
   voc: number,
-  rs: number,
-  rsh: number,
-  n: number,
-  temperature: number,
-  irradiance: number,
-  numPoints = 200
-): IVPoint[] {
-  const k = 1.380649e-23; // Boltzmann constant
-  const q = 1.602176634e-19; // electron charge
-  const T = temperature + 273.15; // Kelvin
-  const Vt = (n * k * T) / q; // thermal voltage
-  const I0 = isc / (Math.exp(voc / Vt) - 1); // reverse saturation current
+  impp: number,
+  vmpp: number,
+  numPoints: number = 100,
+): IVDataPoint[] {
+  const points: IVDataPoint[] = []
 
-  const points: IVPoint[] = [];
+  // Simplified single-diode model parameters
+  const il = isc // photo-generated current ≈ Isc
+  const vt = 0.026 * (voc / (Math.log(isc / 0.0000001))) // thermal voltage approximation
+  const io = isc / (Math.exp(voc / vt) - 1) // reverse saturation current
+
   for (let i = 0; i <= numPoints; i++) {
-    const v = (voc * 1.05 * i) / numPoints;
-    // Simplified single-diode: I = Iph - I0*(exp(V/Vt)-1) - V/Rsh
-    let current = isc - I0 * (Math.exp((v + 0) / Vt) - 1) - v / rsh;
-    // Account for series resistance iteratively
-    for (let iter = 0; iter < 5; iter++) {
-      const vd = v + current * rs;
-      current = isc - I0 * (Math.exp(vd / Vt) - 1) - vd / rsh;
-    }
-    if (current < 0) current = 0;
+    const v = (voc * 1.05) * (i / numPoints) // voltage from 0 to slightly beyond Voc
+    let current = il - io * (Math.exp(v / vt) - 1)
+    if (current < 0) current = 0
+    if (v > voc) current = 0
+
     points.push({
-      voltage: Number(v.toFixed(4)),
-      current: Number(current.toFixed(4)),
-      power: Number((v * current).toFixed(4)),
-    });
+      voltage: parseFloat(v.toFixed(4)),
+      current: parseFloat(current.toFixed(4)),
+      power: parseFloat((v * current).toFixed(4)),
+    })
   }
-  return points;
+
+  return points
 }
 
-// Extract IV parameters from curve data
-export function extractIVParameters(points: IVPoint[]): {
-  voc: number; isc: number; pmax: number; vmpp: number; impp: number; ff: number; rs: number; rsh: number;
-} {
-  if (points.length === 0) {
-    return { voc: 0, isc: 0, pmax: 0, vmpp: 0, impp: 0, ff: 0, rs: 0, rsh: 0 };
-  }
-
-  const isc = points[0].current;
-  const voc = points.find(p => p.current <= 0.001)?.voltage || points[points.length - 1].voltage;
-
-  let pmax = 0, vmpp = 0, impp = 0;
-  for (const p of points) {
-    if (p.power > pmax) {
-      pmax = p.power;
-      vmpp = p.voltage;
-      impp = p.current;
-    }
-  }
-
-  const ff = (isc * voc > 0) ? (pmax / (isc * voc)) * 100 : 0;
-
-  // Estimate Rs from slope near Voc
-  const nearVoc = points.filter(p => p.voltage > voc * 0.85 && p.current > 0);
-  let rs = 0.5;
-  if (nearVoc.length >= 2) {
-    const dv = nearVoc[0].voltage - nearVoc[nearVoc.length - 1].voltage;
-    const di = nearVoc[0].current - nearVoc[nearVoc.length - 1].current;
-    if (di !== 0) rs = Math.abs(dv / di);
-  }
-
-  // Estimate Rsh from slope near Isc
-  const nearIsc = points.filter(p => p.voltage < voc * 0.15);
-  let rsh = 500;
-  if (nearIsc.length >= 2) {
-    const dv = nearIsc[nearIsc.length - 1].voltage - nearIsc[0].voltage;
-    const di = nearIsc[nearIsc.length - 1].current - nearIsc[0].current;
-    if (di !== 0) rsh = Math.abs(dv / di);
-  }
-
-  return {
-    voc: Number(voc.toFixed(3)),
-    isc: Number(isc.toFixed(3)),
-    pmax: Number(pmax.toFixed(2)),
-    vmpp: Number(vmpp.toFixed(3)),
-    impp: Number(impp.toFixed(3)),
-    ff: Number(ff.toFixed(2)),
-    rs: Number(rs.toFixed(3)),
-    rsh: Number(rsh.toFixed(1)),
-  };
+// Calculate series resistance from IV curve
+export function calcSeriesResistance(voc: number, vmpp: number, impp: number, isc: number): number {
+  // Approximate Rs from slope near Voc
+  return parseFloat(((voc - vmpp) / impp - (voc - vmpp) / (isc - impp) * 0.5).toFixed(4))
 }
 
-// Temperature correction to STC (25°C, 1000 W/m²)
-export function correctToSTC(
-  curve: IVCurveData,
-  coefficients: TemperatureCorrectionParams = DEFAULT_TEMP_COEFFICIENTS
-): IVCurveData {
-  const dT = 25 - curve.temperature;
-  const irradianceRatio = 1000 / curve.irradiance;
+// Calculate shunt resistance from IV curve
+export function calcShuntResistance(voc: number, isc: number, points: IVDataPoint[]): number {
+  // Approximate Rsh from slope near Isc (low voltage region)
+  if (points.length < 5) return 1000
+  const p1 = points[0]
+  const p2 = points[Math.min(5, points.length - 1)]
+  const dv = p2.voltage - p1.voltage
+  const di = p1.current - p2.current
+  if (di === 0) return 10000
+  return parseFloat(Math.abs(dv / di).toFixed(2))
+}
 
-  const correctedIsc = curve.isc * irradianceRatio * (1 + coefficients.alphaIsc / 100 * dT);
-  const correctedVoc = curve.voc * (1 + coefficients.betaVoc / 100 * dT);
-  const correctedPmax = curve.pmax * irradianceRatio * (1 + coefficients.gammaPmax / 100 * dT);
+// Calculate diode ideality factor
+export function calcIdealityFactor(voc: number, isc: number, vmpp: number, impp: number, temp: number): number {
+  const k = 1.381e-23 // Boltzmann constant
+  const q = 1.602e-19 // electron charge
+  const T = temp + 273.15 // convert to Kelvin
+  const vt = k * T / q
+  // Simplified calculation
+  const n = voc / (vt * Math.log(isc / (isc - impp) + 1)) / 60 // 60 cells typical
+  return parseFloat(Math.max(1, Math.min(2, n)).toFixed(3))
+}
 
-  const points = generateIVCurve(correctedIsc, correctedVoc, curve.rs, curve.rsh, curve.n, 25, 1000);
-  const params = extractIVParameters(points);
+// Temperature correction scalar (pmax only) to STC (25°C, 1000 W/m²)
+export function correctPmaxToSTC(
+  pmax: number,
+  irradiance: number,
+  temperature: number,
+  tempCoeffPmax: number, // in %/°C
+): number {
+  const irradianceCorrection = 1000 / irradiance
+  const tempCorrection = 1 + (tempCoeffPmax / 100) * (25 - temperature)
+  return parseFloat((pmax * irradianceCorrection * tempCorrection).toFixed(2))
+}
 
+// Correct a full IV curve to STC conditions
+export function correctToSTC(curve: IVCurveData, params: TemperatureCorrectionParams): IVCurveData {
+  const tempDelta = 25 - curve.temperature
+  const irradianceRatio = 1000 / curve.irradiance
+  const pmax = curve.pmax * (1 + params.tempCoeffPmax / 100 * tempDelta) * irradianceRatio
+  const voc = curve.voc * (1 + params.tempCoeffVoc / 100 * tempDelta)
+  const isc = curve.isc * (1 + params.tempCoeffIsc / 100 * tempDelta) * irradianceRatio
+  const vmpp = curve.vmpp * (1 + params.tempCoeffVoc / 100 * tempDelta)
+  const impp = isc * (curve.impp / curve.isc)
+  const ff = (voc * isc) > 0 ? pmax / (voc * isc) : curve.ff
+  const dataPoints = generateIVCurve(isc, voc, impp, vmpp)
   return {
     ...curve,
     id: `${curve.id}-stc`,
-    label: `${curve.label} (STC)`,
-    points,
-    ...params,
-    temperature: 25,
+    label: `${curve.label} → STC (25°C, 1000W/m²)`,
+    color: CURVE_COLORS[6],
+    dataPoints,
+    voc: parseFloat(voc.toFixed(2)),
+    isc: parseFloat(isc.toFixed(2)),
+    pmax: parseFloat(pmax.toFixed(2)),
+    vmpp: parseFloat(vmpp.toFixed(2)),
+    impp: parseFloat(impp.toFixed(2)),
+    ff: parseFloat(ff.toFixed(4)),
     irradiance: 1000,
-    color: curve.color,
-  };
+    temperature: 25,
+  }
 }
 
-// Correct to NMOT/NOCT conditions
-export function correctToNMOT(
-  curve: IVCurveData,
-  coefficients: TemperatureCorrectionParams = DEFAULT_TEMP_COEFFICIENTS
-): IVCurveData {
-  const targetTemp = coefficients.nmot;
-  const targetIrradiance = 800; // NMOT conditions: 800 W/m²
-  const dT = targetTemp - curve.temperature;
-  const irradianceRatio = targetIrradiance / curve.irradiance;
+// NMOT/NOCT calculation per IEC 61215
+export function calculateNMOT(inputs: NMOTInputs): NMOTResult {
+  // Module temperature: T_mod = T_amb + (NMOT - 20) * G / 800
+  // NMOT is measured at 800 W/m², 20°C ambient, 1 m/s wind
+  const moduleTemp = inputs.tAmbient + ((inputs.nmot - 20) * inputs.irradiance / 800)
+  const tempDelta = moduleTemp - 25 // difference from STC
+  const thermalLoss = Math.abs(inputs.tempCoeffPmax * tempDelta)
+  const pmaxAtNMOT = inputs.pmax_stc * (1 + inputs.tempCoeffPmax / 100 * tempDelta)
+  const performanceRatio = (pmaxAtNMOT / inputs.pmax_stc) * (inputs.irradiance / 1000)
 
-  const correctedIsc = curve.isc * irradianceRatio * (1 + coefficients.alphaIsc / 100 * dT);
-  const correctedVoc = curve.voc * (1 + coefficients.betaVoc / 100 * dT);
+  return {
+    moduleTemp: parseFloat(moduleTemp.toFixed(1)),
+    pmaxAtNMOT: parseFloat(pmaxAtNMOT.toFixed(2)),
+    performanceRatio: parseFloat(performanceRatio.toFixed(4)),
+    thermalLoss: parseFloat(thermalLoss.toFixed(2)),
+    tempDelta: parseFloat(tempDelta.toFixed(1)),
+  }
+}
 
-  const points = generateIVCurve(correctedIsc, correctedVoc, curve.rs, curve.rsh, curve.n, targetTemp, targetIrradiance);
-  const params = extractIVParameters(points);
+// Generate irradiance vs temperature model data
+export function generateIrradianceTempModel(
+  nmot: number,
+  pmax_stc: number,
+  tempCoeffPmax: number,
+): { irradiance: number; moduleTemp: number; power: number; pr: number }[] {
+  const data: { irradiance: number; moduleTemp: number; power: number; pr: number }[] = []
+  for (let g = 200; g <= 1200; g += 100) {
+    const tMod = 25 + (nmot - 20) * g / 800
+    const pmax = pmax_stc * (1 + tempCoeffPmax / 100 * (tMod - 25)) * (g / 1000)
+    data.push({
+      irradiance: g,
+      moduleTemp: parseFloat(tMod.toFixed(1)),
+      power: parseFloat(pmax.toFixed(2)),
+      pr: parseFloat((pmax / (pmax_stc * g / 1000)).toFixed(4)),
+    })
+  }
+  return data
+}
 
+// Extract IV parameters from raw data points
+export function extractIVParameters(points: IVDataPoint[]): Pick<IVCurveData, 'voc' | 'isc' | 'pmax' | 'vmpp' | 'impp' | 'ff' | 'rSeries' | 'rShunt' | 'ideality'> {
+  if (points.length === 0) {
+    return { voc: 0, isc: 0, pmax: 0, vmpp: 0, impp: 0, ff: 0, rSeries: 0, rShunt: 0, ideality: 1 }
+  }
+  const isc = points[0]?.current ?? 0
+  const voc = points[points.length - 1]?.voltage ?? 0
+  let pmax = 0, vmpp = 0, impp = 0
+  for (const p of points) {
+    if (p.power > pmax) { pmax = p.power; vmpp = p.voltage; impp = p.current }
+  }
+  const ff = (voc * isc) > 0 ? pmax / (voc * isc) : 0
+  const rSeries = calcSeriesResistance(voc, vmpp, impp, isc)
+  const rShunt = calcShuntResistance(voc, isc, points)
+  const ideality = calcIdealityFactor(voc, isc, vmpp, impp, 25)
+  return { voc, isc, pmax, vmpp, impp, ff, rSeries, rShunt, ideality }
+}
+
+// Correct an IV curve to NMOT conditions
+export function correctToNMOT(curve: IVCurveData, params: TemperatureCorrectionParams): IVCurveData {
+  const tMod = params.tAmbient + ((params.nmot - 20) * params.irradiance / 800)
+  const tempDelta = tMod - 25
+  const irradianceRatio = params.irradiance / 1000
+  const pmax = curve.pmax * (1 + params.tempCoeffPmax / 100 * tempDelta) * irradianceRatio
+  const voc = curve.voc * (1 + params.tempCoeffVoc / 100 * tempDelta)
+  const isc = curve.isc * (1 + params.tempCoeffIsc / 100 * tempDelta) * irradianceRatio
+  const vmpp = curve.vmpp * (1 + params.tempCoeffVoc / 100 * tempDelta)
+  const impp = isc * (curve.impp / curve.isc)
+  const ff = (voc * isc) > 0 ? pmax / (voc * isc) : curve.ff
+  const dataPoints = generateIVCurve(isc, voc, impp, vmpp)
   return {
     ...curve,
     id: `${curve.id}-nmot`,
-    label: `${curve.label} (NMOT)`,
-    points,
-    ...params,
-    temperature: targetTemp,
-    irradiance: targetIrradiance,
-    color: curve.color,
-  };
+    label: `${curve.label} → NMOT (${tMod.toFixed(0)}°C, ${params.irradiance}W/m²)`,
+    color: CURVE_COLORS[5],
+    dataPoints,
+    voc: parseFloat(voc.toFixed(2)),
+    isc: parseFloat(isc.toFixed(2)),
+    pmax: parseFloat(pmax.toFixed(2)),
+    vmpp: parseFloat(vmpp.toFixed(2)),
+    impp: parseFloat(impp.toFixed(2)),
+    ff: parseFloat(ff.toFixed(4)),
+    irradiance: params.irradiance,
+    temperature: parseFloat(tMod.toFixed(1)),
+  }
 }
 
-const CURVE_COLORS = [
-  "#f97316", "#3b82f6", "#22c55e", "#ef4444", "#a855f7",
-  "#06b6d4", "#eab308", "#ec4899", "#14b8a6", "#6366f1",
-];
+// Alias for generateSampleCurves
+export const generateDemoCurves = generateSampleCurves;
 
-// Generate demo IV curves
-export function generateDemoCurves(): IVCurveData[] {
+// Sample IV curve datasets for demo
+export function generateSampleCurves(): IVCurveData[] {
+  const curves: IVCurveData[] = []
+
   const configs = [
-    { label: "Module A – STC", isc: 10.2, voc: 49.5, rs: 0.35, rsh: 500, n: 1.2, temp: 25, irr: 1000 },
-    { label: "Module A – 45°C", isc: 10.25, voc: 46.1, rs: 0.38, rsh: 450, n: 1.22, temp: 45, irr: 1000 },
-    { label: "Module A – 800W/m²", isc: 8.16, voc: 48.9, rs: 0.36, rsh: 520, n: 1.2, temp: 25, irr: 800 },
-    { label: "Module B – STC", isc: 9.8, voc: 50.2, rs: 0.32, rsh: 550, n: 1.15, temp: 25, irr: 1000 },
-  ];
+    { id: 'stc', label: 'STC (25\u00B0C, 1000 W/m\u00B2)', color: '#f97316', isc: 10.5, voc: 49.5, impp: 9.8, vmpp: 40.8, temp: 25, irr: 1000 },
+    { id: 'nmot', label: 'NMOT (45\u00B0C, 800 W/m\u00B2)', color: '#3b82f6', isc: 8.5, voc: 46.2, impp: 7.9, vmpp: 38.5, temp: 45, irr: 800 },
+    { id: 'low', label: 'Low Irradiance (200 W/m\u00B2)', color: '#22c55e', isc: 2.1, voc: 47.0, impp: 1.95, vmpp: 39.5, temp: 30, irr: 200 },
+    { id: 'hot', label: 'Hot (60\u00B0C, 1000 W/m\u00B2)', color: '#ef4444', isc: 10.6, voc: 44.8, impp: 9.7, vmpp: 37.2, temp: 60, irr: 1000 },
+  ]
 
-  return configs.map((c, i) => {
-    const points = generateIVCurve(c.isc, c.voc, c.rs, c.rsh, c.n, c.temp, c.irr);
-    const params = extractIVParameters(points);
-    return {
-      id: `curve-${i + 1}`,
-      label: c.label,
-      points,
-      ...params,
-      rs: c.rs,
-      rsh: c.rsh,
-      n: c.n,
-      temperature: c.temp,
-      irradiance: c.irr,
-      color: CURVE_COLORS[i % CURVE_COLORS.length],
-    };
-  });
+  for (const cfg of configs) {
+    const dataPoints = generateIVCurve(cfg.isc, cfg.voc, cfg.impp, cfg.vmpp)
+    const pmax = cfg.vmpp * cfg.impp
+    const area = 2.0 // 2 m² module
+
+    curves.push({
+      id: cfg.id,
+      label: cfg.label,
+      color: cfg.color,
+      dataPoints,
+      voc: cfg.voc,
+      isc: cfg.isc,
+      pmax: parseFloat(pmax.toFixed(2)),
+      vmpp: cfg.vmpp,
+      impp: cfg.impp,
+      ff: parseFloat((pmax / (cfg.voc * cfg.isc)).toFixed(4)),
+      efficiency: parseFloat((pmax / (cfg.irr * area) * 100).toFixed(2)),
+      area,
+      irradiance: cfg.irr,
+      temperature: cfg.temp,
+      rSeries: calcSeriesResistance(cfg.voc, cfg.vmpp, cfg.impp, cfg.isc),
+      rShunt: 500 + Math.random() * 500,
+      ideality: calcIdealityFactor(cfg.voc, cfg.isc, cfg.vmpp, cfg.impp, cfg.temp),
+    })
+  }
+
+  return curves
 }
-
-export { DEFAULT_TEMP_COEFFICIENTS, CURVE_COLORS };
