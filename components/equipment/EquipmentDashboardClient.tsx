@@ -17,6 +17,8 @@ import OutdoorTestbedMap from "@/components/equipment/OutdoorTestbedMap";
 import TestFlowRoute from "@/components/equipment/TestFlowRoute";
 import TechnicianView from "@/components/equipment/TechnicianView";
 import EquipmentFormDialog from "@/components/equipment/EquipmentFormDialog";
+import ChamberTestsManager from "@/components/chamber-tests/ChamberTestsManager";
+import { chamberTests } from "@/lib/data/chamber-tests-data";
 
 const categories = [
   "All",
@@ -303,6 +305,7 @@ export default function EquipmentDashboardClient() {
       <Tabs defaultValue="registry" className="space-y-4 print:hidden">
         <TabsList>
           <TabsTrigger value="registry">Equipment Registry</TabsTrigger>
+          <TabsTrigger value="chamber-tests">Chamber Tests</TabsTrigger>
           <TabsTrigger value="chambers">Chambers ({chamberStatuses.length})</TabsTrigger>
           <TabsTrigger value="outdoor">Outdoor Testbed ({occupiedPositions}/72)</TabsTrigger>
           <TabsTrigger value="flow">Test Flow</TabsTrigger>
@@ -330,6 +333,10 @@ export default function EquipmentDashboardClient() {
             statusChangeId={statusChangeId}
             onToggleStatusChange={setStatusChangeId}
           />
+        </TabsContent>
+
+        <TabsContent value="chamber-tests">
+          <ChamberTestsManager tests={chamberTests} />
         </TabsContent>
 
         <TabsContent value="chambers">
