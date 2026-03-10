@@ -24,6 +24,13 @@ import {
   Search,
   MessageSquareWarning,
   MessageCircle,
+  ShieldCheck,
+  Workflow,
+  ClipboardList,
+  TrendingUp,
+  Zap,
+  ScrollText,
+  ArrowLeftRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -54,6 +61,13 @@ const iconMap = {
   Search,
   MessageSquareWarning,
   MessageCircle,
+  ShieldCheck,
+  Workflow,
+  ClipboardList,
+  TrendingUp,
+  Zap,
+  ScrollText,
+  ArrowLeftRight,
 } as const;
 
 const navItems = [
@@ -64,6 +78,9 @@ const navItems = [
   { title: "Projects", href: "/projects", icon: "FolderKanban" },
   { title: "Equipment", href: "/equipment", icon: "Wrench" },
   { title: "Uncertainty", href: "/uncertainty", icon: "Calculator" },
+  { title: "Data Analysis", href: "/data-analysis", icon: "TrendingUp" },
+  { title: "IV Curve", href: "/iv-curve", icon: "Zap" },
+  { title: "NMOT/NOCT", href: "/nmot-noct", icon: "Thermometer" },
   { title: "Vision AI", href: "/vision-ai", icon: "ScanEye" },
   { title: "SOP Gen", href: "/sop-gen", icon: "BookOpen" },
   { title: "Reports", href: "/reports", icon: "FileBarChart" },
@@ -71,9 +88,14 @@ const navItems = [
   { title: "RCA", href: "/rca", icon: "SearchCheck" },
   { title: "Complaints", href: "/complaints", icon: "MessageSquareWarning" },
   { title: "Chatbot", href: "/chatbot", icon: "MessageCircle" },
+  { title: "Electrical Safety", href: "/electrical-safety", icon: "ShieldCheck" },
+  { title: "Flowcharts", href: "/flowcharts", icon: "Workflow" },
+  { title: "Route Cards", href: "/route-cards", icon: "ClipboardList" },
   { title: "Sun Simulator", href: "/sun-simulator", icon: "Sun" },
   { title: "Chamber Config", href: "/chamber-config", icon: "Thermometer" },
   { title: "Procurement", href: "/procurement", icon: "ShoppingCart" },
+  { title: "IEC Guidelines", href: "/iec-guidelines", icon: "ScrollText" },
+  { title: "BoM Changes", href: "/bom-changes", icon: "ArrowLeftRight" },
 ] as const;
 
 interface SidebarProps {
