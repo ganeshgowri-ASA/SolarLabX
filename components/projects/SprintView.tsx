@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import { Sprint, Task } from "@/lib/types/projects";

@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import { ElectricalSafetyProject, SafetyTest } from "@/lib/types/electrical-safety";

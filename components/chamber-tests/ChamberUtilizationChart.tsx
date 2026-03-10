@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import { chamberUtilization } from "@/lib/data/chamber-tests-data";

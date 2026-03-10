@@ -52,6 +52,14 @@ export interface Task {
   dependencies: string[];
   completionPercent: number;
   description: string;
+  column?: KanbanColumn;
+  subtasks?: { id: string; name: string; done: boolean }[];
+  tags?: string[];
+  labels?: string[];
+  estimatedHours?: number;
+  loggedHours?: number;
+  attachments?: number;
+  comments?: number;
 }
 
 export interface ResourceAllocation {
@@ -62,3 +70,4 @@ export interface ResourceAllocation {
   allocatedTo: string;
   utilizationPercent: number;
 }
+export type KanbanColumn = "Backlog" | "To Do" | "In Progress" | "Review" | "Done";

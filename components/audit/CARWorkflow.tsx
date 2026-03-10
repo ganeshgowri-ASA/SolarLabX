@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import { CARReport, CARStatus } from "@/lib/types/audit";

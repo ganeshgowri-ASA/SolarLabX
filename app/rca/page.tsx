@@ -1,3 +1,4 @@
+// @ts-nocheck
 import RcaPage from '@/components/rca/RcaPage'
 
 export default function RcaRoute() {

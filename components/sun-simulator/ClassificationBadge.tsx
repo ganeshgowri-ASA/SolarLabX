@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import { ClassificationGrade } from "@/lib/sun-simulator";

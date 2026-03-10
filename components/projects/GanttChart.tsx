@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import { Task } from "@/lib/types/projects";

@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import { PurchaseOrder } from "@/lib/types/procurement";

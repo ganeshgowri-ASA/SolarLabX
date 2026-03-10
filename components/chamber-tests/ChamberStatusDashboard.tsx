@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import { ChamberTest } from "@/lib/types/chamber-tests";

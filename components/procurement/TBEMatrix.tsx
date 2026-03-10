@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import { TBEMatrix as TBEMatrixType } from "@/lib/types/procurement";

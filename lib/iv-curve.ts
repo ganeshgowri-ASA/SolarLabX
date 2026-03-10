@@ -1,5 +1,36 @@
 // IV Curve Analysis utilities for Solar PV testing
 
+export const CURVE_COLORS = [
+  '#f97316', '#3b82f6', '#22c55e', '#ef4444', '#a855f7',
+  '#eab308', '#06b6d4', '#ec4899', '#14b8a6', '#f59e0b',
+]
+
+export interface TemperatureCorrectionParams {
+  tempCoeffPmax: number  // %/°C (alias: gammaPmax)
+  tempCoeffVoc: number   // %/°C (alias: betaVoc)
+  tempCoeffIsc: number   // %/°C (alias: alphaIsc)
+  gammaPmax: number      // %/°C
+  betaVoc: number        // %/°C
+  alphaIsc: number       // %/°C
+  nmot: number           // °C
+  noct: number           // °C
+  tAmbient: number       // °C
+  irradiance: number     // W/m²
+}
+
+export const DEFAULT_TEMP_COEFFICIENTS: TemperatureCorrectionParams = {
+  tempCoeffPmax: -0.35,
+  tempCoeffVoc: -0.30,
+  tempCoeffIsc: 0.05,
+  gammaPmax: -0.35,
+  betaVoc: -0.30,
+  alphaIsc: 0.05,
+  nmot: 45,
+  noct: 45,
+  tAmbient: 25,
+  irradiance: 1000,
+}
+
 export interface IVDataPoint {
   voltage: number
   current: number
@@ -103,8 +134,8 @@ export function calcIdealityFactor(voc: number, isc: number, vmpp: number, impp:
   return parseFloat(Math.max(1, Math.min(2, n)).toFixed(3))
 }
 
-// Temperature correction to STC (25°C, 1000 W/m²)
-export function correctToSTC(
+// Temperature correction scalar (pmax only) to STC (25°C, 1000 W/m²)
+export function correctPmaxToSTC(
   pmax: number,
   irradiance: number,
   temperature: number,
@@ -113,6 +144,34 @@ export function correctToSTC(
   const irradianceCorrection = 1000 / irradiance
   const tempCorrection = 1 + (tempCoeffPmax / 100) * (25 - temperature)
   return parseFloat((pmax * irradianceCorrection * tempCorrection).toFixed(2))
+}
+
+// Correct a full IV curve to STC conditions
+export function correctToSTC(curve: IVCurveData, params: TemperatureCorrectionParams): IVCurveData {
+  const tempDelta = 25 - curve.temperature
+  const irradianceRatio = 1000 / curve.irradiance
+  const pmax = curve.pmax * (1 + params.tempCoeffPmax / 100 * tempDelta) * irradianceRatio
+  const voc = curve.voc * (1 + params.tempCoeffVoc / 100 * tempDelta)
+  const isc = curve.isc * (1 + params.tempCoeffIsc / 100 * tempDelta) * irradianceRatio
+  const vmpp = curve.vmpp * (1 + params.tempCoeffVoc / 100 * tempDelta)
+  const impp = isc * (curve.impp / curve.isc)
+  const ff = (voc * isc) > 0 ? pmax / (voc * isc) : curve.ff
+  const dataPoints = generateIVCurve(isc, voc, impp, vmpp)
+  return {
+    ...curve,
+    id: `${curve.id}-stc`,
+    label: `${curve.label} → STC (25°C, 1000W/m²)`,
+    color: CURVE_COLORS[6],
+    dataPoints,
+    voc: parseFloat(voc.toFixed(2)),
+    isc: parseFloat(isc.toFixed(2)),
+    pmax: parseFloat(pmax.toFixed(2)),
+    vmpp: parseFloat(vmpp.toFixed(2)),
+    impp: parseFloat(impp.toFixed(2)),
+    ff: parseFloat(ff.toFixed(4)),
+    irradiance: 1000,
+    temperature: 25,
+  }
 }
 
 // NMOT/NOCT calculation per IEC 61215
@@ -153,6 +212,56 @@ export function generateIrradianceTempModel(
   }
   return data
 }
+
+// Extract IV parameters from raw data points
+export function extractIVParameters(points: IVDataPoint[]): Pick<IVCurveData, 'voc' | 'isc' | 'pmax' | 'vmpp' | 'impp' | 'ff' | 'rSeries' | 'rShunt' | 'ideality'> {
+  if (points.length === 0) {
+    return { voc: 0, isc: 0, pmax: 0, vmpp: 0, impp: 0, ff: 0, rSeries: 0, rShunt: 0, ideality: 1 }
+  }
+  const isc = points[0]?.current ?? 0
+  const voc = points[points.length - 1]?.voltage ?? 0
+  let pmax = 0, vmpp = 0, impp = 0
+  for (const p of points) {
+    if (p.power > pmax) { pmax = p.power; vmpp = p.voltage; impp = p.current }
+  }
+  const ff = (voc * isc) > 0 ? pmax / (voc * isc) : 0
+  const rSeries = calcSeriesResistance(voc, vmpp, impp, isc)
+  const rShunt = calcShuntResistance(voc, isc, points)
+  const ideality = calcIdealityFactor(voc, isc, vmpp, impp, 25)
+  return { voc, isc, pmax, vmpp, impp, ff, rSeries, rShunt, ideality }
+}
+
+// Correct an IV curve to NMOT conditions
+export function correctToNMOT(curve: IVCurveData, params: TemperatureCorrectionParams): IVCurveData {
+  const tMod = params.tAmbient + ((params.nmot - 20) * params.irradiance / 800)
+  const tempDelta = tMod - 25
+  const irradianceRatio = params.irradiance / 1000
+  const pmax = curve.pmax * (1 + params.tempCoeffPmax / 100 * tempDelta) * irradianceRatio
+  const voc = curve.voc * (1 + params.tempCoeffVoc / 100 * tempDelta)
+  const isc = curve.isc * (1 + params.tempCoeffIsc / 100 * tempDelta) * irradianceRatio
+  const vmpp = curve.vmpp * (1 + params.tempCoeffVoc / 100 * tempDelta)
+  const impp = isc * (curve.impp / curve.isc)
+  const ff = (voc * isc) > 0 ? pmax / (voc * isc) : curve.ff
+  const dataPoints = generateIVCurve(isc, voc, impp, vmpp)
+  return {
+    ...curve,
+    id: `${curve.id}-nmot`,
+    label: `${curve.label} → NMOT (${tMod.toFixed(0)}°C, ${params.irradiance}W/m²)`,
+    color: CURVE_COLORS[5],
+    dataPoints,
+    voc: parseFloat(voc.toFixed(2)),
+    isc: parseFloat(isc.toFixed(2)),
+    pmax: parseFloat(pmax.toFixed(2)),
+    vmpp: parseFloat(vmpp.toFixed(2)),
+    impp: parseFloat(impp.toFixed(2)),
+    ff: parseFloat(ff.toFixed(4)),
+    irradiance: params.irradiance,
+    temperature: parseFloat(tMod.toFixed(1)),
+  }
+}
+
+// Alias for generateSampleCurves
+export const generateDemoCurves = generateSampleCurves;
 
 // Sample IV curve datasets for demo
 export function generateSampleCurves(): IVCurveData[] {

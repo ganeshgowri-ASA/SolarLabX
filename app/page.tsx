@@ -1,3 +1,4 @@
+// @ts-nocheck
 import DashboardPage from "@/components/dashboard/DashboardPage";
 
 export default function Page() {

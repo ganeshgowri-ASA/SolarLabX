@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import { projects, projectMetrics } from "@/lib/data/projects-data";

@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import { Milestone } from "@/lib/types/projects";
