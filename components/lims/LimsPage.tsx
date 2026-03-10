@@ -21,12 +21,13 @@ import type {
   BOMEntry,
 } from '@/lib/types'
 
-type TabKey = 'overview' | 'service-requests' | 'samples' | 'approvals' | 'schedule' | 'certificates' | 'audit-trail'
+type TabKey = 'overview' | 'service-requests' | 'samples' | 'approvals' | 'schedule' | 'certificates' | 'audit-trail' | 'sample-tracking'
 
 const tabs: { key: TabKey; label: string }[] = [
   { key: 'overview', label: 'Overview' },
   { key: 'service-requests', label: 'Service Requests' },
   { key: 'samples', label: 'Samples & BOM' },
+  { key: 'sample-tracking', label: 'Sample Tracking' },
   { key: 'approvals', label: 'Approvals' },
   { key: 'schedule', label: 'Project Schedule' },
   { key: 'certificates', label: 'Certificates' },
@@ -105,6 +106,7 @@ export default function LimsPage() {
       {activeTab === 'approvals' && <ApprovalsTab />}
       {activeTab === 'schedule' && <ScheduleTab />}
       {activeTab === 'certificates' && <CertificatesTab />}
+      {activeTab === 'sample-tracking' && <SampleTrackingTab />}
       {activeTab === 'audit-trail' && <AuditTrailTab />}
     </div>
   )
@@ -783,6 +785,295 @@ function AuditTrailRow({ entry }: { entry: AuditTrailEntry }) {
         </div>
         <div className="text-xs text-gray-500 mt-0.5">
           by {entry.changedBy} — {entry.reason}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ============================================================================
+// Sample Tracking Tab
+// ============================================================================
+interface TrackedSample {
+  id: string
+  sampleId: string
+  moduleModel: string
+  clientName: string
+  status: string
+  location: string
+  batchId: string
+  receivedDate: string
+  custody: { holder: string; action: string; timestamp: string; location: string }[]
+}
+
+const sampleStatuses = [
+  { key: 'received', label: 'Received', color: 'bg-blue-500' },
+  { key: 'inspection', label: 'Incoming Inspection', color: 'bg-cyan-500' },
+  { key: 'storage', label: 'In Storage', color: 'bg-gray-400' },
+  { key: 'testing', label: 'Under Testing', color: 'bg-amber-500' },
+  { key: 'conditioning', label: 'Conditioning', color: 'bg-purple-500' },
+  { key: 'post_test', label: 'Post-Test Inspection', color: 'bg-indigo-500' },
+  { key: 'reporting', label: 'Reporting', color: 'bg-orange-500' },
+  { key: 'returned', label: 'Returned to Client', color: 'bg-green-500' },
+]
+
+const trackedSamples: TrackedSample[] = [
+  {
+    id: 'TS-001',
+    sampleId: 'SAMPLE-2026-00001',
+    moduleModel: 'SunPower SPR-MAX6-450',
+    clientName: 'SunPower Corp',
+    status: 'testing',
+    location: 'Chamber Lab - TC200',
+    batchId: 'BATCH-2026-001',
+    receivedDate: '2026-01-15',
+    custody: [
+      { holder: 'Logistics Team', action: 'Sample received at dock', timestamp: '2026-01-15T09:00:00', location: 'Receiving Dock' },
+      { holder: 'Rajesh Kumar', action: 'Incoming visual inspection', timestamp: '2026-01-15T10:30:00', location: 'Inspection Bay A' },
+      { holder: 'Lab Storage', action: 'Stored in controlled environment', timestamp: '2026-01-15T14:00:00', location: 'Storage Room B2' },
+      { holder: 'Priya Sharma', action: 'Retrieved for IEC 61215 thermal cycling', timestamp: '2026-01-20T08:00:00', location: 'Chamber Lab - TC200' },
+      { holder: 'Priya Sharma', action: 'TC200 test in progress — cycle 45/200', timestamp: '2026-02-10T16:00:00', location: 'Chamber Lab - TC200' },
+    ],
+  },
+  {
+    id: 'TS-002',
+    sampleId: 'SAMPLE-2026-00002',
+    moduleModel: 'SunPower SPR-MAX6-450',
+    clientName: 'SunPower Corp',
+    status: 'conditioning',
+    location: 'DH Chamber - DH1000',
+    batchId: 'BATCH-2026-001',
+    receivedDate: '2026-01-15',
+    custody: [
+      { holder: 'Logistics Team', action: 'Sample received at dock', timestamp: '2026-01-15T09:00:00', location: 'Receiving Dock' },
+      { holder: 'Rajesh Kumar', action: 'Incoming inspection completed', timestamp: '2026-01-15T11:00:00', location: 'Inspection Bay A' },
+      { holder: 'Lab Storage', action: 'Stored', timestamp: '2026-01-15T14:30:00', location: 'Storage Room B2' },
+      { holder: 'Amit Verma', action: 'Damp Heat 1000h conditioning started', timestamp: '2026-01-22T09:00:00', location: 'DH Chamber - DH1000' },
+    ],
+  },
+  {
+    id: 'TS-003',
+    sampleId: 'SAMPLE-2026-00003',
+    moduleModel: 'Trina TSM-DE21M.08(II)',
+    clientName: 'Trina Solar',
+    status: 'post_test',
+    location: 'EL Imaging Lab',
+    batchId: 'BATCH-2026-002',
+    receivedDate: '2025-12-05',
+    custody: [
+      { holder: 'Logistics Team', action: 'Sample received', timestamp: '2025-12-05T10:00:00', location: 'Receiving Dock' },
+      { holder: 'Rajesh Kumar', action: 'Incoming inspection', timestamp: '2025-12-05T11:30:00', location: 'Inspection Bay B' },
+      { holder: 'Lab Storage', action: 'Stored', timestamp: '2025-12-05T15:00:00', location: 'Storage Room A1' },
+      { holder: 'Suresh Nair', action: 'Flash test (initial IV)', timestamp: '2025-12-10T09:00:00', location: 'Flash Test Lab' },
+      { holder: 'Priya Sharma', action: 'Mechanical load test completed', timestamp: '2026-01-08T16:00:00', location: 'Mechanical Test Bay' },
+      { holder: 'Amit Verma', action: 'Post-test EL imaging', timestamp: '2026-01-09T10:00:00', location: 'EL Imaging Lab' },
+    ],
+  },
+  {
+    id: 'TS-004',
+    sampleId: 'SAMPLE-2026-00004',
+    moduleModel: 'Jinko JKM-545M-72HL4',
+    clientName: 'Jinko Solar',
+    status: 'received',
+    location: 'Receiving Dock',
+    batchId: 'BATCH-2026-003',
+    receivedDate: '2026-03-08',
+    custody: [
+      { holder: 'Logistics Team', action: 'Sample received — awaiting incoming inspection', timestamp: '2026-03-08T14:00:00', location: 'Receiving Dock' },
+    ],
+  },
+]
+
+const sampleStatusColors: Record<string, string> = {
+  received: 'bg-blue-100 text-blue-700',
+  inspection: 'bg-cyan-100 text-cyan-700',
+  storage: 'bg-gray-100 text-gray-700',
+  testing: 'bg-amber-100 text-amber-700',
+  conditioning: 'bg-purple-100 text-purple-700',
+  post_test: 'bg-indigo-100 text-indigo-700',
+  reporting: 'bg-orange-100 text-orange-700',
+  returned: 'bg-green-100 text-green-700',
+}
+
+function SampleTrackingTab() {
+  const [expandedSample, setExpandedSample] = useState<string | null>(null)
+  const [filterBatch, setFilterBatch] = useState<string>('all')
+
+  const batches = Array.from(new Set(trackedSamples.map(s => s.batchId)))
+  const filtered = filterBatch === 'all' ? trackedSamples : trackedSamples.filter(s => s.batchId === filterBatch)
+
+  // Status summary
+  const statusSummary = sampleStatuses.map(s => ({
+    ...s,
+    count: trackedSamples.filter(ts => ts.status === s.key).length,
+  }))
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Sample Lifecycle Tracking</h2>
+        <div className="flex items-center gap-2">
+          <select
+            value={filterBatch}
+            onChange={(e) => setFilterBatch(e.target.value)}
+            className="border rounded-md px-3 py-1.5 text-sm"
+          >
+            <option value="all">All Batches</option>
+            {batches.map(b => <option key={b} value={b}>{b}</option>)}
+          </select>
+          <button className="px-3 py-1.5 text-sm bg-amber-600 text-white rounded-md hover:bg-amber-700">
+            + Register Sample
+          </button>
+        </div>
+      </div>
+
+      {/* Status Pipeline */}
+      <div className="bg-white rounded-lg border p-4">
+        <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Sample Status Pipeline</h3>
+        <div className="flex gap-1">
+          {statusSummary.map((s, i) => (
+            <div key={s.key} className="flex items-center flex-1">
+              <div className="flex flex-col items-center flex-1">
+                <div className={cn('w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold', s.color)}>
+                  {s.count}
+                </div>
+                <span className="text-[10px] text-gray-500 mt-1 text-center leading-tight">{s.label}</span>
+              </div>
+              {i < statusSummary.length - 1 && <div className="w-4 h-0.5 bg-gray-300 -mt-4 shrink-0" />}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Sample Cards */}
+      {filtered.map((sample) => (
+        <div key={sample.id} className="bg-white rounded-lg border">
+          <div
+            className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50"
+            onClick={() => setExpandedSample(expandedSample === sample.id ? null : sample.id)}
+          >
+            <div className="flex items-center gap-4">
+              <div className="flex flex-col">
+                <span className="text-sm font-mono font-semibold text-amber-600">{sample.sampleId}</span>
+                <span className="text-xs text-gray-500">{sample.moduleModel}</span>
+              </div>
+              <div className="text-xs text-gray-500">
+                <div>{sample.clientName}</div>
+                <div className="font-mono">{sample.batchId}</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <div className="text-xs text-gray-500">Location</div>
+                <div className="text-sm font-medium">{sample.location}</div>
+              </div>
+              <span className={cn('text-xs font-medium px-2 py-0.5 rounded whitespace-nowrap', sampleStatusColors[sample.status])}>
+                {sample.status.replace(/_/g, ' ')}
+              </span>
+              <svg className={cn('w-4 h-4 text-gray-400 transition-transform', expandedSample === sample.id && 'rotate-180')} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
+
+          {expandedSample === sample.id && (
+            <div className="px-4 pb-4 border-t pt-4">
+              {/* Status Timeline */}
+              <h4 className="text-xs font-semibold text-gray-500 uppercase mb-3">Chain of Custody</h4>
+              <div className="relative">
+                <div className="absolute left-3 top-2 bottom-2 w-0.5 bg-amber-200" />
+                <div className="space-y-3">
+                  {sample.custody.map((entry, i) => {
+                    const isLast = i === sample.custody.length - 1
+                    return (
+                      <div key={i} className="flex items-start gap-3 relative">
+                        <div className={cn(
+                          'w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0 z-10',
+                          isLast ? 'bg-amber-500 ring-2 ring-amber-200' : 'bg-amber-400'
+                        )}>
+                          {i + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-medium">{entry.holder}</span>
+                            <span className="text-xs bg-gray-100 px-1.5 py-0.5 rounded">{entry.location}</span>
+                            <span className="text-xs text-gray-400 ml-auto">
+                              {new Date(entry.timestamp).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                          <div className="text-xs text-gray-600 mt-0.5">{entry.action}</div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Quick Info */}
+              <div className="mt-4 pt-3 border-t grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                <div>
+                  <span className="text-gray-500">Received</span>
+                  <div className="font-medium">{formatDate(sample.receivedDate)}</div>
+                </div>
+                <div>
+                  <span className="text-gray-500">Days in Lab</span>
+                  <div className="font-medium">
+                    {Math.ceil((new Date().getTime() - new Date(sample.receivedDate).getTime()) / (1000 * 60 * 60 * 24))} days
+                  </div>
+                </div>
+                <div>
+                  <span className="text-gray-500">Custody Transfers</span>
+                  <div className="font-medium">{sample.custody.length}</div>
+                </div>
+                <div>
+                  <span className="text-gray-500">Current Holder</span>
+                  <div className="font-medium">{sample.custody[sample.custody.length - 1].holder}</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+
+      {/* Batch Management Summary */}
+      <div className="bg-white rounded-lg border p-4">
+        <h3 className="text-sm font-semibold mb-3">Batch Summary</h3>
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="border-b">
+                <th className="text-left py-2 px-3 text-xs text-gray-500 uppercase">Batch ID</th>
+                <th className="text-right py-2 px-3 text-xs text-gray-500 uppercase">Samples</th>
+                <th className="text-left py-2 px-3 text-xs text-gray-500 uppercase">Client</th>
+                <th className="text-left py-2 px-3 text-xs text-gray-500 uppercase">Status Distribution</th>
+              </tr>
+            </thead>
+            <tbody>
+              {batches.map((batchId) => {
+                const batchSamples = trackedSamples.filter(s => s.batchId === batchId)
+                const statuses = batchSamples.reduce<Record<string, number>>((acc, s) => {
+                  acc[s.status] = (acc[s.status] || 0) + 1
+                  return acc
+                }, {})
+                return (
+                  <tr key={batchId} className="border-b last:border-0">
+                    <td className="py-2 px-3 font-mono font-medium text-amber-600">{batchId}</td>
+                    <td className="py-2 px-3 text-right">{batchSamples.length}</td>
+                    <td className="py-2 px-3">{batchSamples[0].clientName}</td>
+                    <td className="py-2 px-3">
+                      <div className="flex gap-1 flex-wrap">
+                        {Object.entries(statuses).map(([st, cnt]) => (
+                          <span key={st} className={cn('text-[10px] font-medium px-1.5 py-0.5 rounded', sampleStatusColors[st])}>
+                            {st.replace(/_/g, ' ')} ({cnt})
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
