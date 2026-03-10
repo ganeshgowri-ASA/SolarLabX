@@ -69,6 +69,7 @@ const navItems = [
   { title: "Vision AI", href: "/vision-ai", icon: "ScanEye" },
   { title: "SOP Gen", href: "/sop-gen", icon: "BookOpen" },
   { title: "Reports", href: "/reports", icon: "FileBarChart" },
+  { title: "Data Analysis", href: "/data-analysis", icon: "BarChart3" },
   { title: "Statistics", href: "/statistics", icon: "BarChart3" },
   { title: "Traceability", href: "/traceability", icon: "GitBranch" },
   { title: "RCA", href: "/rca", icon: "SearchCheck" },
