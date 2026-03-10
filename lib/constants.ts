@@ -163,6 +163,8 @@ export const REPORT_TYPES = [
   { id: "iec_61730_safety", label: "IEC 61730 Safety Qualification", standard: "IEC 61730" },
   { id: "iec_61853_energy", label: "IEC 61853 Energy Rating", standard: "IEC 61853" },
   { id: "iec_60904_measurement", label: "IEC 60904 Measurement", standard: "IEC 60904" },
+  { id: "iec_61701_salt", label: "IEC 61701 Salt Mist Corrosion", standard: "IEC 61701" },
+  { id: "iec_62716_ammonia", label: "IEC 62716 Ammonia Corrosion", standard: "IEC 62716" },
   { id: "custom", label: "Custom Report", standard: "Custom" },
 ] as const;
 
