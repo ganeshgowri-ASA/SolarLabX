@@ -8,6 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { sampleReports } from "@/lib/mock-data";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import MasterIndex from "@/components/reports/MasterIndex";
+import TemplateLibrary from "@/components/reports/TemplateLibrary";
+import TemplateCustomizer from "@/components/reports/TemplateCustomizer";
 
 // ---------------------------------------------------------------------------
 // Inline mock data
@@ -261,7 +264,10 @@ const complianceMatrix: ComplianceRow[] = [
 
 const tabs = [
   { key: "registry", label: "Report Registry" },
+  { key: "master_index", label: "Master Index" },
   { key: "templates", label: "Templates" },
+  { key: "template_library", label: "Template Library" },
+  { key: "customize", label: "Customize" },
   { key: "generate", label: "Generate" },
   { key: "signatures", label: "Digital Signatures" },
   { key: "compliance", label: "Compliance Matrix" },
@@ -772,6 +778,21 @@ export default function ReportsDashboard() {
           })}
         </div>
       )}
+
+      {/* ============================================================== */}
+      {/* TAB: Master Index                                              */}
+      {/* ============================================================== */}
+      {activeTab === "master_index" && <MasterIndex />}
+
+      {/* ============================================================== */}
+      {/* TAB: Template Library                                          */}
+      {/* ============================================================== */}
+      {activeTab === "template_library" && <TemplateLibrary />}
+
+      {/* ============================================================== */}
+      {/* TAB: Customize                                                 */}
+      {/* ============================================================== */}
+      {activeTab === "customize" && <TemplateCustomizer />}
 
       {/* ============================================================== */}
       {/* TAB: Compliance Matrix                                         */}
