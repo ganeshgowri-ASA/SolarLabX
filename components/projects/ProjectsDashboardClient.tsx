@@ -14,6 +14,7 @@ import GanttChart from "@/components/projects/GanttChart";
 import SprintView from "@/components/projects/SprintView";
 import ResourceView from "@/components/projects/ResourceView";
 import ProjectDashboardWidgets from "@/components/projects/ProjectDashboardWidgets";
+import TestPlanView from "@/components/projects/TestPlanView";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
@@ -183,6 +184,7 @@ export default function ProjectsDashboardClient() {
           <TabsTrigger value="sprints">Sprints</TabsTrigger>
           <TabsTrigger value="resources">Resources</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="test-plans">Test Plans</TabsTrigger>
           <TabsTrigger value="templates">Templates</TabsTrigger>
         </TabsList>
 
@@ -245,6 +247,10 @@ export default function ProjectsDashboardClient() {
             cycleTimeData={projectMetrics.cycleTimeData}
             throughputWeekly={projectMetrics.throughputWeekly}
           />
+        </TabsContent>
+
+        <TabsContent value="test-plans">
+          <TestPlanView />
         </TabsContent>
 
         <TabsContent value="templates">
