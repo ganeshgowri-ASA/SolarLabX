@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { cn, formatDate, formatCurrency, getStatusColor } from '@/lib/utils'
+import { toast } from 'sonner'
 import {
   serviceRequests,
   approvalWorkflows,
@@ -62,6 +63,9 @@ export default function LimsPage() {
           <p className="text-sm text-gray-500">Laboratory Information Management System - Professional Lab Workflow</p>
         </div>
         <div className="flex gap-2">
+          <button onClick={() => toast.info("New service request form coming soon")} className="px-3 py-1.5 text-sm bg-amber-600 text-white rounded-md hover:bg-amber-700">
+            + New Service Request
+          </button>
           <Link href="/lims/samples" className="px-3 py-1.5 text-sm border rounded-md hover:bg-gray-50">
             Sample Registry
           </Link>

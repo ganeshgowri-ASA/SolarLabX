@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { cn, formatDate, getStatusColor } from "@/lib/utils";
+import { toast } from "sonner";
 import type { QMSDocument, CAPA } from "@/lib/types";
 import { mockComplianceRequirements } from "@/lib/mock-data";
 
@@ -639,7 +640,7 @@ export default function QMSDashboard() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">Non-Conformance Reports</h2>
-            <button className="btn-primary text-sm px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">
+            <button onClick={() => toast.info("NCR creation form coming soon")} className="btn-primary text-sm px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">
               Raise NCR
             </button>
           </div>
@@ -720,7 +721,7 @@ export default function QMSDashboard() {
                 <p className="text-xs text-gray-500 font-medium uppercase mb-2">Disposition Options</p>
                 <div className="flex gap-2">
                   {["Scrap", "Rework", "Use As-Is", "Return to Supplier"].map((d) => (
-                    <button key={d} className="px-3 py-1 text-xs border rounded hover:bg-gray-50">{d}</button>
+                    <button key={d} onClick={() => toast.success(`Disposition set to "${d}"`)} className="px-3 py-1 text-xs border rounded hover:bg-gray-50">{d}</button>
                   ))}
                 </div>
               </div>

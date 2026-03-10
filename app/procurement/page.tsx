@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { rfqs, purchaseOrders, vendors, procurementMetrics } from "@/lib/data/procurement-data";
 import { formatCurrency, formatDate, cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { useState } from "react";
 
@@ -433,7 +434,7 @@ export default function ProcurementDashboard() {
               <h2 className="text-lg font-semibold text-gray-900">Purchase Requisitions</h2>
               <p className="text-sm text-gray-500">Manage procurement requests and approval workflows</p>
             </div>
-            <button className="btn-primary text-sm">New Requisition</button>
+            <button onClick={() => toast.info("New requisition form coming soon")} className="btn-primary text-sm">New Requisition</button>
           </div>
 
           {/* PR summary cards */}
@@ -543,7 +544,7 @@ export default function ProcurementDashboard() {
               <h2 className="text-lg font-semibold text-gray-900">Vendor Management</h2>
               <p className="text-sm text-gray-500">Approved vendor list, performance ratings, and audit schedule</p>
             </div>
-            <button className="btn-primary text-sm">Add Vendor</button>
+            <button onClick={() => toast.info("Add vendor form coming soon")} className="btn-primary text-sm">Add Vendor</button>
           </div>
 
           {/* Vendor Cards */}
@@ -782,7 +783,7 @@ export default function ProcurementDashboard() {
               <h2 className="text-lg font-semibold text-gray-900">Material Receiving &amp; Inspection</h2>
               <p className="text-sm text-gray-500">Goods Receipt Notes (GRN) and quality inspection records</p>
             </div>
-            <button className="btn-primary text-sm">Create GRN</button>
+            <button onClick={() => toast.info("GRN creation form coming soon")} className="btn-primary text-sm">Create GRN</button>
           </div>
 
           {/* GRN summary */}
@@ -891,7 +892,7 @@ export default function ProcurementDashboard() {
               <h2 className="text-lg font-semibold text-gray-900">Inventory Management</h2>
               <p className="text-sm text-gray-500">Test consumables, spare parts, and calibration standards tracking</p>
             </div>
-            <button className="btn-primary text-sm">Add Item</button>
+            <button onClick={() => toast.info("Add inventory item form coming soon")} className="btn-primary text-sm">Add Item</button>
           </div>
 
           {/* Inventory summary */}

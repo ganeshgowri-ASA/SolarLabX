@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { cn, formatDate, getStatusColor } from '@/lib/utils'
+import { toast } from 'sonner'
 import { rcaRecords, rcaMetrics } from '@/lib/data/rca-data'
 import type { RCA, FishboneData } from '@/lib/types'
 
@@ -38,6 +39,9 @@ export default function RcaPage() {
           <h1 className="text-2xl font-bold text-gray-900">Root Cause Analysis</h1>
           <p className="text-sm text-gray-500">5-Why, Fishbone/Ishikawa, 8D Report & CAPA Tracking</p>
         </div>
+        <button onClick={() => toast.info("New RCA initiation form coming soon")} className="px-4 py-2 text-sm bg-amber-600 text-white rounded hover:bg-amber-700">
+          + New RCA
+        </button>
       </div>
 
       {/* Tabs */}

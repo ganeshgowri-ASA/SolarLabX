@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { sampleReports } from "@/lib/mock-data";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -502,7 +503,7 @@ export default function ReportsDashboard() {
                   <span className="text-xs text-muted-foreground">
                     Last updated: {tpl.lastUpdated}
                   </span>
-                  <Button size="sm">Use Template</Button>
+                  <Button size="sm" onClick={() => toast.success(`Template "${tpl.name}" selected`)}>Use Template</Button>
                 </div>
               </CardContent>
             </Card>
@@ -628,7 +629,7 @@ export default function ReportsDashboard() {
                             </Badge>
                           </td>
                           <td className="p-2">
-                            <Button variant="outline" size="sm">
+                            <Button variant="outline" size="sm" onClick={() => toast.info(`Report ${r.reportNumber} selected for generation`)}>
                               Select
                             </Button>
                           </td>
@@ -640,8 +641,8 @@ export default function ReportsDashboard() {
               </div>
 
               <div className="flex gap-3 pt-2">
-                <Button>Generate Report</Button>
-                <Button variant="outline">Preview</Button>
+                <Button onClick={() => toast.success("Report generation started")}>Generate Report</Button>
+                <Button variant="outline" onClick={() => toast.info("Report preview loading")}>Preview</Button>
               </div>
             </CardContent>
           </Card>
