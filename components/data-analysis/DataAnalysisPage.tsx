@@ -48,7 +48,18 @@ import {
   Activity,
   Target,
   Sigma,
+  Zap,
+  Sun,
+  Thermometer,
+  Wind,
+  FlaskConical,
 } from "lucide-react"
+import { SPCControlCharts } from "./SPCControlCharts"
+import { StatisticsOverview } from "./StatisticsOverview"
+import { IVCurveTab } from "./IVCurveTab"
+import { NMOTCalculator } from "./NMOTCalculator"
+import { PeelTestAnalysis } from "./PeelTestAnalysis"
+import { WeatherQA } from "./WeatherQA"
 import {
   generateMockData,
   calculateStatistics,
@@ -411,22 +422,46 @@ export default function DataAnalysisPage() {
 
       {/* Main Tabs */}
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="overview">
-            <BarChart3 className="mr-2 h-4 w-4" />
+        <TabsList className="h-auto flex-wrap bg-muted">
+          <TabsTrigger value="overview" className="text-xs">
+            <BarChart3 className="mr-1 h-3 w-3" />
             Overview
           </TabsTrigger>
-          <TabsTrigger value="trend">
-            <TrendingUp className="mr-2 h-4 w-4" />
-            Trend Analysis
+          <TabsTrigger value="statistics" className="text-xs">
+            <Sigma className="mr-1 h-3 w-3" />
+            JMP Statistics
           </TabsTrigger>
-          <TabsTrigger value="comparison">
-            <Target className="mr-2 h-4 w-4" />
+          <TabsTrigger value="spc" className="text-xs">
+            <Activity className="mr-1 h-3 w-3" />
+            SPC Charts
+          </TabsTrigger>
+          <TabsTrigger value="trend" className="text-xs">
+            <TrendingUp className="mr-1 h-3 w-3" />
+            Trend
+          </TabsTrigger>
+          <TabsTrigger value="comparison" className="text-xs">
+            <Target className="mr-1 h-3 w-3" />
             Comparison
           </TabsTrigger>
-          <TabsTrigger value="passfail">
-            <Activity className="mr-2 h-4 w-4" />
-            Pass/Fail Analysis
+          <TabsTrigger value="passfail" className="text-xs">
+            <CheckCircle className="mr-1 h-3 w-3" />
+            Pass/Fail
+          </TabsTrigger>
+          <TabsTrigger value="ivcurve" className="text-xs">
+            <Zap className="mr-1 h-3 w-3" />
+            IV Curve
+          </TabsTrigger>
+          <TabsTrigger value="nmot" className="text-xs">
+            <Thermometer className="mr-1 h-3 w-3" />
+            NMOT/NOCT
+          </TabsTrigger>
+          <TabsTrigger value="peel" className="text-xs">
+            <FlaskConical className="mr-1 h-3 w-3" />
+            Peel Test
+          </TabsTrigger>
+          <TabsTrigger value="weather" className="text-xs">
+            <Sun className="mr-1 h-3 w-3" />
+            Weather QA
           </TabsTrigger>
         </TabsList>
 
@@ -1492,6 +1527,73 @@ export default function DataAnalysisPage() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* ===================== TAB: JMP STATISTICS ===================== */}
+        <TabsContent value="statistics" className="space-y-6">
+          <StatisticsOverview data={filteredData} />
+        </TabsContent>
+
+        {/* ===================== TAB: SPC CHARTS ===================== */}
+        <TabsContent value="spc" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">SPC Control Charts</h2>
+            <p className="text-sm text-muted-foreground">
+              Individual, Moving Range, X̄-bar &amp; R charts with Western Electric rule violation detection
+            </p>
+          </div>
+          <SPCControlCharts
+            data={filteredData}
+            parameter={activeParameter}
+            parameterLabel={PARAMETER_LABELS[activeParameter]}
+            unit={IEC_TOLERANCES[activeParameter].unit}
+            lsl={IEC_TOLERANCES[activeParameter].lsl}
+            usl={IEC_TOLERANCES[activeParameter].usl}
+          />
+        </TabsContent>
+
+        {/* ===================== TAB: IV CURVE ===================== */}
+        <TabsContent value="ivcurve" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">IV Curve Analysis</h2>
+            <p className="text-sm text-muted-foreground">
+              Parameter extraction, IEC 60891 temperature correction, power matrix (IEC 61853)
+            </p>
+          </div>
+          <IVCurveTab />
+        </TabsContent>
+
+        {/* ===================== TAB: NMOT/NOCT ===================== */}
+        <TabsContent value="nmot" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">NMOT / NOCT Calculator</h2>
+            <p className="text-sm text-muted-foreground">
+              Outdoor NMOT determination per IEC 61215-2 / IEC 61853-2 with diurnal analysis
+            </p>
+          </div>
+          <NMOTCalculator />
+        </TabsContent>
+
+        {/* ===================== TAB: PEEL TEST ===================== */}
+        <TabsContent value="peel" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Peel Test Data Analysis</h2>
+            <p className="text-sm text-muted-foreground">
+              Adhesion strength, failure mode analysis, degradation by conditioning sequence
+            </p>
+          </div>
+          <PeelTestAnalysis />
+        </TabsContent>
+
+        {/* ===================== TAB: WEATHER QA ===================== */}
+        <TabsContent value="weather" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Weather Data Quality Assessment</h2>
+            <p className="text-sm text-muted-foreground">
+              BSRN Tier 1 QC checks, irradiance flagging, NMOT measurement filtering
+            </p>
+          </div>
+          <WeatherQA />
         </TabsContent>
       </Tabs>
     </div>
