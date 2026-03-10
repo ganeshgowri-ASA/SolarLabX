@@ -24,6 +24,8 @@ import {
   Search,
   MessageSquareWarning,
   MessageCircle,
+  Workflow,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -54,6 +56,8 @@ const iconMap = {
   Search,
   MessageSquareWarning,
   MessageCircle,
+  Workflow,
+  ClipboardList,
 } as const;
 
 const navItems = [
@@ -71,6 +75,8 @@ const navItems = [
   { title: "RCA", href: "/rca", icon: "SearchCheck" },
   { title: "Complaints", href: "/complaints", icon: "MessageSquareWarning" },
   { title: "Chatbot", href: "/chatbot", icon: "MessageCircle" },
+  { title: "Flowcharts", href: "/flowcharts", icon: "Workflow" },
+  { title: "Route Cards", href: "/route-cards", icon: "ClipboardList" },
   { title: "Sun Simulator", href: "/sun-simulator", icon: "Sun" },
   { title: "Chamber Config", href: "/chamber-config", icon: "Thermometer" },
   { title: "Procurement", href: "/procurement", icon: "ShoppingCart" },
