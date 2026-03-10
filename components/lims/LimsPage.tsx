@@ -75,6 +75,9 @@ export default function LimsPage() {
           <Link href="/lims/equipment" className="px-3 py-1.5 text-sm border rounded-md hover:bg-gray-50">
             Equipment
           </Link>
+          <Link href="/lims/labels" className="px-3 py-1.5 text-sm border rounded-md hover:bg-gray-50">
+            QR / Barcode Labels
+          </Link>
         </div>
       </div>
 
