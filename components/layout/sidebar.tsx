@@ -29,6 +29,8 @@ import {
   ClipboardList,
   TrendingUp,
   Zap,
+  ScrollText,
+  ArrowLeftRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -64,6 +66,8 @@ const iconMap = {
   ClipboardList,
   TrendingUp,
   Zap,
+  ScrollText,
+  ArrowLeftRight,
 } as const;
 
 const navItems = [
@@ -90,6 +94,8 @@ const navItems = [
   { title: "Sun Simulator", href: "/sun-simulator", icon: "Sun" },
   { title: "Chamber Config", href: "/chamber-config", icon: "Thermometer" },
   { title: "Procurement", href: "/procurement", icon: "ShoppingCart" },
+  { title: "IEC Guidelines", href: "/iec-guidelines", icon: "ScrollText" },
+  { title: "BoM Changes", href: "/bom-changes", icon: "ArrowLeftRight" },
 ] as const;
 
 interface SidebarProps {
