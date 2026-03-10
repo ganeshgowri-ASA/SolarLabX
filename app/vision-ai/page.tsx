@@ -878,12 +878,12 @@ export default function VisionAIDashboard() {
                       <TableCell className="text-right">
                         {item.status === "Complete" && (
                           <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="sm" onClick={() => toast.info(`Viewing results for ${item.moduleId}`)}><Eye className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="sm" onClick={() => toast.success(`Report downloaded for ${item.moduleId}`)}><FileText className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="sm" onClick={() => toast.info(`Viewing results for ${item.id}`)}><Eye className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="sm" onClick={() => toast.success(`Report downloaded for ${item.id}`)}><FileText className="h-4 w-4" /></Button>
                           </div>
                         )}
                         {item.status === "Failed" && (
-                          <Button variant="ghost" size="sm" className="text-destructive" onClick={() => toast.info(`Retrying analysis for ${item.moduleId}`)}>Retry</Button>
+                          <Button variant="ghost" size="sm" className="text-destructive" onClick={() => toast.info(`Retrying analysis for ${item.id}`)}>Retry</Button>
                         )}
                         {item.status === "Queued" && (
                           <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => toast.info("Analysis queued — waiting for processing")}>
