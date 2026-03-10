@@ -190,7 +190,14 @@ export default function ProjectsDashboardClient() {
         </TabsContent>
 
         <TabsContent value="gantt">
-          <GanttChart tasks={filteredTasks} projectStart={project.startDate} projectEnd={project.endDate} />
+          <GanttChart
+            tasks={filteredTasks}
+            projectStart={project.startDate}
+            projectEnd={project.endDate}
+            projectName={project.name}
+            projectManager={project.projectManager}
+            completionPercent={project.completionPercent}
+          />
         </TabsContent>
 
         <TabsContent value="sprints">
