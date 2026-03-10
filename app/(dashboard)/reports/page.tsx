@@ -32,6 +32,9 @@ export default function ReportsDashboard() {
           <Link href="/reports/generate">
             <Button>Generate Report</Button>
           </Link>
+          <Link href="/reports/iec-full">
+            <Button variant="default" className="bg-blue-600 hover:bg-blue-700">IEC Full Report</Button>
+          </Link>
           <Link href="/reports/templates">
             <Button variant="outline">Templates</Button>
           </Link>
