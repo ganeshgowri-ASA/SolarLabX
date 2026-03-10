@@ -1,80 +1,268 @@
-// Master Test Index data for IEC standards
-// Each entry represents a test from the standard with its execution status
+// ---------------------------------------------------------------------------
+// Master Index Files — Test Index per IEC standard
+// ---------------------------------------------------------------------------
 
-export type TestIndexStatus = "completed" | "in_progress" | "scheduled" | "not_started" | "skipped" | "failed";
+export type TestStatus = "completed" | "in_progress" | "scheduled" | "not_started" | "on_hold" | "failed";
 
 export interface MasterIndexEntry {
   id: string;
+  testId: string;
+  testName: string;
   standard: string;
   clause: string;
-  testName: string;
-  category: "Design" | "Safety" | "Performance" | "Durability" | "Environmental" | "Measurement";
-  status: TestIndexStatus;
   moduleId: string;
+  manufacturer: string;
+  sampleType: string;
+  testSequence: string;
+  status: TestStatus;
+  startDate: string;
+  endDate: string;
   assignedTo: string;
-  scheduledDate: string;
-  completedDate: string;
+  equipment: string;
+  reportNumber: string;
   result: "pass" | "fail" | "pending" | "n/a";
   remarks: string;
-  equipment: string;
-  sequence: number;
 }
 
-export const masterIndexData: MasterIndexEntry[] = [
-  // IEC 61215 Tests
-  { id: "mi-001", standard: "IEC 61215", clause: "MQT 01", testName: "Visual Inspection (Initial)", category: "Design", status: "completed", moduleId: "MOD-2026-0145", assignedTo: "Ravi Kumar", scheduledDate: "2026-01-15", completedDate: "2026-01-15", result: "pass", remarks: "No visible defects", equipment: "Visual Inspection Booth", sequence: 1 },
-  { id: "mi-002", standard: "IEC 61215", clause: "MQT 02", testName: "Maximum Power Determination at STC", category: "Performance", status: "completed", moduleId: "MOD-2026-0145", assignedTo: "Ravi Kumar", scheduledDate: "2026-01-16", completedDate: "2026-01-16", result: "pass", remarks: "Pmax = 405.2W (Rated: 400W)", equipment: "Sun Simulator SS-1600", sequence: 2 },
-  { id: "mi-003", standard: "IEC 61215", clause: "MQT 03", testName: "Insulation Test", category: "Safety", status: "completed", moduleId: "MOD-2026-0145", assignedTo: "Suresh Iyer", scheduledDate: "2026-01-17", completedDate: "2026-01-17", result: "pass", remarks: "Rins = 4.2 GΩ (>40 MΩ)", equipment: "Insulation Tester IR-500", sequence: 3 },
-  { id: "mi-004", standard: "IEC 61215", clause: "MQT 04", testName: "Temperature Coefficients Measurement", category: "Performance", status: "completed", moduleId: "MOD-2026-0145", assignedTo: "Ravi Kumar", scheduledDate: "2026-01-20", completedDate: "2026-01-21", result: "pass", remarks: "α=0.05%/K, β=-0.31%/K", equipment: "Sun Simulator SS-1600 + TC Chamber", sequence: 4 },
-  { id: "mi-005", standard: "IEC 61215", clause: "MQT 05", testName: "NMOT Determination", category: "Performance", status: "completed", moduleId: "MOD-2026-0145", assignedTo: "Ravi Kumar", scheduledDate: "2026-01-22", completedDate: "2026-01-23", result: "pass", remarks: "NMOT = 43.5°C", equipment: "Outdoor Test Stand", sequence: 5 },
-  { id: "mi-006", standard: "IEC 61215", clause: "MQT 06", testName: "Performance at STC & NMOT", category: "Performance", status: "completed", moduleId: "MOD-2026-0145", assignedTo: "Suresh Iyer", scheduledDate: "2026-01-24", completedDate: "2026-01-24", result: "pass", remarks: "Within tolerance", equipment: "Sun Simulator SS-1600", sequence: 6 },
-  { id: "mi-007", standard: "IEC 61215", clause: "MQT 07", testName: "Performance at Low Irradiance", category: "Performance", status: "completed", moduleId: "MOD-2026-0145", assignedTo: "Suresh Iyer", scheduledDate: "2026-01-25", completedDate: "2026-01-25", result: "pass", remarks: "P200 = 76.8W", equipment: "Sun Simulator SS-1600", sequence: 7 },
-  { id: "mi-008", standard: "IEC 61215", clause: "MQT 08", testName: "Outdoor Exposure Test", category: "Durability", status: "completed", moduleId: "MOD-2026-0145", assignedTo: "Meena Joshi", scheduledDate: "2026-01-27", completedDate: "2026-02-10", result: "pass", remarks: "60 kWh/m² cumulative", equipment: "Outdoor Rack OT-3", sequence: 8 },
-  { id: "mi-009", standard: "IEC 61215", clause: "MQT 09", testName: "Hot-Spot Endurance Test", category: "Safety", status: "completed", moduleId: "MOD-2026-0145", assignedTo: "Ravi Kumar", scheduledDate: "2026-02-11", completedDate: "2026-02-12", result: "pass", remarks: "No degradation observed", equipment: "Sun Simulator SS-1600", sequence: 9 },
-  { id: "mi-010", standard: "IEC 61215", clause: "MQT 10", testName: "UV Preconditioning", category: "Durability", status: "completed", moduleId: "MOD-2026-0145", assignedTo: "Meena Joshi", scheduledDate: "2026-02-13", completedDate: "2026-02-20", result: "pass", remarks: "15 kWh/m² UV dose", equipment: "UV Chamber UV-2000", sequence: 10 },
-  { id: "mi-011", standard: "IEC 61215", clause: "MQT 11", testName: "Thermal Cycling TC200", category: "Durability", status: "in_progress", moduleId: "MOD-2026-0145", assignedTo: "Meena Joshi", scheduledDate: "2026-02-21", completedDate: "", result: "pending", remarks: "Cycle 156/200 completed", equipment: "TC Chamber TC-3000", sequence: 11 },
-  { id: "mi-012", standard: "IEC 61215", clause: "MQT 12", testName: "Humidity-Freeze HF10", category: "Durability", status: "scheduled", moduleId: "MOD-2026-0145", assignedTo: "Meena Joshi", scheduledDate: "2026-03-15", completedDate: "", result: "pending", remarks: "", equipment: "HF Chamber HF-1500", sequence: 12 },
-  { id: "mi-013", standard: "IEC 61215", clause: "MQT 13", testName: "Damp Heat DH1000", category: "Durability", status: "scheduled", moduleId: "MOD-2026-0145", assignedTo: "Meena Joshi", scheduledDate: "2026-03-20", completedDate: "", result: "pending", remarks: "", equipment: "DH Chamber DH-5000", sequence: 13 },
-  { id: "mi-014", standard: "IEC 61215", clause: "MQT 14", testName: "Robustness of Terminations", category: "Safety", status: "not_started", moduleId: "MOD-2026-0145", assignedTo: "Suresh Iyer", scheduledDate: "2026-04-15", completedDate: "", result: "pending", remarks: "", equipment: "Mechanical Tester", sequence: 14 },
-  { id: "mi-015", standard: "IEC 61215", clause: "MQT 15", testName: "Wet Leakage Current", category: "Safety", status: "not_started", moduleId: "MOD-2026-0145", assignedTo: "Suresh Iyer", scheduledDate: "2026-04-20", completedDate: "", result: "pending", remarks: "", equipment: "Leakage Current Tester", sequence: 15 },
-  { id: "mi-016", standard: "IEC 61215", clause: "MQT 16", testName: "Mechanical Load Test", category: "Durability", status: "not_started", moduleId: "MOD-2026-0145", assignedTo: "Ravi Kumar", scheduledDate: "2026-04-25", completedDate: "", result: "pending", remarks: "", equipment: "Mechanical Load Frame ML-1000", sequence: 16 },
-  { id: "mi-017", standard: "IEC 61215", clause: "MQT 17", testName: "Hail Test", category: "Durability", status: "not_started", moduleId: "MOD-2026-0145", assignedTo: "Ravi Kumar", scheduledDate: "2026-05-01", completedDate: "", result: "pending", remarks: "", equipment: "Hail Tester HT-200", sequence: 17 },
-  { id: "mi-018", standard: "IEC 61215", clause: "MQT 18", testName: "Bypass Diode Thermal Test", category: "Safety", status: "not_started", moduleId: "MOD-2026-0145", assignedTo: "Suresh Iyer", scheduledDate: "2026-05-05", completedDate: "", result: "pending", remarks: "", equipment: "Diode Tester", sequence: 18 },
-  { id: "mi-019", standard: "IEC 61215", clause: "MQT 19", testName: "Static Mechanical Load", category: "Durability", status: "not_started", moduleId: "MOD-2026-0145", assignedTo: "Ravi Kumar", scheduledDate: "2026-05-10", completedDate: "", result: "pending", remarks: "", equipment: "Static Load Frame", sequence: 19 },
-
-  // IEC 61730 Tests
-  { id: "mi-020", standard: "IEC 61730", clause: "MST 01", testName: "Visual Inspection", category: "Safety", status: "completed", moduleId: "MOD-2026-0145", assignedTo: "Ravi Kumar", scheduledDate: "2026-01-15", completedDate: "2026-01-15", result: "pass", remarks: "No safety concerns", equipment: "Visual Inspection Booth", sequence: 1 },
-  { id: "mi-021", standard: "IEC 61730", clause: "MST 02", testName: "Accessibility Test", category: "Safety", status: "completed", moduleId: "MOD-2026-0145", assignedTo: "Suresh Iyer", scheduledDate: "2026-01-16", completedDate: "2026-01-16", result: "pass", remarks: "IP rated", equipment: "Test Probe Kit", sequence: 2 },
-  { id: "mi-022", standard: "IEC 61730", clause: "MST 03", testName: "Cut Susceptibility Test", category: "Safety", status: "completed", moduleId: "MOD-2026-0145", assignedTo: "Suresh Iyer", scheduledDate: "2026-01-17", completedDate: "2026-01-17", result: "pass", remarks: "No penetration", equipment: "Cut Test Apparatus", sequence: 3 },
-  { id: "mi-023", standard: "IEC 61730", clause: "MST 04", testName: "Ground Continuity Test", category: "Safety", status: "completed", moduleId: "MOD-2026-0145", assignedTo: "Ravi Kumar", scheduledDate: "2026-01-18", completedDate: "2026-01-18", result: "pass", remarks: "R = 0.08Ω (<0.1Ω)", equipment: "Ground Bond Tester", sequence: 4 },
-  { id: "mi-024", standard: "IEC 61730", clause: "MST 05", testName: "Impulse Voltage Test", category: "Safety", status: "completed", moduleId: "MOD-2026-0145", assignedTo: "Suresh Iyer", scheduledDate: "2026-01-20", completedDate: "2026-01-20", result: "pass", remarks: "No flashover", equipment: "Impulse Voltage Generator", sequence: 5 },
-  { id: "mi-025", standard: "IEC 61730", clause: "MST 06", testName: "Dielectric Withstand Test", category: "Safety", status: "in_progress", moduleId: "MOD-2026-0145", assignedTo: "Suresh Iyer", scheduledDate: "2026-03-08", completedDate: "", result: "pending", remarks: "Testing at 3000V AC", equipment: "Hipot Tester HV-5000", sequence: 6 },
-  { id: "mi-026", standard: "IEC 61730", clause: "MST 07", testName: "Wet Leakage Current", category: "Safety", status: "scheduled", moduleId: "MOD-2026-0145", assignedTo: "Suresh Iyer", scheduledDate: "2026-03-12", completedDate: "", result: "pending", remarks: "", equipment: "Leakage Current Tester", sequence: 7 },
-  { id: "mi-027", standard: "IEC 61730", clause: "MST 08", testName: "Temperature Test", category: "Safety", status: "scheduled", moduleId: "MOD-2026-0145", assignedTo: "Meena Joshi", scheduledDate: "2026-03-18", completedDate: "", result: "pending", remarks: "", equipment: "TC Chamber TC-3000", sequence: 8 },
-  { id: "mi-028", standard: "IEC 61730", clause: "MST 09", testName: "Hot-Spot Test (Safety)", category: "Safety", status: "not_started", moduleId: "MOD-2026-0145", assignedTo: "Ravi Kumar", scheduledDate: "2026-03-25", completedDate: "", result: "pending", remarks: "", equipment: "Sun Simulator SS-1600", sequence: 9 },
-  { id: "mi-029", standard: "IEC 61730", clause: "MST 10", testName: "Reverse Current Overload", category: "Safety", status: "not_started", moduleId: "MOD-2026-0145", assignedTo: "Suresh Iyer", scheduledDate: "2026-04-01", completedDate: "", result: "pending", remarks: "", equipment: "DC Power Supply", sequence: 10 },
-  { id: "mi-030", standard: "IEC 61730", clause: "MST 11", testName: "Module Breakage Test", category: "Safety", status: "not_started", moduleId: "MOD-2026-0145", assignedTo: "Ravi Kumar", scheduledDate: "2026-04-05", completedDate: "", result: "pending", remarks: "", equipment: "Impact Tester", sequence: 11 },
-  { id: "mi-031", standard: "IEC 61730", clause: "MST 12", testName: "Fire Test (Class C)", category: "Safety", status: "skipped", moduleId: "MOD-2026-0145", assignedTo: "N/A", scheduledDate: "", completedDate: "", result: "n/a", remarks: "Not applicable for this module class", equipment: "Fire Test Chamber", sequence: 12 },
-
-  // IEC 61853 Tests
-  { id: "mi-032", standard: "IEC 61853", clause: "Clause 7", testName: "Power Rating Matrix (Multi-condition)", category: "Performance", status: "completed", moduleId: "MOD-2026-0139", assignedTo: "Ravi Kumar", scheduledDate: "2026-02-01", completedDate: "2026-02-05", result: "pass", remarks: "22 I-V measurements at varying irradiance/temperature", equipment: "Sun Simulator SS-1600", sequence: 1 },
-  { id: "mi-033", standard: "IEC 61853", clause: "Clause 8", testName: "Energy Rating (CSER Calculation)", category: "Performance", status: "completed", moduleId: "MOD-2026-0139", assignedTo: "Ravi Kumar", scheduledDate: "2026-02-06", completedDate: "2026-02-08", result: "pass", remarks: "CSER calculated for 6 climate profiles", equipment: "Software + Data Logger", sequence: 2 },
-  { id: "mi-034", standard: "IEC 61853", clause: "Clause 9", testName: "Spectral Response Measurement", category: "Performance", status: "in_progress", moduleId: "MOD-2026-0139", assignedTo: "Suresh Iyer", scheduledDate: "2026-03-01", completedDate: "", result: "pending", remarks: "Wavelength scan 300-1200nm in progress", equipment: "Spectroradiometer SR-3000", sequence: 3 },
-  { id: "mi-035", standard: "IEC 61853", clause: "Clause 10", testName: "Angular Response (IAM)", category: "Performance", status: "scheduled", moduleId: "MOD-2026-0139", assignedTo: "Suresh Iyer", scheduledDate: "2026-03-15", completedDate: "", result: "pending", remarks: "", equipment: "Goniometric Stage + SS-1600", sequence: 4 },
-  { id: "mi-036", standard: "IEC 61853", clause: "Clause 11", testName: "Temperature Coefficients", category: "Performance", status: "scheduled", moduleId: "MOD-2026-0139", assignedTo: "Ravi Kumar", scheduledDate: "2026-03-20", completedDate: "", result: "pending", remarks: "", equipment: "Sun Simulator + TC Chamber", sequence: 5 },
-
-  // IEC 61701 Tests
-  { id: "mi-037", standard: "IEC 61701", clause: "Sev 1", testName: "Salt Mist Severity 1 (4 cycles)", category: "Environmental", status: "completed", moduleId: "MOD-2026-0142", assignedTo: "Meena Joshi", scheduledDate: "2026-01-10", completedDate: "2026-01-24", result: "pass", remarks: "No corrosion observed", equipment: "Salt Mist Chamber SM-500", sequence: 1 },
-  { id: "mi-038", standard: "IEC 61701", clause: "Sev 2", testName: "Salt Mist Severity 2 (8 cycles)", category: "Environmental", status: "in_progress", moduleId: "MOD-2026-0142", assignedTo: "Meena Joshi", scheduledDate: "2026-02-01", completedDate: "", result: "pending", remarks: "Cycle 6/8 completed", equipment: "Salt Mist Chamber SM-500", sequence: 2 },
-  { id: "mi-039", standard: "IEC 61701", clause: "Sev 3", testName: "Salt Mist Severity 3 (16 cycles)", category: "Environmental", status: "scheduled", moduleId: "MOD-2026-0142", assignedTo: "Meena Joshi", scheduledDate: "2026-03-15", completedDate: "", result: "pending", remarks: "", equipment: "Salt Mist Chamber SM-500", sequence: 3 },
-  { id: "mi-040", standard: "IEC 61701", clause: "Sev 6", testName: "Salt Mist Severity 6 (96 cycles)", category: "Environmental", status: "not_started", moduleId: "MOD-2026-0142", assignedTo: "Meena Joshi", scheduledDate: "2026-05-01", completedDate: "", result: "pending", remarks: "", equipment: "Salt Mist Chamber SM-500", sequence: 4 },
-  { id: "mi-041", standard: "IEC 61701", clause: "Visual", testName: "Post-Exposure Visual Inspection", category: "Environmental", status: "not_started", moduleId: "MOD-2026-0142", assignedTo: "Ravi Kumar", scheduledDate: "2026-06-01", completedDate: "", result: "pending", remarks: "", equipment: "Visual Inspection Booth", sequence: 5 },
-  { id: "mi-042", standard: "IEC 61701", clause: "I-V", testName: "Post-Exposure I-V Measurement", category: "Environmental", status: "not_started", moduleId: "MOD-2026-0142", assignedTo: "Ravi Kumar", scheduledDate: "2026-06-02", completedDate: "", result: "pending", remarks: "", equipment: "Sun Simulator SS-1600", sequence: 6 },
-];
-
-export const standardInfo: Record<string, { fullName: string; edition: string; totalTests: number }> = {
-  "IEC 61215": { fullName: "Design Qualification & Type Approval", edition: "2021 Ed.2", totalTests: 19 },
-  "IEC 61730": { fullName: "PV Module Safety Qualification", edition: "2016 Ed.2", totalTests: 12 },
-  "IEC 61853": { fullName: "PV Module Energy Rating", edition: "2018 Ed.1", totalTests: 5 },
-  "IEC 61701": { fullName: "Salt Mist Corrosion Testing", edition: "2020 Ed.3", totalTests: 6 },
+export const testStatusColors: Record<TestStatus, { bg: string; text: string }> = {
+  completed: { bg: "bg-green-100", text: "text-green-800" },
+  in_progress: { bg: "bg-blue-100", text: "text-blue-800" },
+  scheduled: { bg: "bg-purple-100", text: "text-purple-800" },
+  not_started: { bg: "bg-gray-100", text: "text-gray-600" },
+  on_hold: { bg: "bg-orange-100", text: "text-orange-800" },
+  failed: { bg: "bg-red-100", text: "text-red-800" },
 };
+
+export const masterIndexEntries: MasterIndexEntry[] = [
+  // IEC 61215 Tests
+  {
+    id: "mi-001", testId: "T-61215-001", testName: "Visual Inspection", standard: "IEC 61215:2021",
+    clause: "MQT 01", moduleId: "MOD-2026-0145", manufacturer: "SolarTech Industries",
+    sampleType: "PV Module", testSequence: "Seq A - Initial",
+    status: "completed", startDate: "2026-02-01", endDate: "2026-02-01",
+    assignedTo: "Ravi Kumar", equipment: "Inspection Table IT-01",
+    reportNumber: "TR-2026-0042", result: "pass", remarks: "No visual defects observed",
+  },
+  {
+    id: "mi-002", testId: "T-61215-002", testName: "Maximum Power Determination", standard: "IEC 61215:2021",
+    clause: "MQT 02", moduleId: "MOD-2026-0145", manufacturer: "SolarTech Industries",
+    sampleType: "PV Module", testSequence: "Seq A - Initial",
+    status: "completed", startDate: "2026-02-02", endDate: "2026-02-02",
+    assignedTo: "Suresh Iyer", equipment: "Solar Simulator SS-01 + IV Tracer",
+    reportNumber: "TR-2026-0042", result: "pass", remarks: "Pmax = 405.2 W (Nominal 400 W)",
+  },
+  {
+    id: "mi-003", testId: "T-61215-003", testName: "Insulation Test", standard: "IEC 61215:2021",
+    clause: "MQT 03", moduleId: "MOD-2026-0145", manufacturer: "SolarTech Industries",
+    sampleType: "PV Module", testSequence: "Seq A - Initial",
+    status: "completed", startDate: "2026-02-02", endDate: "2026-02-02",
+    assignedTo: "Ravi Kumar", equipment: "Insulation Tester IR-02",
+    reportNumber: "TR-2026-0042", result: "pass", remarks: "Resistance = 4.2 GΩ (Limit >40 MΩ)",
+  },
+  {
+    id: "mi-004", testId: "T-61215-004", testName: "Temperature Coefficients", standard: "IEC 61215:2021",
+    clause: "MQT 04", moduleId: "MOD-2026-0145", manufacturer: "SolarTech Industries",
+    sampleType: "PV Module", testSequence: "Seq A - Characterization",
+    status: "completed", startDate: "2026-02-03", endDate: "2026-02-05",
+    assignedTo: "Suresh Iyer", equipment: "Environmental Chamber EC-01 + SS-01",
+    reportNumber: "TR-2026-0042", result: "pass", remarks: "α=0.05%/K, β=-0.31%/K, γ=-0.38%/K",
+  },
+  {
+    id: "mi-005", testId: "T-61215-005", testName: "NMOT Determination", standard: "IEC 61215:2021",
+    clause: "MQT 05", moduleId: "MOD-2026-0145", manufacturer: "SolarTech Industries",
+    sampleType: "PV Module", testSequence: "Seq A - Characterization",
+    status: "completed", startDate: "2026-02-06", endDate: "2026-02-10",
+    assignedTo: "Ravi Kumar", equipment: "Outdoor Test Facility",
+    reportNumber: "TR-2026-0042", result: "pass", remarks: "NMOT = 44.2°C",
+  },
+  {
+    id: "mi-006", testId: "T-61215-006", testName: "UV Preconditioning", standard: "IEC 61215:2021",
+    clause: "MQT 10", moduleId: "MOD-2026-0145", manufacturer: "SolarTech Industries",
+    sampleType: "PV Module", testSequence: "Seq B - Preconditioning",
+    status: "completed", startDate: "2026-02-11", endDate: "2026-02-18",
+    assignedTo: "Meena Joshi", equipment: "UV Chamber UV-01",
+    reportNumber: "TR-2026-0042", result: "pass", remarks: "15 kWh/m² UVA accumulated",
+  },
+  {
+    id: "mi-007", testId: "T-61215-007", testName: "Thermal Cycling TC200", standard: "IEC 61215:2021",
+    clause: "MQT 11", moduleId: "MOD-2026-0145", manufacturer: "SolarTech Industries",
+    sampleType: "PV Module", testSequence: "Seq C - Stress Test",
+    status: "completed", startDate: "2026-02-19", endDate: "2026-03-01",
+    assignedTo: "Vikram Desai", equipment: "Thermal Chamber TC-01",
+    reportNumber: "TR-2026-0042", result: "pass", remarks: "200 cycles, -2.1% Pmax degradation",
+  },
+  {
+    id: "mi-008", testId: "T-61215-008", testName: "Humidity Freeze HF10", standard: "IEC 61215:2021",
+    clause: "MQT 12", moduleId: "MOD-2026-0145", manufacturer: "SolarTech Industries",
+    sampleType: "PV Module", testSequence: "Seq C - Stress Test",
+    status: "in_progress", startDate: "2026-03-02", endDate: "",
+    assignedTo: "Vikram Desai", equipment: "Environmental Chamber EC-02",
+    reportNumber: "", result: "pending", remarks: "Cycle 7 of 10 completed",
+  },
+  {
+    id: "mi-009", testId: "T-61215-009", testName: "Damp Heat DH1000", standard: "IEC 61215:2021",
+    clause: "MQT 13", moduleId: "MOD-2026-0145", manufacturer: "SolarTech Industries",
+    sampleType: "PV Module", testSequence: "Seq D - Accelerated Aging",
+    status: "scheduled", startDate: "2026-03-15", endDate: "",
+    assignedTo: "Meena Joshi", equipment: "Humidity Chamber HC-01",
+    reportNumber: "", result: "pending", remarks: "Scheduled after HF completion",
+  },
+  {
+    id: "mi-010", testId: "T-61215-010", testName: "Mechanical Load Test", standard: "IEC 61215:2021",
+    clause: "MQT 16", moduleId: "MOD-2026-0145", manufacturer: "SolarTech Industries",
+    sampleType: "PV Module", testSequence: "Seq E - Mechanical",
+    status: "not_started", startDate: "", endDate: "",
+    assignedTo: "Ravi Kumar", equipment: "Mechanical Load Frame ML-01",
+    reportNumber: "", result: "pending", remarks: "",
+  },
+  {
+    id: "mi-011", testId: "T-61215-011", testName: "Hail Test", standard: "IEC 61215:2021",
+    clause: "MQT 17", moduleId: "MOD-2026-0145", manufacturer: "SolarTech Industries",
+    sampleType: "PV Module", testSequence: "Seq E - Mechanical",
+    status: "not_started", startDate: "", endDate: "",
+    assignedTo: "Ravi Kumar", equipment: "Hail Launcher HL-01",
+    reportNumber: "", result: "pending", remarks: "",
+  },
+  {
+    id: "mi-012", testId: "T-61215-012", testName: "Hot-Spot Endurance", standard: "IEC 61215:2021",
+    clause: "MQT 09", moduleId: "MOD-2026-0145", manufacturer: "SolarTech Industries",
+    sampleType: "PV Module", testSequence: "Seq B - Preconditioning",
+    status: "completed", startDate: "2026-02-11", endDate: "2026-02-12",
+    assignedTo: "Suresh Iyer", equipment: "Solar Simulator SS-01 + IR Camera",
+    reportNumber: "TR-2026-0042", result: "pass", remarks: "Max cell temp 132°C (limit <150°C)",
+  },
+  // IEC 61730 Tests
+  {
+    id: "mi-013", testId: "T-61730-001", testName: "Visual Inspection (Safety)", standard: "IEC 61730:2016",
+    clause: "MST 01", moduleId: "MOD-2026-0145", manufacturer: "SolarTech Industries",
+    sampleType: "PV Module", testSequence: "Safety - Initial",
+    status: "completed", startDate: "2026-03-03", endDate: "2026-03-03",
+    assignedTo: "Ravi Kumar", equipment: "Inspection Table IT-01",
+    reportNumber: "TR-2026-0043", result: "pass", remarks: "No safety-critical defects",
+  },
+  {
+    id: "mi-014", testId: "T-61730-002", testName: "Ground Continuity Test", standard: "IEC 61730:2016",
+    clause: "MST 13", moduleId: "MOD-2026-0145", manufacturer: "SolarTech Industries",
+    sampleType: "PV Module", testSequence: "Safety - Electrical",
+    status: "completed", startDate: "2026-03-04", endDate: "2026-03-04",
+    assignedTo: "Suresh Iyer", equipment: "Ground Continuity Tester GC-01",
+    reportNumber: "TR-2026-0043", result: "pass", remarks: "Resistance = 0.08 Ω (Limit <0.1 Ω)",
+  },
+  {
+    id: "mi-015", testId: "T-61730-003", testName: "Impulse Voltage Test", standard: "IEC 61730:2016",
+    clause: "MST 14", moduleId: "MOD-2026-0145", manufacturer: "SolarTech Industries",
+    sampleType: "PV Module", testSequence: "Safety - Electrical",
+    status: "completed", startDate: "2026-03-04", endDate: "2026-03-04",
+    assignedTo: "Suresh Iyer", equipment: "Impulse Generator IG-01",
+    reportNumber: "TR-2026-0043", result: "pass", remarks: "No flashover or breakdown",
+  },
+  {
+    id: "mi-016", testId: "T-61730-004", testName: "Dielectric Withstand", standard: "IEC 61730:2016",
+    clause: "MST 16", moduleId: "MOD-2026-0145", manufacturer: "SolarTech Industries",
+    sampleType: "PV Module", testSequence: "Safety - Electrical",
+    status: "in_progress", startDate: "2026-03-08", endDate: "",
+    assignedTo: "Suresh Iyer", equipment: "Hipot Tester HT-01",
+    reportNumber: "", result: "pending", remarks: "Test in progress",
+  },
+  {
+    id: "mi-017", testId: "T-61730-005", testName: "Fire Test (Class A)", standard: "IEC 61730:2016",
+    clause: "MST 23", moduleId: "MOD-2026-0145", manufacturer: "SolarTech Industries",
+    sampleType: "PV Module", testSequence: "Safety - Fire",
+    status: "on_hold", startDate: "", endDate: "",
+    assignedTo: "Vikram Desai", equipment: "Fire Test Facility FT-01",
+    reportNumber: "", result: "pending", remarks: "Awaiting external lab coordination",
+  },
+  // IEC 61853 Tests
+  {
+    id: "mi-018", testId: "T-61853-001", testName: "Power Rating Matrix", standard: "IEC 61853:2018",
+    clause: "Clause 7", moduleId: "MOD-2026-0139", manufacturer: "GreenPower Corp",
+    sampleType: "PV Module", testSequence: "Energy Rating - Power",
+    status: "completed", startDate: "2026-03-01", endDate: "2026-03-05",
+    assignedTo: "Suresh Iyer", equipment: "SS-01 + EC-01",
+    reportNumber: "TR-2026-0044", result: "pass", remarks: "22-point matrix completed",
+  },
+  {
+    id: "mi-019", testId: "T-61853-002", testName: "Spectral Response", standard: "IEC 61853:2018",
+    clause: "Clause 9", moduleId: "MOD-2026-0139", manufacturer: "GreenPower Corp",
+    sampleType: "PV Module", testSequence: "Energy Rating - Spectral",
+    status: "in_progress", startDate: "2026-03-07", endDate: "",
+    assignedTo: "Meena Joshi", equipment: "Spectroradiometer SR-01",
+    reportNumber: "", result: "pending", remarks: "Measurements at 3 of 6 angles done",
+  },
+  {
+    id: "mi-020", testId: "T-61853-003", testName: "Angular Response (IAM)", standard: "IEC 61853:2018",
+    clause: "Clause 10", moduleId: "MOD-2026-0139", manufacturer: "GreenPower Corp",
+    sampleType: "PV Module", testSequence: "Energy Rating - Angular",
+    status: "scheduled", startDate: "2026-03-12", endDate: "",
+    assignedTo: "Meena Joshi", equipment: "Goniometer Stage GS-01",
+    reportNumber: "", result: "pending", remarks: "Depends on spectral response completion",
+  },
+  // IEC 61701 Tests
+  {
+    id: "mi-021", testId: "T-61701-001", testName: "Salt Mist Corrosion - Severity 1", standard: "IEC 61701:2020",
+    clause: "Sev 1", moduleId: "MOD-2026-0142", manufacturer: "SolarTech Industries",
+    sampleType: "PV Module", testSequence: "Environmental - Salt",
+    status: "completed", startDate: "2026-01-10", endDate: "2026-01-20",
+    assignedTo: "Vikram Desai", equipment: "Salt Spray Chamber SC-01",
+    reportNumber: "TR-2026-0030", result: "pass", remarks: "4 cycles completed, no corrosion",
+  },
+  {
+    id: "mi-022", testId: "T-61701-002", testName: "Salt Mist Corrosion - Severity 6", standard: "IEC 61701:2020",
+    clause: "Sev 6", moduleId: "MOD-2026-0142", manufacturer: "SolarTech Industries",
+    sampleType: "PV Module", testSequence: "Environmental - Salt",
+    status: "in_progress", startDate: "2026-02-15", endDate: "",
+    assignedTo: "Vikram Desai", equipment: "Salt Spray Chamber SC-01",
+    reportNumber: "", result: "pending", remarks: "Cycle 48 of 96",
+  },
+  // IEC 62804 Test
+  {
+    id: "mi-023", testId: "T-62804-001", testName: "PID Test (System Voltage)", standard: "IEC 62804:2015",
+    clause: "Clause 5", moduleId: "MOD-2026-0139", manufacturer: "GreenPower Corp",
+    sampleType: "PV Module", testSequence: "Degradation - PID",
+    status: "scheduled", startDate: "2026-03-20", endDate: "",
+    assignedTo: "Ravi Kumar", equipment: "PID Test Setup PID-01",
+    reportNumber: "", result: "pending", remarks: "96h at 85°C/85%RH + system voltage",
+  },
+  // Additional IEC 60904 Tests
+  {
+    id: "mi-024", testId: "T-60904-001", testName: "I-V Characterization at STC", standard: "IEC 60904-1",
+    clause: "60904-1", moduleId: "MOD-2026-0145", manufacturer: "SolarTech Industries",
+    sampleType: "PV Module", testSequence: "Measurement - IV",
+    status: "completed", startDate: "2026-02-01", endDate: "2026-02-01",
+    assignedTo: "Suresh Iyer", equipment: "Solar Simulator SS-01",
+    reportNumber: "TR-2026-0042", result: "pass", remarks: "STC measurement baseline",
+  },
+  {
+    id: "mi-025", testId: "T-60904-002", testName: "Sun Simulator Classification", standard: "IEC 60904-9",
+    clause: "60904-9", moduleId: "MOD-2026-0145", manufacturer: "SolarTech Industries",
+    sampleType: "Equipment Verification", testSequence: "Calibration",
+    status: "completed", startDate: "2026-01-15", endDate: "2026-01-15",
+    assignedTo: "Meena Joshi", equipment: "Solar Simulator SS-01",
+    reportNumber: "CAL-2026-0118", result: "pass", remarks: "Class A+A+A+ confirmed",
+  },
+  // Module Type C - new batch
+  {
+    id: "mi-026", testId: "T-61215-013", testName: "Visual Inspection", standard: "IEC 61215:2021",
+    clause: "MQT 01", moduleId: "MOD-2026-0160", manufacturer: "SunPeak Energy",
+    sampleType: "PV Module", testSequence: "Seq A - Initial",
+    status: "completed", startDate: "2026-03-06", endDate: "2026-03-06",
+    assignedTo: "Ravi Kumar", equipment: "Inspection Table IT-01",
+    reportNumber: "", result: "pass", remarks: "Minor cosmetic scratches on frame - acceptable",
+  },
+  {
+    id: "mi-027", testId: "T-61215-014", testName: "Maximum Power Determination", standard: "IEC 61215:2021",
+    clause: "MQT 02", moduleId: "MOD-2026-0160", manufacturer: "SunPeak Energy",
+    sampleType: "PV Module", testSequence: "Seq A - Initial",
+    status: "completed", startDate: "2026-03-07", endDate: "2026-03-07",
+    assignedTo: "Suresh Iyer", equipment: "Solar Simulator SS-01",
+    reportNumber: "", result: "fail", remarks: "Pmax = 388.1 W (Nominal 400 W) - below tolerance",
+  },
+  {
+    id: "mi-028", testId: "T-61215-015", testName: "Insulation Test", standard: "IEC 61215:2021",
+    clause: "MQT 03", moduleId: "MOD-2026-0160", manufacturer: "SunPeak Energy",
+    sampleType: "PV Module", testSequence: "Seq A - Initial",
+    status: "in_progress", startDate: "2026-03-08", endDate: "",
+    assignedTo: "Ravi Kumar", equipment: "Insulation Tester IR-02",
+    reportNumber: "", result: "pending", remarks: "Re-test after Pmax failure investigation",
+  },
+];

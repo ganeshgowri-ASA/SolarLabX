@@ -8,9 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { sampleReports } from "@/lib/mock-data";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import MasterIndexTab from "@/components/reports/MasterIndexTab";
-import TemplateLibraryTab from "@/components/reports/TemplateLibraryTab";
-import TemplateCustomizationTab from "@/components/reports/TemplateCustomizationTab";
+import MasterIndex from "@/components/reports/MasterIndex";
+import TemplateLibrary from "@/components/reports/TemplateLibrary";
+import TemplateCustomizer from "@/components/reports/TemplateCustomizer";
 
 // ---------------------------------------------------------------------------
 // Inline mock data
@@ -264,10 +264,10 @@ const complianceMatrix: ComplianceRow[] = [
 
 const tabs = [
   { key: "registry", label: "Report Registry" },
-  { key: "master-index", label: "Master Index" },
+  { key: "master_index", label: "Master Index" },
   { key: "templates", label: "Templates" },
-  { key: "template-library", label: "Template Library" },
-  { key: "customization", label: "Customization" },
+  { key: "template_library", label: "Template Library" },
+  { key: "customize", label: "Customize" },
   { key: "generate", label: "Generate" },
   { key: "signatures", label: "Digital Signatures" },
   { key: "compliance", label: "Compliance Matrix" },
@@ -780,23 +780,23 @@ export default function ReportsDashboard() {
       )}
 
       {/* ============================================================== */}
+      {/* TAB: Master Index                                              */}
+      {/* ============================================================== */}
+      {activeTab === "master_index" && <MasterIndex />}
+
+      {/* ============================================================== */}
+      {/* TAB: Template Library                                          */}
+      {/* ============================================================== */}
+      {activeTab === "template_library" && <TemplateLibrary />}
+
+      {/* ============================================================== */}
+      {/* TAB: Customize                                                 */}
+      {/* ============================================================== */}
+      {activeTab === "customize" && <TemplateCustomizer />}
+
+      {/* ============================================================== */}
       {/* TAB: Compliance Matrix                                         */}
       {/* ============================================================== */}
-      {/* ============================================================== */}
-      {/* TAB: Master Index                                               */}
-      {/* ============================================================== */}
-      {activeTab === "master-index" && <MasterIndexTab />}
-
-      {/* ============================================================== */}
-      {/* TAB: Template Library                                           */}
-      {/* ============================================================== */}
-      {activeTab === "template-library" && <TemplateLibraryTab />}
-
-      {/* ============================================================== */}
-      {/* TAB: Customization                                              */}
-      {/* ============================================================== */}
-      {activeTab === "customization" && <TemplateCustomizationTab />}
-
       {activeTab === "compliance" && (
         <div className="space-y-6">
           <Card>
