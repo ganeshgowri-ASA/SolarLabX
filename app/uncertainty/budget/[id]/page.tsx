@@ -28,7 +28,7 @@ function createSampleBudget(): UncertaintyBudget {
     createComponent("c11", "Repeatability", 0.3, 0.3, "normal", "typeA", 1.0, 9),
   ];
 
-  return calculateBudget("Module ABC-2024 Pmax", "Pmax (W)", 350.5, components, 0.95);
+  return calculateBudget("Module ABC-2024 Pmax", "Pmax", 350.5, components, 0.95, undefined, "W");
 }
 
 export default function BudgetDetailPage() {
