@@ -27,6 +27,8 @@ import {
   ShieldCheck,
   Workflow,
   ClipboardList,
+  TrendingUp,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -60,6 +62,8 @@ const iconMap = {
   ShieldCheck,
   Workflow,
   ClipboardList,
+  TrendingUp,
+  Zap,
 } as const;
 
 const navItems = [
@@ -70,6 +74,9 @@ const navItems = [
   { title: "Projects", href: "/projects", icon: "FolderKanban" },
   { title: "Equipment", href: "/equipment", icon: "Wrench" },
   { title: "Uncertainty", href: "/uncertainty", icon: "Calculator" },
+  { title: "Data Analysis", href: "/data-analysis", icon: "TrendingUp" },
+  { title: "IV Curve", href: "/iv-curve", icon: "Zap" },
+  { title: "NMOT/NOCT", href: "/nmot-noct", icon: "Thermometer" },
   { title: "Vision AI", href: "/vision-ai", icon: "ScanEye" },
   { title: "SOP Gen", href: "/sop-gen", icon: "BookOpen" },
   { title: "Reports", href: "/reports", icon: "FileBarChart" },
