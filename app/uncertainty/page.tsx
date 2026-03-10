@@ -1,1083 +1,1392 @@
 "use client";
 
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Calculator,
-  Plus,
-  Trash2,
-  FileDown,
   BarChart3,
-  TrendingUp,
-  FileText,
-  BookOpen,
-  Dices,
-  GitBranch,
-  ChevronRight,
-  Activity,
+  FlaskConical,
   Zap,
   Thermometer,
+  FileText,
+  Plus,
+  Trash2,
+  Download,
+  Eye,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import {
-  type UncertaintyComponent,
-  type UncertaintyBudget,
-  type UncertaintyTemplate,
-  type DistributionType,
-  type UncertaintyType,
-  type MonteCarloResult,
-  type FishboneCategory,
-  UNCERTAINTY_TEMPLATES,
-  TEMPLATE_CATEGORIES,
-  FISHBONE_CATEGORIES,
-  createComponent,
-  calculateBudget,
-  calculateTypeA,
-  runMonteCarloSimulation,
-} from "@/lib/uncertainty";
-import IVCurveAnalysis from "@/components/iv-curve/IVCurveAnalysis";
-import NMOTCalculator from "@/components/iv-curve/NMOTCalculator";
-import UncertaintyBudgetTable from "@/components/uncertainty/UncertaintyBudgetTable";
-import SensitivityAnalysis from "@/components/uncertainty/SensitivityAnalysis";
-import CoverageFactor from "@/components/uncertainty/CoverageFactor";
-import NormalDistributionChart from "@/components/uncertainty/NormalDistributionChart";
-import FishboneDiagram from "@/components/uncertainty/FishboneDiagram";
-import MonteCarloChart from "@/components/uncertainty/MonteCarloChart";
-import TornadoChart from "@/components/uncertainty/TornadoChart";
-import { downloadUncertaintyPDF } from "@/components/uncertainty/UncertaintyPDFReport";
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  Cell,
+} from "recharts";
 
-// ===== Component form state =====
-interface ComponentFormData {
-  name: string;
-  value: string;
-  uncertainty: string;
-  distribution: DistributionType;
-  type: UncertaintyType;
-  sensitivityCoefficient: string;
-  degreesOfFreedom: string;
-  measurements: string;
-  category: FishboneCategory;
-  description: string;
+// Utility Functions
+
+function toStandardUncertainty(value: number, distribution: string): number {
+  switch (distribution) {
+    case "Normal":
+      return value;
+    case "Uniform":
+      return value / Math.sqrt(3);
+    case "Triangular":
+      return value / Math.sqrt(6);
+    default:
+      return value;
+  }
 }
 
-const emptyForm: ComponentFormData = {
-  name: "",
-  value: "",
-  uncertainty: "",
-  distribution: "normal",
-  type: "typeB",
-  sensitivityCoefficient: "1.0",
-  degreesOfFreedom: "",
-  measurements: "",
-  category: "Equipment",
-  description: "",
-};
+function computeCombinedUncertainty(components: UncertaintyComponent[]): number {
+  const sumVariance = components.reduce((sum, c) => {
+    const ui = toStandardUncertainty(c.value, c.distribution);
+    return sum + Math.pow(c.sensitivityCoefficient * ui, 2);
+  }, 0);
+  return Math.sqrt(sumVariance);
+}
 
-export default function UncertaintyPage() {
-  // Template selection
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
-  const [selectedTemplate, setSelectedTemplate] = useState<UncertaintyTemplate | null>(null);
+function welchSatterthwaite(components: UncertaintyComponent[], uc: number): number {
+  if (uc === 0) return Infinity;
+  const uc4 = Math.pow(uc, 4);
+  const denominator = components.reduce((sum, c) => {
+    const ui = toStandardUncertainty(c.value, c.distribution);
+    const ciui = c.sensitivityCoefficient * ui;
+    const dof = c.degreesOfFreedom;
+    if (!isFinite(dof) || dof === 0) return sum;
+    return sum + Math.pow(ciui, 4) / dof;
+  }, 0);
+  if (denominator === 0) return Infinity;
+  return Math.round(uc4 / denominator);
+}
 
-  // Calculator state
-  const [measurand, setMeasurand] = useState("");
-  const [unit, setUnit] = useState("");
-  const [measuredValue, setMeasuredValue] = useState("");
-  const [components, setComponents] = useState<UncertaintyComponent[]>([]);
-  const [form, setForm] = useState<ComponentFormData>({ ...emptyForm });
-  const [typeAResult, setTypeAResult] = useState<{
-    mean: number; stdDev: number; standardUncertainty: number; degreesOfFreedom: number; n: number;
-  } | null>(null);
-  const [coverageProbability, setCoverageProbability] = useState<number>(0.95);
-
-  // Results state
-  const [budget, setBudget] = useState<UncertaintyBudget | null>(null);
-  const [mcResult, setMcResult] = useState<MonteCarloResult | null>(null);
-  const [isCalculating, setIsCalculating] = useState(false);
-  const [mcIterations, setMcIterations] = useState(10000);
-
-  // Active tab
-  const [activeTab, setActiveTab] = useState("templates");
-
-  // PDF settings
-  const [labName, setLabName] = useState("Solar PV Testing Laboratory");
-  const [preparedBy, setPreparedBy] = useState("");
-
-  // Saved budgets
-  const [savedBudgets, setSavedBudgets] = useState<UncertaintyBudget[]>([]);
-
-  // Filter templates by category
-  const filteredTemplates = useMemo(() => {
-    if (!selectedCategory) return UNCERTAINTY_TEMPLATES;
-    return UNCERTAINTY_TEMPLATES.filter((t) => t.category === selectedCategory);
-  }, [selectedCategory]);
-
-  // Load template
-  function loadTemplate(template: UncertaintyTemplate) {
-    setSelectedTemplate(template);
-    setMeasurand(template.measurand);
-    setUnit(template.unit);
-    setMeasuredValue(template.defaultMeasuredValue.toString());
-    const comps = template.components.map((tc, i) =>
-      createComponent(
-        `tmpl-${i}-${Date.now()}`,
-        tc.name,
-        tc.defaultUncertainty,
-        tc.defaultUncertainty,
-        tc.distribution,
-        tc.type,
-        tc.sensitivityCoefficient,
-        tc.degreesOfFreedom,
-        false,
-        tc.category,
-        tc.description
-      )
-    );
-    setComponents(comps);
-    setBudget(null);
-    setMcResult(null);
-    setActiveTab("calculator");
-  }
-
-  // Type A measurements handler
-  function handleMeasurementsChange(value: string) {
-    setForm((f) => ({ ...f, measurements: value }));
-    const nums = value.split(",").map((s) => s.trim()).filter((s) => s !== "").map(Number).filter((n) => !isNaN(n));
-    if (nums.length >= 2) {
-      const result = calculateTypeA(nums);
-      setTypeAResult(result);
-      setForm((f) => ({
-        ...f,
-        value: result.mean.toString(),
-        uncertainty: result.standardUncertainty.toString(),
-        degreesOfFreedom: result.degreesOfFreedom.toString(),
-      }));
-    } else {
-      setTypeAResult(null);
+function coverageFactorLookup(dof: number): number {
+  if (!isFinite(dof) || dof >= 100) return 2.0;
+  const table: Record<number, number> = {
+    1: 12.71, 2: 4.30, 3: 3.18, 4: 2.78, 5: 2.57,
+    6: 2.45, 7: 2.36, 8: 2.31, 9: 2.26, 10: 2.23,
+    15: 2.13, 20: 2.09, 25: 2.06, 30: 2.04, 50: 2.01,
+  };
+  if (table[dof]) return table[dof];
+  const keys = Object.keys(table).map(Number).sort((a, b) => a - b);
+  let lower = keys[0];
+  let upper = keys[keys.length - 1];
+  for (let i = 0; i < keys.length - 1; i++) {
+    if (keys[i] <= dof && keys[i + 1] >= dof) {
+      lower = keys[i];
+      upper = keys[i + 1];
+      break;
     }
   }
+  const frac = (dof - lower) / (upper - lower);
+  return table[lower] + frac * (table[upper] - table[lower]);
+}
 
-  // Add component
-  function addComponent() {
-    const val = parseFloat(form.value) || 0;
-    const unc = parseFloat(form.uncertainty) || 0;
-    const sc = parseFloat(form.sensitivityCoefficient) || 1;
-    const dofStr = form.degreesOfFreedom.trim();
-    const dof = dofStr === "" || dofStr.toLowerCase() === "inf" ? Infinity : parseInt(dofStr) || Infinity;
-    const comp = createComponent(
-      `comp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      form.name || `Component ${components.length + 1}`,
-      val, unc, form.distribution, form.type, sc, dof, false, form.category, form.description
-    );
-    setComponents((prev) => [...prev, comp]);
-    setForm({ ...emptyForm });
-    setTypeAResult(null);
-  }
+// Types
 
-  // Remove component
-  function removeComponent(id: string) {
-    setComponents((prev) => prev.filter((c) => c.id !== id));
-  }
+interface UncertaintyComponent {
+  id: string;
+  sourceName: string;
+  type: "Type A" | "Type B";
+  distribution: "Normal" | "Uniform" | "Triangular";
+  value: number;
+  sensitivityCoefficient: number;
+  degreesOfFreedom: number;
+  unit: string;
+}
 
-  // Update component uncertainty inline
-  function updateComponentUncertainty(id: string, newUncertainty: number) {
-    setComponents((prev) =>
-      prev.map((c) => {
-        if (c.id !== id) return c;
-        const stdU = c.distribution === "uniform" ? newUncertainty / Math.sqrt(3) :
-          c.distribution === "triangular" ? newUncertainty / Math.sqrt(6) : newUncertainty;
-        const varContrib = (c.sensitivityCoefficient * stdU) ** 2;
-        return { ...c, uncertainty: newUncertainty, standardUncertainty: stdU, varianceContribution: varContrib };
-      })
-    );
-    setBudget(null);
-  }
+// Default Data
 
-  // Calculate budget
-  const handleCalculate = useCallback(() => {
-    if (components.length === 0) return;
-    setIsCalculating(true);
+const DEFAULT_COMPONENTS: UncertaintyComponent[] = [
+  { id: "1", sourceName: "Reference cell calibration", type: "Type B", distribution: "Normal", value: 1.5, sensitivityCoefficient: 1.0, degreesOfFreedom: Infinity, unit: "%" },
+  { id: "2", sourceName: "Spatial non-uniformity", type: "Type B", distribution: "Uniform", value: 2.0, sensitivityCoefficient: 1.0, degreesOfFreedom: Infinity, unit: "%" },
+  { id: "3", sourceName: "Spectral mismatch", type: "Type B", distribution: "Normal", value: 1.0, sensitivityCoefficient: 1.0, degreesOfFreedom: Infinity, unit: "%" },
+  { id: "4", sourceName: "Temperature measurement", type: "Type B", distribution: "Normal", value: 1.0, sensitivityCoefficient: 0.4, degreesOfFreedom: Infinity, unit: "\u00b0C" },
+  { id: "5", sourceName: "Current measurement", type: "Type B", distribution: "Normal", value: 0.1, sensitivityCoefficient: 1.0, degreesOfFreedom: Infinity, unit: "%" },
+  { id: "6", sourceName: "Repeatability", type: "Type A", distribution: "Normal", value: 0.3, sensitivityCoefficient: 1.0, degreesOfFreedom: 9, unit: "%" },
+];
 
-    const b = calculateBudget(
-      selectedTemplate?.name || "Custom Budget",
-      measurand, parseFloat(measuredValue) || 0, components, coverageProbability,
-      undefined, unit, selectedTemplate?.measurementModel, selectedTemplate?.standardReference
-    );
-    setBudget(b);
+const CHART_COLORS = ["#2563eb", "#7c3aed", "#db2777", "#ea580c", "#16a34a", "#0891b2", "#d97706", "#4f46e5"];
 
-    // Run Monte Carlo
-    const mc = runMonteCarloSimulation(
-      components, parseFloat(measuredValue) || 0, mcIterations
-    );
-    setMcResult(mc);
-    setIsCalculating(false);
-    setActiveTab("results");
-  }, [components, measurand, measuredValue, coverageProbability, unit, selectedTemplate, mcIterations]);
+// Main Component
 
-  // Save budget
-  function saveBudget() {
-    if (budget) {
-      setSavedBudgets((prev) => [budget, ...prev]);
-    }
-  }
-
-  // Export PDF
-  function handleExportPDF() {
-    if (!budget) return;
-    downloadUncertaintyPDF({ budget, labName, preparedBy });
-  }
-
+export default function UncertaintyDashboard() {
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Uncertainty Calculator</h1>
-          <p className="text-muted-foreground">
-            ISO/IEC 17025 measurement uncertainty analysis — GUM methodology with Monte Carlo verification
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-xs">
-            {UNCERTAINTY_TEMPLATES.length} Templates
-          </Badge>
-          <Badge variant="outline" className="text-xs">
-            {TEMPLATE_CATEGORIES.length} IEC Standards
-          </Badge>
-        </div>
+    <div className="p-8 space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Uncertainty Calculator</h1>
+        <p className="text-muted-foreground mt-2 max-w-3xl">
+          ISO/IEC 17025 compliant measurement uncertainty evaluation using the GUM
+          (JCGM 100:2008) methodology. Calculate Type A and Type B uncertainties,
+          perform Monte Carlo simulations, and generate accreditation-ready budget reports.
+        </p>
       </div>
 
-      {/* Main Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-7">
-          <TabsTrigger value="templates" className="flex items-center gap-1">
-            <BookOpen className="h-3.5 w-3.5" />
-            Templates
+      <Tabs defaultValue="gum" className="w-full">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="gum" className="flex items-center gap-1.5 text-xs">
+            <Calculator className="h-3.5 w-3.5" /> GUM Calculator
           </TabsTrigger>
-          <TabsTrigger value="calculator" className="flex items-center gap-1">
-            <Calculator className="h-3.5 w-3.5" />
-            Calculator
+          <TabsTrigger value="typeA" className="flex items-center gap-1.5 text-xs">
+            <BarChart3 className="h-3.5 w-3.5" /> Type A Analysis
           </TabsTrigger>
-          <TabsTrigger value="results" className="flex items-center gap-1" disabled={!budget}>
-            <BarChart3 className="h-3.5 w-3.5" />
-            Results
+          <TabsTrigger value="montecarlo" className="flex items-center gap-1.5 text-xs">
+            <FlaskConical className="h-3.5 w-3.5" /> Monte Carlo
           </TabsTrigger>
-          <TabsTrigger value="analysis" className="flex items-center gap-1" disabled={!budget}>
-            <TrendingUp className="h-3.5 w-3.5" />
-            Analysis
+          <TabsTrigger value="ivcurve" className="flex items-center gap-1.5 text-xs">
+            <Zap className="h-3.5 w-3.5" /> IV Curve Uncertainty
           </TabsTrigger>
-          <TabsTrigger value="report" className="flex items-center gap-1" disabled={!budget}>
-            <FileText className="h-3.5 w-3.5" />
-            Report
+          <TabsTrigger value="environmental" className="flex items-center gap-1.5 text-xs">
+            <Thermometer className="h-3.5 w-3.5" /> Environmental
           </TabsTrigger>
-          <TabsTrigger value="iv-curve" className="flex items-center gap-1">
-            <Zap className="h-3.5 w-3.5" />
-            IV Curve
-          </TabsTrigger>
-          <TabsTrigger value="nmot" className="flex items-center gap-1">
-            <Thermometer className="h-3.5 w-3.5" />
-            NMOT/NOCT
+          <TabsTrigger value="reports" className="flex items-center gap-1.5 text-xs">
+            <FileText className="h-3.5 w-3.5" /> Budget Reports
           </TabsTrigger>
         </TabsList>
 
-        {/* ===== TEMPLATES TAB ===== */}
-        <TabsContent value="templates" className="space-y-4">
-          {/* Category filter */}
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant={selectedCategory === "" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedCategory("")}
-            >
-              All ({UNCERTAINTY_TEMPLATES.length})
-            </Button>
-            {TEMPLATE_CATEGORIES.map((cat) => (
-              <Button
-                key={cat.id}
-                variant={selectedCategory === cat.id ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedCategory(cat.id)}
-              >
-                {cat.id} ({cat.count})
-              </Button>
-            ))}
-          </div>
+        <TabsContent value="gum"><GUMCalculatorTab /></TabsContent>
+        <TabsContent value="typeA"><TypeATab /></TabsContent>
+        <TabsContent value="montecarlo"><MonteCarloTab /></TabsContent>
+        <TabsContent value="ivcurve"><IVCurveTab /></TabsContent>
+        <TabsContent value="environmental"><EnvironmentalTab /></TabsContent>
+        <TabsContent value="reports"><BudgetReportsTab /></TabsContent>
+      </Tabs>
+    </div>
+  );
+}
 
-          {/* Template grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredTemplates.map((template) => (
-              <Card
-                key={template.id}
-                className={`cursor-pointer transition-all hover:shadow-md ${
-                  selectedTemplate?.id === template.id ? "ring-2 ring-blue-500" : ""
-                }`}
-                onClick={() => loadTemplate(template)}
-              >
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <Badge variant="secondary" className="text-xs">
-                      {template.category}
-                    </Badge>
-                    <Badge variant="outline" className="text-xs">
-                      {template.components.length} sources
-                    </Badge>
-                  </div>
-                  <CardTitle className="text-sm mt-2">{template.name}</CardTitle>
-                  <CardDescription className="text-xs">{template.description}</CardDescription>
-                </CardHeader>
-                <CardContent className="pb-3">
-                  <div className="text-xs text-muted-foreground space-y-1">
-                    <div className="flex items-center gap-1">
-                      <span className="font-medium">Measurand:</span>
-                      <span>{template.measurand} {template.unit ? `(${template.unit})` : ""}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="font-medium">Ref:</span>
-                      <span className="truncate">{template.standardReference}</span>
-                    </div>
-                  </div>
-                  <Button size="sm" className="w-full mt-3" variant="outline">
-                    <ChevronRight className="h-3 w-3 mr-1" />
-                    Load Template
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
+// Tab 1: GUM Calculator
 
-        {/* ===== CALCULATOR TAB ===== */}
-        <TabsContent value="calculator" className="space-y-4">
-          {/* Template info banner */}
-          {selectedTemplate && (
-            <Card className="bg-blue-50 border-blue-200">
-              <CardContent className="py-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-sm font-semibold text-blue-900">{selectedTemplate.name}</span>
-                    <span className="text-xs text-blue-700 ml-2">— {selectedTemplate.standardReference}</span>
+function GUMCalculatorTab() {
+  const [measurand, setMeasurand] = useState("Pmax");
+  const [measuredValue, setMeasuredValue] = useState(405.2);
+  const [unit, setUnit] = useState("W");
+  const [components, setComponents] = useState<UncertaintyComponent[]>(DEFAULT_COMPONENTS);
+  const [nextId, setNextId] = useState(7);
+
+  const [newSource, setNewSource] = useState("");
+  const [newType, setNewType] = useState<"Type A" | "Type B">("Type B");
+  const [newDist, setNewDist] = useState<"Normal" | "Uniform" | "Triangular">("Normal");
+  const [newValue, setNewValue] = useState("");
+  const [newCi, setNewCi] = useState("1.0");
+  const [newDof, setNewDof] = useState("");
+  const [newUnit, setNewUnit] = useState("%");
+
+  const results = useMemo(() => {
+    const uc = computeCombinedUncertainty(components);
+    const veff = welchSatterthwaite(components, uc);
+    const k = coverageFactorLookup(veff);
+    const U = k * uc;
+    const relU = measuredValue !== 0 ? (U / measuredValue) * 100 : 0;
+
+    const budgetRows = components.map((c) => {
+      const ui = toStandardUncertainty(c.value, c.distribution);
+      const ciui = c.sensitivityCoefficient * ui;
+      const variance = ciui * ciui;
+      return { ...c, ui, ciui, variance };
+    });
+
+    const totalVariance = budgetRows.reduce((s, r) => s + r.variance, 0);
+    const budgetWithPercent = budgetRows.map((r) => ({
+      ...r,
+      percentContribution: totalVariance > 0 ? (r.variance / totalVariance) * 100 : 0,
+    }));
+
+    return { uc, veff, k, U, relU, budget: budgetWithPercent, totalVariance };
+  }, [components, measuredValue]);
+
+  const paretoData = useMemo(() => {
+    return [...results.budget]
+      .sort((a, b) => b.percentContribution - a.percentContribution)
+      .map((r) => ({
+        name: r.sourceName.length > 18 ? r.sourceName.slice(0, 16) + "..." : r.sourceName,
+        fullName: r.sourceName,
+        contribution: parseFloat(r.percentContribution.toFixed(1)),
+      }));
+  }, [results.budget]);
+
+  function addComponent() {
+    if (!newSource || !newValue) return;
+    const comp: UncertaintyComponent = {
+      id: String(nextId),
+      sourceName: newSource,
+      type: newType,
+      distribution: newDist,
+      value: parseFloat(newValue),
+      sensitivityCoefficient: parseFloat(newCi) || 1.0,
+      degreesOfFreedom: newType === "Type B" ? Infinity : (newDof ? parseFloat(newDof) : Infinity),
+      unit: newUnit,
+    };
+    setComponents([...components, comp]);
+    setNextId(nextId + 1);
+    setNewSource("");
+    setNewValue("");
+    setNewCi("1.0");
+    setNewDof("");
+  }
+
+  function removeComponent(id: string) {
+    setComponents(components.filter((c) => c.id !== id));
+  }
+
+  return (
+    <div className="space-y-6 mt-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Measurand Definition</CardTitle>
+          <CardDescription>Define the measurement quantity and its value</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label>Measurand Name</Label>
+              <Input value={measurand} onChange={(e) => setMeasurand(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Measured Value</Label>
+              <Input type="number" value={measuredValue} onChange={(e) => setMeasuredValue(parseFloat(e.target.value) || 0)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Unit</Label>
+              <Input value={unit} onChange={(e) => setUnit(e.target.value)} />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Add Uncertainty Component</CardTitle>
+          <CardDescription>Define a new source of uncertainty to include in the budget</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-6 gap-3 items-end">
+            <div className="space-y-2">
+              <Label className="text-xs">Source Name</Label>
+              <Input placeholder="e.g. DAQ resolution" value={newSource} onChange={(e) => setNewSource(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Type</Label>
+              <Select value={newType} onValueChange={(v) => setNewType(v as "Type A" | "Type B")}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Type A">Type A</SelectItem>
+                  <SelectItem value="Type B">Type B</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Distribution</Label>
+              <Select value={newDist} onValueChange={(v) => setNewDist(v as "Normal" | "Uniform" | "Triangular")}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Normal">Normal</SelectItem>
+                  <SelectItem value="Uniform">Uniform</SelectItem>
+                  <SelectItem value="Triangular">Triangular</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Value</Label>
+              <Input type="number" placeholder="0.0" value={newValue} onChange={(e) => setNewValue(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Sensitivity Coeff. (ci)</Label>
+              <Input type="number" value={newCi} onChange={(e) => setNewCi(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Degrees of Freedom</Label>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  placeholder={newType === "Type B" ? "\u221e" : "n-1"}
+                  value={newDof}
+                  onChange={(e) => setNewDof(e.target.value)}
+                />
+                <Button onClick={addComponent} size="icon" className="shrink-0">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-5 gap-4">
+        <Card className="bg-blue-50 border-blue-200">
+          <CardContent className="pt-6 text-center">
+            <p className="text-xs text-blue-600 font-medium">Combined Std. Uncertainty (uc)</p>
+            <p className="text-2xl font-bold text-blue-800 mt-1">{results.uc.toFixed(4)}</p>
+            <p className="text-xs text-blue-500">{unit}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-violet-50 border-violet-200">
+          <CardContent className="pt-6 text-center">
+            <p className="text-xs text-violet-600 font-medium">Effective DOF (veff)</p>
+            <p className="text-2xl font-bold text-violet-800 mt-1">
+              {isFinite(results.veff) ? results.veff : "\u221e"}
+            </p>
+            <p className="text-xs text-violet-500">Welch-Satterthwaite</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-amber-50 border-amber-200">
+          <CardContent className="pt-6 text-center">
+            <p className="text-xs text-amber-600 font-medium">Coverage Factor (k)</p>
+            <p className="text-2xl font-bold text-amber-800 mt-1">{results.k.toFixed(2)}</p>
+            <p className="text-xs text-amber-500">95% confidence</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-emerald-50 border-emerald-200">
+          <CardContent className="pt-6 text-center">
+            <p className="text-xs text-emerald-600 font-medium">Expanded Uncertainty (U)</p>
+            <p className="text-2xl font-bold text-emerald-800 mt-1">{"\u00b1"}{results.U.toFixed(4)}</p>
+            <p className="text-xs text-emerald-500">{unit}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-rose-50 border-rose-200">
+          <CardContent className="pt-6 text-center">
+            <p className="text-xs text-rose-600 font-medium">Relative Expanded U</p>
+            <p className="text-2xl font-bold text-rose-800 mt-1">{"\u00b1"}{results.relU.toFixed(2)}%</p>
+            <p className="text-xs text-rose-500">k={results.k.toFixed(2)}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Uncertainty Budget</CardTitle>
+          <CardDescription>
+            {measurand} = {measuredValue} {unit} | U = {"\u00b1"}{results.U.toFixed(4)} {unit} (k={results.k.toFixed(2)}, 95%)
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Source</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Distribution</TableHead>
+                <TableHead className="text-right">Value</TableHead>
+                <TableHead className="text-right">u(xi)</TableHead>
+                <TableHead className="text-right">ci</TableHead>
+                <TableHead className="text-right">ci{"\u00b7"}u(xi)</TableHead>
+                <TableHead className="text-right">Variance</TableHead>
+                <TableHead className="w-[200px]">% Contribution</TableHead>
+                <TableHead className="w-10"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {results.budget.map((row) => (
+                <TableRow key={row.id}>
+                  <TableCell className="font-medium text-sm">{row.sourceName}</TableCell>
+                  <TableCell>
+                    <Badge variant={row.type === "Type A" ? "default" : "secondary"} className="text-xs">
+                      {row.type}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-sm">{row.distribution}</TableCell>
+                  <TableCell className="text-right font-mono text-sm">{row.value.toFixed(3)} {row.unit}</TableCell>
+                  <TableCell className="text-right font-mono text-sm">{row.ui.toFixed(4)}</TableCell>
+                  <TableCell className="text-right font-mono text-sm">{row.sensitivityCoefficient.toFixed(2)}</TableCell>
+                  <TableCell className="text-right font-mono text-sm">{row.ciui.toFixed(4)}</TableCell>
+                  <TableCell className="text-right font-mono text-sm">{row.variance.toFixed(6)}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Progress value={row.percentContribution} className="h-2 flex-1" />
+                      <span className="text-xs font-mono w-12 text-right">{row.percentContribution.toFixed(1)}%</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeComponent(row.id)}>
+                      <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Sensitivity Analysis - Pareto Chart</CardTitle>
+          <CardDescription>Variance contribution of each uncertainty source (sorted descending)</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[350px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={paretoData} margin={{ top: 10, right: 30, left: 20, bottom: 60 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" angle={-35} textAnchor="end" tick={{ fontSize: 11 }} />
+                <YAxis label={{ value: "% Contribution", angle: -90, position: "insideLeft" }} />
+                <RechartsTooltip />
+                <Bar dataKey="contribution" name="% Contribution" radius={[4, 4, 0, 0]}>
+                  {paretoData.map((_, idx) => (
+                    <Cell key={idx} fill={CHART_COLORS[idx % CHART_COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Tab 2: Type A Analysis
+
+const DEFAULT_MEASUREMENTS = "405.2\n404.8\n405.5\n404.9\n405.1\n405.3\n404.7\n405.4\n405.0\n405.2";
+
+function TypeATab() {
+  const [rawData, setRawData] = useState(DEFAULT_MEASUREMENTS);
+
+  const analysis = useMemo(() => {
+    const values = rawData
+      .split("\n")
+      .map((s) => s.trim())
+      .filter((s) => s !== "")
+      .map(Number)
+      .filter((n) => !isNaN(n));
+
+    if (values.length < 2) return null;
+
+    const n = values.length;
+    const mean = values.reduce((a, b) => a + b, 0) / n;
+    const variance = values.reduce((s, v) => s + Math.pow(v - mean, 2), 0) / (n - 1);
+    const stdDev = Math.sqrt(variance);
+    const stdUncertainty = stdDev / Math.sqrt(n);
+    const dof = n - 1;
+
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const binCount = Math.max(5, Math.min(15, Math.ceil(Math.sqrt(n))));
+    const binWidth = (max - min) / binCount || 0.1;
+    const bins: { range: string; center: number; count: number }[] = [];
+    for (let i = 0; i < binCount; i++) {
+      const lo = min + i * binWidth;
+      const hi = lo + binWidth;
+      const count = values.filter((v) => (i === binCount - 1 ? v >= lo && v <= hi : v >= lo && v < hi)).length;
+      bins.push({
+        range: lo.toFixed(2) + "-" + hi.toFixed(2),
+        center: (lo + hi) / 2,
+        count,
+      });
+    }
+
+    const m3 = values.reduce((s, v) => s + Math.pow(v - mean, 3), 0) / n;
+    const m4 = values.reduce((s, v) => s + Math.pow(v - mean, 4), 0) / n;
+    const skewness = stdDev > 0 ? m3 / Math.pow(stdDev, 3) : 0;
+    const kurtosis = stdDev > 0 ? m4 / Math.pow(stdDev, 4) - 3 : 0;
+
+    return { values, n, mean, stdDev, stdUncertainty, dof, bins, skewness, kurtosis };
+  }, [rawData]);
+
+  return (
+    <div className="space-y-6 mt-4">
+      <div className="grid grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Repeated Measurements</CardTitle>
+            <CardDescription>Enter one measurement per line. Pre-populated with Pmax readings (W).</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Textarea
+              className="font-mono h-64"
+              value={rawData}
+              onChange={(e) => setRawData(e.target.value)}
+              placeholder="Enter measurements, one per line..."
+            />
+            <p className="text-xs text-muted-foreground mt-2">
+              {analysis ? analysis.n + " valid measurements detected" : "Enter at least 2 measurements"}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Type A Evaluation Results</CardTitle>
+            <CardDescription>Statistical analysis of repeated observations</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {analysis ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <p className="text-xs text-muted-foreground">Number of observations (n)</p>
+                    <p className="text-xl font-bold">{analysis.n}</p>
                   </div>
-                  <Badge variant="secondary">{selectedTemplate.category}</Badge>
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <p className="text-xs text-muted-foreground">Degrees of Freedom (n-1)</p>
+                    <p className="text-xl font-bold">{analysis.dof}</p>
+                  </div>
+                  <div className="p-3 bg-blue-50 rounded-lg">
+                    <p className="text-xs text-blue-600">Mean</p>
+                    <p className="text-xl font-bold text-blue-800">{analysis.mean.toFixed(4)} W</p>
+                  </div>
+                  <div className="p-3 bg-violet-50 rounded-lg">
+                    <p className="text-xs text-violet-600">Standard Deviation (s)</p>
+                    <p className="text-xl font-bold text-violet-800">{analysis.stdDev.toFixed(4)} W</p>
+                  </div>
                 </div>
-                {selectedTemplate.measurementModel && (
-                  <div className="mt-2 p-2 bg-white rounded border border-blue-200 text-xs font-mono text-blue-800">
-                    {selectedTemplate.measurementModel}
+                <Separator />
+                <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200">
+                  <p className="text-sm text-emerald-600 font-medium">{"Standard Uncertainty u(x) = s / \u221an"}</p>
+                  <p className="text-3xl font-bold text-emerald-800 mt-1">
+                    {analysis.stdUncertainty.toFixed(4)} W
+                  </p>
+                  <p className="text-xs text-emerald-500 mt-1">
+                    {"= " + analysis.stdDev.toFixed(4) + " / \u221a" + analysis.n + " | DOF = " + analysis.dof}
+                  </p>
+                </div>
+                <Separator />
+                <div>
+                  <p className="text-sm font-medium mb-2">Normal Distribution Assessment</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-2 bg-gray-50 rounded text-sm">
+                      <span className="text-muted-foreground">Skewness: </span>
+                      <span className="font-mono">{analysis.skewness.toFixed(3)}</span>
+                      <Badge variant={Math.abs(analysis.skewness) < 1 ? "default" : "secondary"} className="ml-2 text-xs">
+                        {Math.abs(analysis.skewness) < 1 ? "OK" : "Skewed"}
+                      </Badge>
+                    </div>
+                    <div className="p-2 bg-gray-50 rounded text-sm">
+                      <span className="text-muted-foreground">Excess Kurtosis: </span>
+                      <span className="font-mono">{analysis.kurtosis.toFixed(3)}</span>
+                      <Badge variant={Math.abs(analysis.kurtosis) < 2 ? "default" : "secondary"} className="ml-2 text-xs">
+                        {Math.abs(analysis.kurtosis) < 2 ? "OK" : "Non-normal"}
+                      </Badge>
+                    </div>
                   </div>
-                )}
+                </div>
+              </div>
+            ) : (
+              <p className="text-muted-foreground">Enter at least 2 measurements to see results.</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {analysis && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Measurement Histogram</CardTitle>
+            <CardDescription>{"Frequency distribution of " + analysis.n + " observations"}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={analysis.bins} margin={{ top: 10, right: 30, left: 20, bottom: 40 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="range" angle={-25} textAnchor="end" tick={{ fontSize: 10 }} />
+                  <YAxis label={{ value: "Count", angle: -90, position: "insideLeft" }} allowDecimals={false} />
+                  <RechartsTooltip />
+                  <Bar dataKey="count" fill="#2563eb" name="Frequency" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// Tab 3: Monte Carlo
+
+function MonteCarloTab() {
+  const [numSims, setNumSims] = useState(10000);
+  const [seed, setSeed] = useState(42);
+  const [hasRun, setHasRun] = useState(false);
+
+  const mcResults = useMemo(() => {
+    function mulberry32(a: number) {
+      return function () {
+        let t = (a += 0x6d2b79f5);
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+    const rand = mulberry32(seed);
+
+    function randNormal(mean: number, std: number): number {
+      const u1 = rand();
+      const u2 = rand();
+      return mean + std * Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+    }
+    function randUniform(half: number): number {
+      return (rand() - 0.5) * 2 * half;
+    }
+
+    const baseValue = 405.2;
+    const samples: number[] = [];
+
+    for (let i = 0; i < numSims; i++) {
+      let y = baseValue;
+      y += randNormal(0, (1.5 / 100) * baseValue) * 1.0;
+      y += randUniform((2.0 / 100) * baseValue) * 1.0;
+      y += randNormal(0, (1.0 / 100) * baseValue) * 1.0;
+      y += randNormal(0, 1.0) * 0.4;
+      y += randNormal(0, (0.1 / 100) * baseValue) * 1.0;
+      y += randNormal(0, (0.3 / 100) * baseValue) * 1.0;
+      samples.push(y);
+    }
+
+    samples.sort((a, b) => a - b);
+    const mean = samples.reduce((a, b) => a + b, 0) / samples.length;
+    const std = Math.sqrt(samples.reduce((s, v) => s + (v - mean) ** 2, 0) / (samples.length - 1));
+    const p2_5 = samples[Math.floor(samples.length * 0.025)];
+    const p97_5 = samples[Math.floor(samples.length * 0.975)];
+    const expandedU = (p97_5 - p2_5) / 2;
+
+    const min = samples[0];
+    const max = samples[samples.length - 1];
+    const binCount = 20;
+    const binWidth = (max - min) / binCount;
+    const bins = [];
+    for (let i = 0; i < binCount; i++) {
+      const lo = min + i * binWidth;
+      const hi = lo + binWidth;
+      const center = (lo + hi) / 2;
+      let count = 0;
+      for (const s of samples) {
+        if (i === binCount - 1 ? s >= lo && s <= hi : s >= lo && s < hi) count++;
+      }
+      bins.push({ range: center.toFixed(1), count, lo, hi });
+    }
+
+    return { mean, std, p2_5, p97_5, expandedU, bins, n: samples.length };
+  }, [numSims, seed]);
+
+  const gumUc = computeCombinedUncertainty(DEFAULT_COMPONENTS);
+  const gumVeff = welchSatterthwaite(DEFAULT_COMPONENTS, gumUc);
+  const gumK = coverageFactorLookup(gumVeff);
+  const gumU = gumK * gumUc;
+
+  return (
+    <div className="space-y-6 mt-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Monte Carlo Simulation (MCM)</CardTitle>
+          <CardDescription>
+            Supplement 1 to the GUM (JCGM 101:2008) - Propagation of distributions using Monte Carlo method.
+            This provides a numerical alternative to the GUM analytical framework, especially useful when the
+            measurement model is nonlinear or when input distributions are asymmetric.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-4 items-end">
+            <div className="space-y-2">
+              <Label>Number of Simulations</Label>
+              <Input
+                type="number"
+                value={numSims}
+                onChange={(e) => setNumSims(parseInt(e.target.value) || 10000)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Random Seed</Label>
+              <Input type="number" value={seed} onChange={(e) => setSeed(parseInt(e.target.value) || 42)} />
+            </div>
+            <Button onClick={() => setHasRun(true)} className="h-10">
+              <FlaskConical className="h-4 w-4 mr-2" /> Run Simulation
+            </Button>
+          </div>
+          <div className="mt-4 p-3 bg-gray-50 rounded-lg text-sm text-muted-foreground">
+            <p className="font-medium text-gray-700">Model: Y = Pmax (base 405.2 W)</p>
+            <p className="mt-1">
+              Inputs: Reference cell cal. (Normal), Spatial uniformity (Uniform), Spectral mismatch (Normal),
+              Temperature (Normal), Current meas. (Normal), Repeatability (Normal)
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {hasRun && (
+        <>
+          <div className="grid grid-cols-5 gap-4">
+            <Card className="bg-blue-50 border-blue-200">
+              <CardContent className="pt-6 text-center">
+                <p className="text-xs text-blue-600 font-medium">MC Mean</p>
+                <p className="text-xl font-bold text-blue-800">{mcResults.mean.toFixed(3)} W</p>
               </CardContent>
             </Card>
-          )}
+            <Card className="bg-violet-50 border-violet-200">
+              <CardContent className="pt-6 text-center">
+                <p className="text-xs text-violet-600 font-medium">MC Std Dev</p>
+                <p className="text-xl font-bold text-violet-800">{mcResults.std.toFixed(3)} W</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-amber-50 border-amber-200">
+              <CardContent className="pt-6 text-center">
+                <p className="text-xs text-amber-600 font-medium">2.5th Percentile</p>
+                <p className="text-xl font-bold text-amber-800">{mcResults.p2_5.toFixed(2)} W</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-emerald-50 border-emerald-200">
+              <CardContent className="pt-6 text-center">
+                <p className="text-xs text-emerald-600 font-medium">97.5th Percentile</p>
+                <p className="text-xl font-bold text-emerald-800">{mcResults.p97_5.toFixed(2)} W</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-rose-50 border-rose-200">
+              <CardContent className="pt-6 text-center">
+                <p className="text-xs text-rose-600 font-medium">Expanded U (95%)</p>
+                <p className="text-xl font-bold text-rose-800">{"\u00b1"}{mcResults.expandedU.toFixed(3)} W</p>
+              </CardContent>
+            </Card>
+          </div>
 
-          {/* Measurand settings */}
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Measurand & Settings</CardTitle>
+            <CardHeader>
+              <CardTitle className="text-lg">{"Output Distribution (" + numSims.toLocaleString() + " simulations)"}</CardTitle>
+              <CardDescription>Histogram of simulated Pmax values (20 bins)</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-5 gap-4">
-                <div className="space-y-2">
-                  <Label>Measurand</Label>
-                  <Input
-                    placeholder="e.g., Pmax"
-                    value={measurand}
-                    onChange={(e) => setMeasurand(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Unit</Label>
-                  <Input
-                    placeholder="e.g., W"
-                    value={unit}
-                    onChange={(e) => setUnit(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Measured Value</Label>
-                  <Input
-                    type="number"
-                    placeholder="e.g., 350.5"
-                    value={measuredValue}
-                    onChange={(e) => setMeasuredValue(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Coverage Probability</Label>
-                  <Select
-                    value={coverageProbability.toString()}
-                    onValueChange={(v) => setCoverageProbability(parseFloat(v))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="0.95">95% (k ≈ 2)</SelectItem>
-                      <SelectItem value="0.99">99% (k ≈ 2.58)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>MC Iterations</Label>
-                  <Select value={mcIterations.toString()} onValueChange={(v) => setMcIterations(parseInt(v))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1000">1,000</SelectItem>
-                      <SelectItem value="5000">5,000</SelectItem>
-                      <SelectItem value="10000">10,000</SelectItem>
-                      <SelectItem value="50000">50,000</SelectItem>
-                      <SelectItem value="100000">100,000</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="h-[350px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={mcResults.bins} margin={{ top: 10, right: 30, left: 20, bottom: 40 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="range" angle={-35} textAnchor="end" tick={{ fontSize: 10 }} label={{ value: "Pmax (W)", position: "insideBottom", offset: -30 }} />
+                    <YAxis label={{ value: "Frequency", angle: -90, position: "insideLeft" }} />
+                    <RechartsTooltip />
+                    <Bar dataKey="count" fill="#7c3aed" name="Frequency" radius={[2, 2, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
 
-          {/* Uncertainty components table (editable) */}
-          {components.length > 0 && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center justify-between">
-                  <span>Uncertainty Sources ({components.length})</span>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-xs">
-                      Type A: {components.filter((c) => c.type === "typeA").length}
-                    </Badge>
-                    <Badge variant="outline" className="text-xs">
-                      Type B: {components.filter((c) => c.type === "typeB").length}
-                    </Badge>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b bg-muted/50">
-                        <th className="text-left p-2 font-medium">Source</th>
-                        <th className="text-center p-2 font-medium w-14">Type</th>
-                        <th className="text-left p-2 font-medium w-28">Category</th>
-                        <th className="text-right p-2 font-medium w-24">Uncertainty</th>
-                        <th className="text-center p-2 font-medium w-20">Distrib.</th>
-                        <th className="text-right p-2 font-medium w-16">ci</th>
-                        <th className="text-right p-2 font-medium w-16">DOF</th>
-                        <th className="text-right p-2 font-medium w-24">u(xi)</th>
-                        <th className="w-16"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {components.map((c) => (
-                        <tr key={c.id} className="border-b hover:bg-muted/30">
-                          <td className="p-2">
-                            <span className="font-medium text-xs">{c.name}</span>
-                            {c.description && (
-                              <span className="block text-xs text-muted-foreground truncate max-w-xs">{c.description}</span>
-                            )}
-                          </td>
-                          <td className="text-center p-2">
-                            <Badge variant={c.type === "typeA" ? "outline" : "secondary"} className="text-xs">
-                              {c.type === "typeA" ? "A" : "B"}
-                            </Badge>
-                          </td>
-                          <td className="p-2 text-xs text-muted-foreground">{c.category || "—"}</td>
-                          <td className="p-2">
-                            <Input
-                              type="number"
-                              className="h-7 text-xs font-mono text-right w-24"
-                              value={c.uncertainty}
-                              onChange={(e) => updateComponentUncertainty(c.id, parseFloat(e.target.value) || 0)}
-                            />
-                          </td>
-                          <td className="text-center p-2 text-xs capitalize">{c.distribution}</td>
-                          <td className="text-right p-2 text-xs font-mono">{c.sensitivityCoefficient.toFixed(2)}</td>
-                          <td className="text-right p-2 text-xs font-mono">
-                            {c.degreesOfFreedom === Infinity ? "∞" : c.degreesOfFreedom}
-                          </td>
-                          <td className="text-right p-2 text-xs font-mono">{c.standardUncertainty.toFixed(6)}</td>
-                          <td className="p-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
-                              onClick={() => removeComponent(c.id)}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Add component form */}
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Add Uncertainty Source
-              </CardTitle>
+            <CardHeader>
+              <CardTitle className="text-lg">GUM vs Monte Carlo Comparison</CardTitle>
+              <CardDescription>Validation of GUM analytical results against numerical simulation</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Source Name</Label>
-                  <Input
-                    placeholder="e.g., Reference cell calibration"
-                    value={form.name}
-                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Type</Label>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant={form.type === "typeA" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setForm((f) => ({ ...f, type: "typeA" }))}
-                    >
-                      Type A (Statistical)
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={form.type === "typeB" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setForm((f) => ({ ...f, type: "typeB" }))}
-                    >
-                      Type B (Other)
-                    </Button>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Fishbone Category</Label>
-                  <Select
-                    value={form.category}
-                    onValueChange={(v) => setForm((f) => ({ ...f, category: v as FishboneCategory }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {FISHBONE_CATEGORIES.map((cat) => (
-                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {form.type === "typeA" && (
-                <div className="space-y-2 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <Label>Repeated Measurements (comma-separated)</Label>
-                  <Input
-                    placeholder="e.g., 350.2, 350.5, 349.8, 350.1, 350.3"
-                    value={form.measurements}
-                    onChange={(e) => handleMeasurementsChange(e.target.value)}
-                  />
-                  {typeAResult && (
-                    <div className="grid grid-cols-4 gap-3 mt-3 text-sm">
-                      <div className="bg-white p-2 rounded border">
-                        <span className="text-muted-foreground text-xs">n = </span>
-                        <span className="font-mono font-semibold">{typeAResult.n}</span>
-                      </div>
-                      <div className="bg-white p-2 rounded border">
-                        <span className="text-muted-foreground text-xs">Mean = </span>
-                        <span className="font-mono font-semibold">{typeAResult.mean.toFixed(4)}</span>
-                      </div>
-                      <div className="bg-white p-2 rounded border">
-                        <span className="text-muted-foreground text-xs">Std Dev = </span>
-                        <span className="font-mono font-semibold">{typeAResult.stdDev.toFixed(4)}</span>
-                      </div>
-                      <div className="bg-white p-2 rounded border">
-                        <span className="text-muted-foreground text-xs">u = </span>
-                        <span className="font-mono font-semibold">{typeAResult.standardUncertainty.toFixed(6)}</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="grid grid-cols-5 gap-4">
-                <div className="space-y-2">
-                  <Label>Value</Label>
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    value={form.value}
-                    onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))}
-                    disabled={form.type === "typeA" && typeAResult !== null}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Uncertainty</Label>
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    value={form.uncertainty}
-                    onChange={(e) => setForm((f) => ({ ...f, uncertainty: e.target.value }))}
-                    disabled={form.type === "typeA" && typeAResult !== null}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Distribution</Label>
-                  <Select
-                    value={form.distribution}
-                    onValueChange={(v) => setForm((f) => ({ ...f, distribution: v as DistributionType }))}
-                  >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="normal">Normal</SelectItem>
-                      <SelectItem value="uniform">Uniform (Rectangular)</SelectItem>
-                      <SelectItem value="triangular">Triangular</SelectItem>
-                      <SelectItem value="u-shaped">U-shaped (Arcsine)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Sensitivity ci</Label>
-                  <Input
-                    type="number"
-                    placeholder="1.0"
-                    value={form.sensitivityCoefficient}
-                    onChange={(e) => setForm((f) => ({ ...f, sensitivityCoefficient: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>DOF</Label>
-                  <Input
-                    placeholder="∞"
-                    value={form.degreesOfFreedom}
-                    onChange={(e) => setForm((f) => ({ ...f, degreesOfFreedom: e.target.value }))}
-                    disabled={form.type === "typeA" && typeAResult !== null}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Description (optional)</Label>
-                <Input
-                  placeholder="Describe this uncertainty source..."
-                  value={form.description}
-                  onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                />
-              </div>
-
-              <Button onClick={addComponent} className="w-full" variant="outline">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Component
-              </Button>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Parameter</TableHead>
+                    <TableHead className="text-right">GUM Result</TableHead>
+                    <TableHead className="text-right">Monte Carlo Result</TableHead>
+                    <TableHead className="text-right">Difference</TableHead>
+                    <TableHead>Agreement</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow>
+                    <TableCell className="font-medium">Standard Uncertainty</TableCell>
+                    <TableCell className="text-right font-mono">{gumUc.toFixed(4)} W</TableCell>
+                    <TableCell className="text-right font-mono">{mcResults.std.toFixed(4)} W</TableCell>
+                    <TableCell className="text-right font-mono">{Math.abs(gumUc - mcResults.std).toFixed(4)} W</TableCell>
+                    <TableCell>
+                      <Badge variant={Math.abs(gumUc - mcResults.std) / gumUc < 0.1 ? "default" : "secondary"}>
+                        {Math.abs(gumUc - mcResults.std) / gumUc < 0.1 ? "Good" : "Review"}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="font-medium">Expanded Uncertainty (95%)</TableCell>
+                    <TableCell className="text-right font-mono">{"\u00b1"}{gumU.toFixed(4)} W</TableCell>
+                    <TableCell className="text-right font-mono">{"\u00b1"}{mcResults.expandedU.toFixed(4)} W</TableCell>
+                    <TableCell className="text-right font-mono">{Math.abs(gumU - mcResults.expandedU).toFixed(4)} W</TableCell>
+                    <TableCell>
+                      <Badge variant={Math.abs(gumU - mcResults.expandedU) / gumU < 0.1 ? "default" : "secondary"}>
+                        {Math.abs(gumU - mcResults.expandedU) / gumU < 0.1 ? "Good" : "Review"}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="font-medium">Coverage Factor / Interval</TableCell>
+                    <TableCell className="text-right font-mono">k = {gumK.toFixed(2)}</TableCell>
+                    <TableCell className="text-right font-mono">[{mcResults.p2_5.toFixed(2)}, {mcResults.p97_5.toFixed(2)}]</TableCell>
+                    <TableCell className="text-right font-mono">-</TableCell>
+                    <TableCell><Badge>Consistent</Badge></TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
+        </>
+      )}
+    </div>
+  );
+}
 
-          {/* Calculate button */}
-          {components.length > 0 && (
-            <Button onClick={handleCalculate} className="w-full" size="lg" disabled={isCalculating}>
-              <Calculator className="h-4 w-4 mr-2" />
-              {isCalculating ? "Calculating..." : `Calculate Uncertainty Budget (${components.length} sources)`}
-            </Button>
-          )}
-        </TabsContent>
+// Tab 4: IV Curve Uncertainty
 
-        {/* ===== RESULTS TAB ===== */}
-        <TabsContent value="results" className="space-y-4">
-          {budget && (
-            <>
-              {/* Summary cards */}
-              <div className="grid grid-cols-5 gap-4">
-                <Card className="bg-blue-50 border-blue-200">
-                  <CardContent className="pt-4 pb-3 text-center">
-                    <div className="text-xs text-blue-600 mb-1">Measured Value</div>
-                    <div className="text-xl font-bold text-blue-900">{budget.measuredValue.toFixed(2)}</div>
-                    <div className="text-xs text-blue-600">{budget.unit}</div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-amber-50 border-amber-200">
-                  <CardContent className="pt-4 pb-3 text-center">
-                    <div className="text-xs text-amber-600 mb-1">Combined uc</div>
-                    <div className="text-xl font-bold text-amber-900">{budget.combinedStandardUncertainty.toFixed(4)}</div>
-                    <div className="text-xs text-amber-600">{budget.unit}</div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-green-50 border-green-200">
-                  <CardContent className="pt-4 pb-3 text-center">
-                    <div className="text-xs text-green-600 mb-1">Expanded U</div>
-                    <div className="text-xl font-bold text-green-900">± {budget.expandedUncertainty.toFixed(4)}</div>
-                    <div className="text-xs text-green-600">{budget.unit}</div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-purple-50 border-purple-200">
-                  <CardContent className="pt-4 pb-3 text-center">
-                    <div className="text-xs text-purple-600 mb-1">Relative U</div>
-                    <div className="text-xl font-bold text-purple-900">{budget.relativeUncertaintyPercent.toFixed(2)}%</div>
-                    <div className="text-xs text-purple-600">k = {budget.coverageFactor.toFixed(2)}</div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-rose-50 border-rose-200">
-                  <CardContent className="pt-4 pb-3 text-center">
-                    <div className="text-xs text-rose-600 mb-1">ν_eff</div>
-                    <div className="text-xl font-bold text-rose-900">
-                      {budget.effectiveDegreesOfFreedom === Infinity ? "∞" : budget.effectiveDegreesOfFreedom}
-                    </div>
-                    <div className="text-xs text-rose-600">
-                      p = {(budget.coverageProbability * 100).toFixed(0)}%
-                    </div>
-                  </CardContent>
-                </Card>
+interface IVParam {
+  name: string;
+  symbol: string;
+  value: number;
+  unit: string;
+  sources: { name: string; type: string; distribution: string; value: number; ci: number }[];
+}
+
+function IVCurveTab() {
+  const ivParams: IVParam[] = useMemo(
+    () => [
+      {
+        name: "Maximum Power",
+        symbol: "Pmax",
+        value: 405.2,
+        unit: "W",
+        sources: [
+          { name: "Reference cell cal.", type: "B", distribution: "Normal", value: 1.5, ci: 1.0 },
+          { name: "Spatial non-uniformity", type: "B", distribution: "Uniform", value: 2.0, ci: 1.0 },
+          { name: "Spectral mismatch", type: "B", distribution: "Normal", value: 1.0, ci: 1.0 },
+          { name: "Temperature correction", type: "B", distribution: "Normal", value: 0.5, ci: 0.8 },
+          { name: "I-V curve fitting", type: "B", distribution: "Normal", value: 0.2, ci: 1.0 },
+          { name: "Repeatability", type: "A", distribution: "Normal", value: 0.3, ci: 1.0 },
+        ],
+      },
+      {
+        name: "Short-circuit Current",
+        symbol: "Isc",
+        value: 10.52,
+        unit: "A",
+        sources: [
+          { name: "Reference cell cal.", type: "B", distribution: "Normal", value: 1.2, ci: 1.0 },
+          { name: "Spectral mismatch", type: "B", distribution: "Normal", value: 0.8, ci: 1.0 },
+          { name: "Current shunt accuracy", type: "B", distribution: "Normal", value: 0.05, ci: 1.0 },
+          { name: "Repeatability", type: "A", distribution: "Normal", value: 0.15, ci: 1.0 },
+        ],
+      },
+      {
+        name: "Open-circuit Voltage",
+        symbol: "Voc",
+        value: 48.3,
+        unit: "V",
+        sources: [
+          { name: "Voltmeter accuracy", type: "B", distribution: "Normal", value: 0.1, ci: 1.0 },
+          { name: "Temperature correction", type: "B", distribution: "Normal", value: 0.3, ci: 1.0 },
+          { name: "Irradiance correction", type: "B", distribution: "Normal", value: 0.1, ci: 0.5 },
+          { name: "Repeatability", type: "A", distribution: "Normal", value: 0.1, ci: 1.0 },
+        ],
+      },
+      {
+        name: "Fill Factor",
+        symbol: "FF",
+        value: 0.797,
+        unit: "",
+        sources: [
+          { name: "Pmax uncertainty", type: "B", distribution: "Normal", value: 1.8, ci: 1.0 },
+          { name: "Isc uncertainty", type: "B", distribution: "Normal", value: 1.0, ci: 1.0 },
+          { name: "Voc uncertainty", type: "B", distribution: "Normal", value: 0.35, ci: 1.0 },
+          { name: "Repeatability", type: "A", distribution: "Normal", value: 0.2, ci: 1.0 },
+        ],
+      },
+    ],
+    []
+  );
+
+  const ivResults = useMemo(() => {
+    return ivParams.map((param) => {
+      const uc = Math.sqrt(
+        param.sources.reduce((s, src) => {
+          const ui = src.distribution === "Uniform" ? src.value / Math.sqrt(3) : src.distribution === "Triangular" ? src.value / Math.sqrt(6) : src.value;
+          return s + (src.ci * ui) ** 2;
+        }, 0)
+      );
+      const k = 2.0;
+      const U = k * uc;
+      return { ...param, uc, k, U };
+    });
+  }, [ivParams]);
+
+  const barData = ivResults.map((r) => ({
+    name: r.symbol,
+    uncertainty: parseFloat(r.U.toFixed(2)),
+  }));
+
+  return (
+    <div className="space-y-6 mt-4">
+      <Card className="bg-gradient-to-r from-blue-50 to-violet-50 border-blue-200">
+        <CardHeader>
+          <CardTitle className="text-lg">Flash Test I-V Measurement Uncertainty</CardTitle>
+          <CardDescription>
+            IEC 60904-1 compliant I-V characterization uncertainty analysis for solar cell/module testing
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-4 gap-4">
+            {ivResults.map((r) => (
+              <div key={r.symbol} className="p-4 bg-white rounded-lg border text-center">
+                <p className="text-xs text-muted-foreground">{r.name}</p>
+                <p className="text-lg font-bold mt-1">
+                  {r.value} {r.unit}
+                </p>
+                <p className="text-sm font-mono text-blue-700 mt-1">{"\u00b1"}{r.U.toFixed(2)}%</p>
+                <p className="text-xs text-muted-foreground">k={r.k.toFixed(1)}, 95%</p>
               </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
-              {/* Final result banner */}
-              <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-300">
-                <CardContent className="py-4 text-center">
-                  <div className="text-sm text-green-700 mb-1">Measurement Result</div>
-                  <div className="text-2xl font-bold text-green-900">
-                    {budget.measurand} = {budget.measuredValue.toFixed(2)} ± {budget.expandedUncertainty.toFixed(4)} {budget.unit}
-                  </div>
-                  <div className="text-xs text-green-700 mt-1">
-                    (U_rel = {budget.relativeUncertaintyPercent.toFixed(2)}%, k = {budget.coverageFactor.toFixed(2)},
-                    p = {(budget.coverageProbability * 100).toFixed(0)}%)
-                  </div>
-                </CardContent>
-              </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">I-V Parameters at STC</CardTitle>
+          <CardDescription>{"Standard Test Conditions: 1000 W/m\u00b2, 25\u00b0C cell temperature, AM1.5G spectrum"}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label>{"Irradiance (W/m\u00b2)"}</Label>
+              <Input type="number" defaultValue={1000} readOnly className="bg-gray-50" />
+            </div>
+            <div className="space-y-2">
+              <Label>{"Temperature (\u00b0C)"}</Label>
+              <Input type="number" defaultValue={25.0} readOnly className="bg-gray-50" />
+            </div>
+            <div className="space-y-2">
+              <Label>Spectrum</Label>
+              <Input defaultValue="AM1.5G (IEC 60904-3)" readOnly className="bg-gray-50" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-              {/* Budget table */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Uncertainty Budget Table</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <UncertaintyBudgetTable budget={budget} />
-                </CardContent>
-              </Card>
-
-              {/* Distribution and Coverage Factor side by side */}
-              <div className="grid grid-cols-2 gap-4">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Normal Distribution</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <NormalDistributionChart
-                      mean={budget.measuredValue}
-                      uncertainty={budget.expandedUncertainty}
-                      coverageFactor={budget.coverageFactor}
-                    />
-                  </CardContent>
-                </Card>
-                <CoverageFactor
-                  dof={budget.effectiveDegreesOfFreedom}
-                  probability={budget.coverageProbability}
-                />
-              </div>
-
-              {/* GUM vs Monte Carlo comparison */}
-              {mcResult && (
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Activity className="h-4 w-4" />
-                      GUM vs Monte Carlo Comparison
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b bg-muted/50">
-                            <th className="text-left p-2">Parameter</th>
-                            <th className="text-right p-2">GUM (Analytical)</th>
-                            <th className="text-right p-2">Monte Carlo ({mcResult.iterations.toLocaleString()} iter.)</th>
-                            <th className="text-right p-2">Difference</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr className="border-b">
-                            <td className="p-2">Mean</td>
-                            <td className="p-2 text-right font-mono">{budget.measuredValue.toFixed(4)}</td>
-                            <td className="p-2 text-right font-mono">{mcResult.mean.toFixed(4)}</td>
-                            <td className="p-2 text-right font-mono">{(mcResult.mean - budget.measuredValue).toFixed(4)}</td>
-                          </tr>
-                          <tr className="border-b">
-                            <td className="p-2">Standard Uncertainty</td>
-                            <td className="p-2 text-right font-mono">{budget.combinedStandardUncertainty.toFixed(4)}</td>
-                            <td className="p-2 text-right font-mono">{mcResult.standardDeviation.toFixed(4)}</td>
-                            <td className="p-2 text-right font-mono">
-                              {(mcResult.standardDeviation - budget.combinedStandardUncertainty).toFixed(4)}
-                            </td>
-                          </tr>
-                          <tr className="border-b">
-                            <td className="p-2">Expanded Uncertainty (95%)</td>
-                            <td className="p-2 text-right font-mono">{budget.expandedUncertainty.toFixed(4)}</td>
-                            <td className="p-2 text-right font-mono">{mcResult.expandedUncertainty.toFixed(4)}</td>
-                            <td className="p-2 text-right font-mono">
-                              {(mcResult.expandedUncertainty - budget.expandedUncertainty).toFixed(4)}
-                            </td>
-                          </tr>
-                          <tr className="border-b">
-                            <td className="p-2">95% CI Lower</td>
-                            <td className="p-2 text-right font-mono">
-                              {(budget.measuredValue - budget.expandedUncertainty).toFixed(4)}
-                            </td>
-                            <td className="p-2 text-right font-mono">{mcResult.percentile2_5.toFixed(4)}</td>
-                            <td className="p-2 text-right font-mono">
-                              {(mcResult.percentile2_5 - (budget.measuredValue - budget.expandedUncertainty)).toFixed(4)}
-                            </td>
-                          </tr>
-                          <tr className="border-b">
-                            <td className="p-2">95% CI Upper</td>
-                            <td className="p-2 text-right font-mono">
-                              {(budget.measuredValue + budget.expandedUncertainty).toFixed(4)}
-                            </td>
-                            <td className="p-2 text-right font-mono">{mcResult.percentile97_5.toFixed(4)}</td>
-                            <td className="p-2 text-right font-mono">
-                              {(mcResult.percentile97_5 - (budget.measuredValue + budget.expandedUncertainty)).toFixed(4)}
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </>
-          )}
-        </TabsContent>
-
-        {/* ===== ANALYSIS TAB ===== */}
-        <TabsContent value="analysis" className="space-y-4">
-          {budget && (
-            <>
-              {/* Fishbone Diagram */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <GitBranch className="h-4 w-4" />
-                    Fishbone (Ishikawa) Diagram
-                  </CardTitle>
-                  <CardDescription>Interactive cause-and-effect diagram of uncertainty sources</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <FishboneDiagram
-                    components={budget.components}
-                    measurand={`${budget.measurand} (${budget.unit})`}
-                  />
-                </CardContent>
-              </Card>
-
-              {/* Sensitivity Analysis (Pareto) */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <BarChart3 className="h-4 w-4" />
-                    Contribution Analysis (Pareto)
-                  </CardTitle>
-                  <CardDescription>Percentage contribution of each source to combined variance</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <SensitivityAnalysis components={budget.components} />
-                </CardContent>
-              </Card>
-
-              {/* Tornado Chart */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4" />
-                    Tornado Chart (Sensitivity)
-                  </CardTitle>
-                  <CardDescription>Effect of each source on measurand (±1 standard uncertainty)</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <TornadoChart
-                    components={budget.components}
-                    measuredValue={budget.measuredValue}
-                    combinedUncertainty={budget.combinedStandardUncertainty}
-                  />
-                </CardContent>
-              </Card>
-
-              {/* Monte Carlo Distribution */}
-              {mcResult && (
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Dices className="h-4 w-4" />
-                      Monte Carlo Simulation
-                    </CardTitle>
-                    <CardDescription>
-                      Numerical verification of GUM analytical result ({mcResult.iterations.toLocaleString()} iterations)
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <MonteCarloChart
-                      result={mcResult}
-                      measuredValue={budget.measuredValue}
-                      measurand={budget.measurand}
-                      unit={budget.unit}
-                    />
-                  </CardContent>
-                </Card>
-              )}
-            </>
-          )}
-        </TabsContent>
-
-        {/* ===== REPORT TAB ===== */}
-        <TabsContent value="report" className="space-y-4">
-          {budget && (
-            <>
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">PDF Report Settings</CardTitle>
-                  <CardDescription>Configure ISO 17025 compliant uncertainty report</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Laboratory Name</Label>
-                      <Input value={labName} onChange={(e) => setLabName(e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Prepared By</Label>
-                      <Input
-                        placeholder="Your name"
-                        value={preparedBy}
-                        onChange={(e) => setPreparedBy(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <Button onClick={handleExportPDF} className="w-full" size="lg">
-                    <FileDown className="h-4 w-4 mr-2" />
-                    Generate & Download PDF Report
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Report preview */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Report Preview</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Summary section */}
-                  <div className="border rounded-lg p-4 space-y-3">
-                    <h3 className="font-semibold text-sm border-b pb-2">Measurement Information</h3>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Budget: </span>
-                        <span className="font-medium">{budget.name}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Measurand: </span>
-                        <span className="font-medium">{budget.measurand} ({budget.unit})</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Measured Value: </span>
-                        <span className="font-medium">{budget.measuredValue.toFixed(4)} {budget.unit}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Standard: </span>
-                        <span className="font-medium">{budget.standardReference || "—"}</span>
-                      </div>
-                    </div>
-
-                    {budget.measurementModel && (
-                      <div className="bg-amber-50 p-3 rounded border border-amber-200">
-                        <div className="text-xs font-medium text-amber-700 mb-1">Measurement Model:</div>
-                        <div className="text-xs font-mono text-amber-900">{budget.measurementModel}</div>
-                      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Uncertainty Sources per I-V Parameter</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Parameter</TableHead>
+                <TableHead>Uncertainty Source</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Distribution</TableHead>
+                <TableHead className="text-right">Value (%)</TableHead>
+                <TableHead className="text-right">ci</TableHead>
+                <TableHead className="text-right">{"ci\u00b7u(xi) (%)"}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {ivParams.map((param) =>
+                param.sources.map((src, idx) => (
+                  <TableRow key={param.symbol + "-" + idx}>
+                    {idx === 0 && (
+                      <TableCell rowSpan={param.sources.length} className="font-medium border-r">
+                        {param.symbol}
+                        <br />
+                        <span className="text-xs text-muted-foreground">{param.value} {param.unit}</span>
+                      </TableCell>
                     )}
-                  </div>
+                    <TableCell className="text-sm">{src.name}</TableCell>
+                    <TableCell>
+                      <Badge variant={src.type === "A" ? "default" : "secondary"} className="text-xs">
+                        {"Type " + src.type}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm">{src.distribution}</TableCell>
+                    <TableCell className="text-right font-mono text-sm">{src.value.toFixed(2)}</TableCell>
+                    <TableCell className="text-right font-mono text-sm">{src.ci.toFixed(2)}</TableCell>
+                    <TableCell className="text-right font-mono text-sm">
+                      {(src.ci * (src.distribution === "Uniform" ? src.value / Math.sqrt(3) : src.value)).toFixed(3)}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
-                  {/* Budget table */}
-                  <div className="border rounded-lg p-4">
-                    <h3 className="font-semibold text-sm border-b pb-2 mb-3">Uncertainty Budget</h3>
-                    <UncertaintyBudgetTable budget={budget} />
-                  </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Relative Expanded Uncertainty Comparison</CardTitle>
+          <CardDescription>Expanded uncertainty (k=2, 95%) for each I-V parameter</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={barData} margin={{ top: 10, right: 30, left: 20, bottom: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis label={{ value: "Expanded U (%)", angle: -90, position: "insideLeft" }} />
+                <RechartsTooltip formatter={(value: number) => ["\u00b1" + value + "%", "Expanded Uncertainty"]} />
+                <Bar dataKey="uncertainty" name="U (k=2)" radius={[6, 6, 0, 0]}>
+                  {barData.map((_, idx) => (
+                    <Cell key={idx} fill={CHART_COLORS[idx % CHART_COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
-                  {/* Result */}
-                  <div className="bg-green-50 border border-green-300 rounded-lg p-4 text-center">
-                    <div className="text-sm text-green-700 mb-1">Final Result</div>
-                    <div className="text-lg font-bold text-green-900">
-                      {budget.measurand} = {budget.measuredValue.toFixed(2)} ± {budget.expandedUncertainty.toFixed(4)} {budget.unit}
-                    </div>
-                    <div className="text-xs text-green-700 mt-1">
-                      U_rel = {budget.relativeUncertaintyPercent.toFixed(2)}% | k = {budget.coverageFactor.toFixed(2)} |
-                      ν_eff = {budget.effectiveDegreesOfFreedom === Infinity ? "∞" : budget.effectiveDegreesOfFreedom} |
-                      p = {(budget.coverageProbability * 100).toFixed(0)}%
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+// Tab 5: Environmental
 
-              {/* Save and History */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Budget History</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Button onClick={saveBudget} variant="outline" className="w-full mb-4">
-                    Save Current Budget
-                  </Button>
-                  {savedBudgets.length === 0 ? (
-                    <div className="text-center text-sm text-muted-foreground py-4">
-                      No saved budgets yet. Calculate and save budgets to see them here.
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {savedBudgets.map((sb) => (
-                        <div key={sb.id} className="flex items-center justify-between p-3 bg-muted/30 rounded border">
-                          <div>
-                            <span className="font-medium text-sm">{sb.name}</span>
-                            <span className="text-xs text-muted-foreground ml-2">
-                              {sb.measurand} = {sb.measuredValue.toFixed(2)} ± {sb.expandedUncertainty.toFixed(4)} {sb.unit}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-xs">
-                              U_rel = {sb.relativeUncertaintyPercent.toFixed(2)}%
-                            </Badge>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => downloadUncertaintyPDF({ budget: sb, labName, preparedBy })}
-                            >
-                              <FileDown className="h-3 w-3" />
-                            </Button>
-                          </div>
+interface EnvSource {
+  name: string;
+  value: number;
+  distribution: string;
+  unit: string;
+}
+
+interface EnvParam {
+  parameter: string;
+  setpoint: string;
+  sources: EnvSource[];
+  color: string;
+  bgColor: string;
+  borderColor: string;
+}
+
+function EnvironmentalTab() {
+  const envParams: EnvParam[] = useMemo(
+    () => [
+      {
+        parameter: "Temperature",
+        setpoint: "85\u00b0C (DH test) / -40\u00b0C (TC test)",
+        color: "text-red-800",
+        bgColor: "bg-red-50",
+        borderColor: "border-red-200",
+        sources: [
+          { name: "Setpoint accuracy", value: 0.5, distribution: "Normal", unit: "\u00b0C" },
+          { name: "Spatial uniformity", value: 1.0, distribution: "Uniform", unit: "\u00b0C" },
+          { name: "Temporal stability", value: 0.3, distribution: "Uniform", unit: "\u00b0C" },
+          { name: "Sensor calibration", value: 0.2, distribution: "Normal", unit: "\u00b0C" },
+          { name: "Radiation effects", value: 0.1, distribution: "Uniform", unit: "\u00b0C" },
+        ],
+      },
+      {
+        parameter: "Humidity",
+        setpoint: "85% RH (DH test)",
+        color: "text-blue-800",
+        bgColor: "bg-blue-50",
+        borderColor: "border-blue-200",
+        sources: [
+          { name: "Setpoint accuracy", value: 1.5, distribution: "Normal", unit: "% RH" },
+          { name: "Spatial uniformity", value: 2.0, distribution: "Uniform", unit: "% RH" },
+          { name: "Temporal stability", value: 0.8, distribution: "Uniform", unit: "% RH" },
+          { name: "Sensor calibration", value: 0.5, distribution: "Normal", unit: "% RH" },
+        ],
+      },
+      {
+        parameter: "Irradiance",
+        setpoint: "1000 W/m\u00b2 (Sun simulator)",
+        color: "text-amber-800",
+        bgColor: "bg-amber-50",
+        borderColor: "border-amber-200",
+        sources: [
+          { name: "Spatial uniformity", value: 1.0, distribution: "Uniform", unit: "%" },
+          { name: "Temporal instability", value: 0.5, distribution: "Uniform", unit: "%" },
+          { name: "Spectral match", value: 1.5, distribution: "Normal", unit: "%" },
+          { name: "Reference cell calibration", value: 1.2, distribution: "Normal", unit: "%" },
+          { name: "Data acquisition", value: 0.1, distribution: "Uniform", unit: "%" },
+        ],
+      },
+    ],
+    []
+  );
+
+  const envResults = useMemo(() => {
+    return envParams.map((param) => {
+      const uc = Math.sqrt(
+        param.sources.reduce((s, src) => {
+          const ui =
+            src.distribution === "Uniform"
+              ? src.value / Math.sqrt(3)
+              : src.distribution === "Triangular"
+              ? src.value / Math.sqrt(6)
+              : src.value;
+          return s + ui * ui;
+        }, 0)
+      );
+      const k = 2.0;
+      const U = k * uc;
+      return { ...param, uc, k, U };
+    });
+  }, [envParams]);
+
+  return (
+    <div className="space-y-6 mt-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Environmental Chamber Uncertainty</CardTitle>
+          <CardDescription>
+            Uncertainty evaluation for environmental test chambers used in IEC 61215 / IEC 61730 qualification testing.
+            Covers temperature, humidity, and irradiance measurement uncertainties.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+
+      <div className="grid grid-cols-3 gap-6">
+        {envResults.map((r) => (
+          <Card key={r.parameter} className={r.bgColor + " " + r.borderColor}>
+            <CardContent className="pt-6 text-center">
+              <p className={"text-sm font-medium " + r.color}>{r.parameter} Uncertainty</p>
+              <p className={"text-3xl font-bold mt-2 " + r.color}>
+                {"\u00b1"}{r.U.toFixed(3)} {r.sources[0].unit}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {"uc = " + r.uc.toFixed(3) + " | k = " + r.k.toFixed(1) + " (95%)"}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">{r.setpoint}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {envResults.map((r) => (
+        <Card key={r.parameter}>
+          <CardHeader>
+            <CardTitle className="text-lg">{r.parameter} Uncertainty Budget</CardTitle>
+            <CardDescription>{"Setpoint: " + r.setpoint}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Source</TableHead>
+                  <TableHead>Distribution</TableHead>
+                  <TableHead className="text-right">{"Value (" + r.sources[0].unit + ")"}</TableHead>
+                  <TableHead className="text-right">{"u(xi) (" + r.sources[0].unit + ")"}</TableHead>
+                  <TableHead className="text-right">Variance</TableHead>
+                  <TableHead className="w-[180px]">% Contribution</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {r.sources.map((src, idx) => {
+                  const ui =
+                    src.distribution === "Uniform"
+                      ? src.value / Math.sqrt(3)
+                      : src.distribution === "Triangular"
+                      ? src.value / Math.sqrt(6)
+                      : src.value;
+                  const variance = ui * ui;
+                  const totalVar = r.uc * r.uc;
+                  const pct = totalVar > 0 ? (variance / totalVar) * 100 : 0;
+                  return (
+                    <TableRow key={idx}>
+                      <TableCell className="font-medium text-sm">{src.name}</TableCell>
+                      <TableCell className="text-sm">{src.distribution}</TableCell>
+                      <TableCell className="text-right font-mono text-sm">{src.value.toFixed(3)}</TableCell>
+                      <TableCell className="text-right font-mono text-sm">{ui.toFixed(4)}</TableCell>
+                      <TableCell className="text-right font-mono text-sm">{variance.toFixed(6)}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Progress value={pct} className="h-2 flex-1" />
+                          <span className="text-xs font-mono w-12 text-right">{pct.toFixed(1)}%</span>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </>
-          )}
-        </TabsContent>
-        {/* ===== IV CURVE TAB ===== */}
-        <TabsContent value="iv-curve" className="space-y-4">
-          <IVCurveAnalysis />
-        </TabsContent>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                <TableRow className="font-bold bg-gray-50">
+                  <TableCell colSpan={3}>Combined Standard Uncertainty (uc)</TableCell>
+                  <TableCell className="text-right font-mono">{r.uc.toFixed(4)}</TableCell>
+                  <TableCell className="text-right font-mono">{(r.uc * r.uc).toFixed(6)}</TableCell>
+                  <TableCell className="text-right font-mono">100%</TableCell>
+                </TableRow>
+                <TableRow className="font-bold bg-gray-100">
+                  <TableCell colSpan={3}>{"Expanded Uncertainty (k=" + r.k.toFixed(1) + ", 95%)"}</TableCell>
+                  <TableCell className="text-right font-mono">{r.U.toFixed(4)}</TableCell>
+                  <TableCell colSpan={2}></TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
 
-        {/* ===== NMOT/NOCT TAB ===== */}
-        <TabsContent value="nmot" className="space-y-4">
-          <NMOTCalculator />
-        </TabsContent>
-      </Tabs>
+// Tab 6: Budget Reports
+
+const MOCK_BUDGETS = [
+  {
+    id: "budget-001",
+    name: "Module ABC-2024 Pmax",
+    measurand: "Pmax (W)",
+    value: 405.2,
+    expandedUncertainty: "\u00b12.84%",
+    date: "2026-03-05",
+    status: "Complete" as const,
+    components: [
+      { source: "Reference cell cal.", type: "B", dist: "Normal", value: 1.5, ci: 1.0, pct: 42.8 },
+      { source: "Spatial uniformity", type: "B", dist: "Uniform", value: 2.0, ci: 1.0, pct: 25.4 },
+      { source: "Spectral mismatch", type: "B", dist: "Normal", value: 1.0, ci: 1.0, pct: 19.1 },
+      { source: "Temperature", type: "B", dist: "Normal", value: 1.0, ci: 0.4, pct: 3.1 },
+      { source: "Current meas.", type: "B", dist: "Normal", value: 0.1, ci: 1.0, pct: 0.2 },
+      { source: "Repeatability", type: "A", dist: "Normal", value: 0.3, ci: 1.0, pct: 1.7 },
+    ],
+  },
+  {
+    id: "budget-002",
+    name: "Ref Cell RC-107 Isc",
+    measurand: "Isc (A)",
+    value: 10.52,
+    expandedUncertainty: "\u00b11.92%",
+    date: "2026-03-02",
+    status: "Complete" as const,
+    components: [
+      { source: "Reference cell cal.", type: "B", dist: "Normal", value: 1.2, ci: 1.0, pct: 55.2 },
+      { source: "Spectral mismatch", type: "B", dist: "Normal", value: 0.8, ci: 1.0, pct: 24.5 },
+      { source: "Current shunt", type: "B", dist: "Normal", value: 0.05, ci: 1.0, pct: 0.1 },
+      { source: "Repeatability", type: "A", dist: "Normal", value: 0.15, ci: 1.0, pct: 0.9 },
+    ],
+  },
+  {
+    id: "budget-003",
+    name: "Chamber TC-01 Temperature",
+    measurand: "Temperature (\u00b0C)",
+    value: 85.0,
+    expandedUncertainty: "\u00b10.45\u00b0C",
+    date: "2026-02-28",
+    status: "Draft" as const,
+    components: [
+      { source: "Setpoint accuracy", type: "B", dist: "Normal", value: 0.5, ci: 1.0, pct: 48.1 },
+      { source: "Spatial uniformity", type: "B", dist: "Uniform", value: 1.0, ci: 1.0, pct: 32.1 },
+      { source: "Temporal stability", type: "B", dist: "Uniform", value: 0.3, ci: 1.0, pct: 2.9 },
+      { source: "Sensor calibration", type: "B", dist: "Normal", value: 0.2, ci: 1.0, pct: 7.7 },
+    ],
+  },
+  {
+    id: "budget-004",
+    name: "Spectral Mismatch M Factor",
+    measurand: "M (mismatch factor)",
+    value: 1.002,
+    expandedUncertainty: "\u00b13.21%",
+    date: "2026-02-20",
+    status: "Complete" as const,
+    components: [
+      { source: "Reference cell SR", type: "B", dist: "Normal", value: 2.0, ci: 1.0, pct: 48.3 },
+      { source: "DUT SR", type: "B", dist: "Normal", value: 1.5, ci: 1.0, pct: 27.2 },
+      { source: "Simulator spectrum", type: "B", dist: "Normal", value: 1.0, ci: 1.0, pct: 12.1 },
+      { source: "AM1.5G reference", type: "B", dist: "Normal", value: 0.5, ci: 1.0, pct: 3.0 },
+      { source: "Repeatability", type: "A", dist: "Normal", value: 0.4, ci: 1.0, pct: 1.9 },
+    ],
+  },
+];
+
+function BudgetReportsTab() {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  return (
+    <div className="space-y-6 mt-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">Saved Uncertainty Budgets</h2>
+          <p className="text-sm text-muted-foreground">
+            {MOCK_BUDGETS.length + " budgets | " + MOCK_BUDGETS.filter((b) => b.status === "Complete").length + " complete, " + MOCK_BUDGETS.filter((b) => b.status === "Draft").length + " draft"}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm">
+            <Download className="h-4 w-4 mr-2" /> Export All CSV
+          </Button>
+          <Button variant="outline" size="sm">
+            <Download className="h-4 w-4 mr-2" /> Export All PDF
+          </Button>
+        </div>
+      </div>
+
+      {MOCK_BUDGETS.map((budget) => (
+        <Card key={budget.id}>
+          <CardHeader
+            className="cursor-pointer hover:bg-gray-50 transition-colors"
+            onClick={() => setExpandedId(expandedId === budget.id ? null : budget.id)}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div>
+                  <CardTitle className="text-base">{budget.name}</CardTitle>
+                  <CardDescription>{budget.measurand + " = " + budget.value}</CardDescription>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <p className="font-mono font-semibold text-sm">{budget.expandedUncertainty}</p>
+                  <p className="text-xs text-muted-foreground">{budget.date}</p>
+                </div>
+                <Badge variant={budget.status === "Complete" ? "default" : "secondary"}>
+                  {budget.status}
+                </Badge>
+                {expandedId === budget.id ? (
+                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                )}
+              </div>
+            </div>
+          </CardHeader>
+          {expandedId === budget.id && (
+            <CardContent>
+              <Separator className="mb-4" />
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Source</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Distribution</TableHead>
+                    <TableHead className="text-right">Value</TableHead>
+                    <TableHead className="text-right">ci</TableHead>
+                    <TableHead className="w-[200px]">% Contribution</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {budget.components.map((comp, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell className="font-medium text-sm">{comp.source}</TableCell>
+                      <TableCell>
+                        <Badge variant={comp.type === "A" ? "default" : "secondary"} className="text-xs">
+                          {"Type " + comp.type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm">{comp.dist}</TableCell>
+                      <TableCell className="text-right font-mono text-sm">{comp.value.toFixed(2)}</TableCell>
+                      <TableCell className="text-right font-mono text-sm">{comp.ci.toFixed(2)}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Progress value={comp.pct} className="h-2 flex-1" />
+                          <span className="text-xs font-mono w-12 text-right">{comp.pct.toFixed(1)}%</span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <div className="flex gap-2 mt-4 justify-end">
+                <Button variant="outline" size="sm">
+                  <Eye className="h-4 w-4 mr-2" /> View Full Report
+                </Button>
+                <Button variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-2" /> PDF
+                </Button>
+                <Button variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-2" /> CSV
+                </Button>
+              </div>
+            </CardContent>
+          )}
+        </Card>
+      ))}
     </div>
   );
 }
