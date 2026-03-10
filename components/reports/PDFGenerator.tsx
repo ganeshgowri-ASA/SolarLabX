@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import type { SampleReport } from "@/lib/mock-data";
 import type { DetailedTestResult, TestDefinition, LabDetails } from "@/lib/report-test-definitions";
 import { DEFAULT_LAB_DETAILS } from "@/lib/report-test-definitions";
+import { generateNextDocumentNumber } from "@/lib/document-numbering";
 
 interface PDFGeneratorProps {
   report?: SampleReport;
@@ -51,6 +52,9 @@ export function PDFGenerator({
   const handleGenerateHTML = () => {
     let html: string;
 
+    // Auto-generate a traceable document number if not provided
+    const effectiveReportNumber = reportNumber || report?.reportNumber || generateNextDocumentNumber('test_report', { standard: standard || report?.standard || 'IEC 61215' });
+
     if (detailedMode && testResults.length > 0) {
       html = generateDetailedHTML();
     } else if (report) {
@@ -63,7 +67,7 @@ export function PDFGenerator({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${reportNumber || report?.reportNumber || "Report"}_Report.html`;
+    a.download = `${effectiveReportNumber}_Report.html`;
     a.click();
     URL.revokeObjectURL(url);
   };

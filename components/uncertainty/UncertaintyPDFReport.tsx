@@ -10,6 +10,7 @@ import {
   pdf,
 } from "@react-pdf/renderer";
 import type { UncertaintyBudget } from "@/lib/uncertainty";
+import { generateNextDocumentNumber } from "@/lib/document-numbering";
 
 const styles = StyleSheet.create({
   page: {
@@ -176,7 +177,7 @@ function UncertaintyReportDocument({ budget, reportNumber, labName, preparedBy }
           <Text style={styles.subtitle}>ISO/IEC 17025:2017 Compliant Uncertainty Budget</Text>
           <View style={[styles.row, { marginTop: 6 }]}>
             <Text style={styles.label}>Report Number:</Text>
-            <Text style={styles.value}>{reportNumber || `UNC-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${Date.now().toString().slice(-4)}`}</Text>
+            <Text style={styles.value}>{reportNumber || generateNextDocumentNumber('analysis_report', { standard: budget.standardReference || 'ISO 17025' })}</Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.label}>Laboratory:</Text>

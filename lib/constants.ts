@@ -80,6 +80,12 @@ export const NAV_MODULES = [
     icon: "BarChart3",
     description: "Statistical Analysis & SPC",
   },
+  {
+    title: "Traceability",
+    href: "/traceability",
+    icon: "GitBranch",
+    description: "Document Control & Traceability",
+  },
 ] as const;
 
 export const IEC_STANDARDS = [
