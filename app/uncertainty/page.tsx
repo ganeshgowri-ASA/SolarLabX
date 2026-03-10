@@ -27,6 +27,8 @@ import {
   GitBranch,
   ChevronRight,
   Activity,
+  Zap,
+  Thermometer,
 } from "lucide-react";
 import {
   type UncertaintyComponent,
@@ -44,6 +46,8 @@ import {
   calculateTypeA,
   runMonteCarloSimulation,
 } from "@/lib/uncertainty";
+import IVCurveAnalysis from "@/components/iv-curve/IVCurveAnalysis";
+import NMOTCalculator from "@/components/iv-curve/NMOTCalculator";
 import UncertaintyBudgetTable from "@/components/uncertainty/UncertaintyBudgetTable";
 import SensitivityAnalysis from "@/components/uncertainty/SensitivityAnalysis";
 import CoverageFactor from "@/components/uncertainty/CoverageFactor";
@@ -255,7 +259,7 @@ export default function UncertaintyPage() {
 
       {/* Main Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="templates" className="flex items-center gap-1">
             <BookOpen className="h-3.5 w-3.5" />
             Templates
@@ -275,6 +279,14 @@ export default function UncertaintyPage() {
           <TabsTrigger value="report" className="flex items-center gap-1" disabled={!budget}>
             <FileText className="h-3.5 w-3.5" />
             Report
+          </TabsTrigger>
+          <TabsTrigger value="iv-curve" className="flex items-center gap-1">
+            <Zap className="h-3.5 w-3.5" />
+            IV Curve
+          </TabsTrigger>
+          <TabsTrigger value="nmot" className="flex items-center gap-1">
+            <Thermometer className="h-3.5 w-3.5" />
+            NMOT/NOCT
           </TabsTrigger>
         </TabsList>
 
@@ -1055,6 +1067,15 @@ export default function UncertaintyPage() {
               </Card>
             </>
           )}
+        </TabsContent>
+        {/* ===== IV CURVE TAB ===== */}
+        <TabsContent value="iv-curve" className="space-y-4">
+          <IVCurveAnalysis />
+        </TabsContent>
+
+        {/* ===== NMOT/NOCT TAB ===== */}
+        <TabsContent value="nmot" className="space-y-4">
+          <NMOTCalculator />
         </TabsContent>
       </Tabs>
     </div>

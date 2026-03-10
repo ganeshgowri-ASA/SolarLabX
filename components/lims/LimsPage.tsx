@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { cn, formatDate, formatCurrency, getStatusColor } from '@/lib/utils'
 import { toast } from 'sonner'
+import SampleTrackingPage from '@/components/sample-tracking/SampleTrackingPage'
 import {
   serviceRequests,
   approvalWorkflows,
@@ -21,12 +22,13 @@ import type {
   BOMEntry,
 } from '@/lib/types'
 
-type TabKey = 'overview' | 'service-requests' | 'samples' | 'approvals' | 'schedule' | 'certificates' | 'audit-trail'
+type TabKey = 'overview' | 'service-requests' | 'samples' | 'approvals' | 'schedule' | 'certificates' | 'audit-trail' | 'sample-tracking'
 
 const tabs: { key: TabKey; label: string }[] = [
   { key: 'overview', label: 'Overview' },
   { key: 'service-requests', label: 'Service Requests' },
   { key: 'samples', label: 'Samples & BOM' },
+  { key: 'sample-tracking', label: 'Sample Tracking' },
   { key: 'approvals', label: 'Approvals' },
   { key: 'schedule', label: 'Project Schedule' },
   { key: 'certificates', label: 'Certificates' },
@@ -106,6 +108,7 @@ export default function LimsPage() {
       {activeTab === 'schedule' && <ScheduleTab />}
       {activeTab === 'certificates' && <CertificatesTab />}
       {activeTab === 'audit-trail' && <AuditTrailTab />}
+      {activeTab === 'sample-tracking' && <SampleTrackingPage />}
     </div>
   )
 }
