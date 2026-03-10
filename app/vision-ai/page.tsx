@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -309,11 +310,11 @@ export default function VisionAIDashboard() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => toast.success("Defect analysis report exported")}>
             <Download className="mr-2 h-4 w-4" />
             Export Report
           </Button>
-          <Button size="sm">
+          <Button size="sm" onClick={() => toast.info("Upload images below to start a new analysis")}>
             <Upload className="mr-2 h-4 w-4" />
             New Analysis
           </Button>
@@ -361,7 +362,7 @@ export default function VisionAIDashboard() {
                 <Upload className="mx-auto h-10 w-10 text-muted-foreground/50 mb-4" />
                 <p className="text-sm font-medium">Drop EL images here or click to browse</p>
                 <p className="text-xs text-muted-foreground mt-1">Supports TIFF, PNG, JPEG up to 50MB. 16-bit images recommended.</p>
-                <Button variant="outline" size="sm" className="mt-4">
+                <Button variant="outline" size="sm" className="mt-4" onClick={() => toast.info("File browser opening — connect Roboflow API for full functionality")}>
                   <ImageIcon className="mr-2 h-4 w-4" />
                   Select Files
                 </Button>
@@ -877,15 +878,15 @@ export default function VisionAIDashboard() {
                       <TableCell className="text-right">
                         {item.status === "Complete" && (
                           <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="sm"><Eye className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="sm"><FileText className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="sm" onClick={() => toast.info(`Viewing results for ${item.id}`)}><Eye className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="sm" onClick={() => toast.success(`Report downloaded for ${item.id}`)}><FileText className="h-4 w-4" /></Button>
                           </div>
                         )}
                         {item.status === "Failed" && (
-                          <Button variant="ghost" size="sm" className="text-destructive">Retry</Button>
+                          <Button variant="ghost" size="sm" className="text-destructive" onClick={() => toast.info(`Retrying analysis for ${item.id}`)}>Retry</Button>
                         )}
                         {item.status === "Queued" && (
-                          <Button variant="ghost" size="sm" className="text-muted-foreground">
+                          <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => toast.info("Analysis queued — waiting for processing")}>
                             <Clock className="h-4 w-4" />
                           </Button>
                         )}

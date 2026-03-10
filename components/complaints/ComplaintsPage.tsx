@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { cn, formatDate } from '@/lib/utils'
+import { toast } from 'sonner'
 import { customerComplaints, complaintAnalytics } from '@/lib/data/complaints-data'
 import type { CustomerComplaint } from '@/lib/types'
 
@@ -40,6 +41,9 @@ export default function ComplaintsPage() {
           <h1 className="text-2xl font-bold text-gray-900">Customer Complaints</h1>
           <p className="text-sm text-gray-500">Complaint Registration, Investigation, Resolution & SLA Tracking</p>
         </div>
+        <button onClick={() => toast.info("New complaint registration form coming soon")} className="px-4 py-2 text-sm bg-amber-600 text-white rounded hover:bg-amber-700">
+          + New Complaint
+        </button>
       </div>
 
       {/* Tabs */}

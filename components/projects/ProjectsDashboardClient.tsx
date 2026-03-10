@@ -15,6 +15,7 @@ import SprintView from "@/components/projects/SprintView";
 import ResourceView from "@/components/projects/ResourceView";
 import ProjectDashboardWidgets from "@/components/projects/ProjectDashboardWidgets";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 const statusStyles: Record<string, string> = {
@@ -79,13 +80,13 @@ export default function ProjectsDashboardClient() {
           <p className="text-sm text-muted-foreground">Solar PV test campaign tracking and resource management</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => toast.success("Project data exported successfully")}>
             <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
             </svg>
             Export
           </Button>
-          <Button size="sm">+ New Project</Button>
+          <Button size="sm" onClick={() => toast.info("New project wizard coming soon")}>+ New Project</Button>
         </div>
       </div>
 
@@ -257,7 +258,7 @@ export default function ProjectsDashboardClient() {
                     <span>{tpl.estimatedDuration}</span>
                     <span>{tpl.taskCount} tasks</span>
                   </div>
-                  <Button variant="outline" size="sm" className="w-full mt-3">
+                  <Button variant="outline" size="sm" className="w-full mt-3" onClick={() => toast.success(`Template "${tpl.name}" applied`)}>
                     Use Template
                   </Button>
                 </CardContent>

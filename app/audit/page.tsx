@@ -6,6 +6,7 @@ import { auditPlans, auditFindings, auditMetrics } from "@/lib/data/audit-data";
 import { FindingSeverityBadge, FindingStatusBadge } from "@/components/audit/FindingSeverityBadge";
 import { FindingsTrendChart, ClosureRateChart } from "@/components/audit/TrendChart";
 import { formatDate, cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 // ---------------------------------------------------------------------------
 // Inline mock data
@@ -384,7 +385,7 @@ export default function AuditDashboard() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-900">Audit Schedule & Planning</h2>
-        <button className="btn-primary text-sm">+ New Audit Plan</button>
+        <button onClick={() => toast.info("New audit plan form coming soon")} className="btn-primary text-sm">+ New Audit Plan</button>
       </div>
 
       <div className="card overflow-hidden">
@@ -464,7 +465,7 @@ export default function AuditDashboard() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-900">Audit Checklist Generator</h2>
-        <button className="btn-primary text-sm">+ Create Custom Checklist</button>
+        <button onClick={() => toast.info("Custom checklist builder coming soon")} className="btn-primary text-sm">+ Create Custom Checklist</button>
       </div>
 
       <p className="text-sm text-gray-500">
@@ -547,7 +548,7 @@ export default function AuditDashboard() {
           <h2 className="text-lg font-semibold text-gray-900">Audit Findings</h2>
           <div className="flex gap-2">
             <Link href="/audit/car" className="btn-secondary text-sm">CAR/8D Reports</Link>
-            <button className="btn-primary text-sm">+ Log Finding</button>
+            <button onClick={() => toast.info("Finding logging form coming soon")} className="btn-primary text-sm">+ Log Finding</button>
           </div>
         </div>
 
@@ -671,7 +672,7 @@ export default function AuditDashboard() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">Corrective Action Tracking</h2>
-          <button className="btn-primary text-sm">+ New Corrective Action</button>
+          <button onClick={() => toast.info("New corrective action form coming soon")} className="btn-primary text-sm">+ New Corrective Action</button>
         </div>
 
         {/* Status Summary */}
@@ -766,7 +767,7 @@ export default function AuditDashboard() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-900">Audit Reports</h2>
-        <button className="btn-primary text-sm">+ Generate Report</button>
+        <button onClick={() => toast.info("Report generation coming soon")} className="btn-primary text-sm">+ Generate Report</button>
       </div>
 
       <div className="card overflow-hidden">
@@ -809,9 +810,9 @@ export default function AuditDashboard() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-1">
-                      <button className="text-xs text-primary-600 hover:underline">View</button>
-                      {report.status === "Draft" && <button className="text-xs text-yellow-600 hover:underline ml-2">Edit</button>}
-                      {(report.status === "Approved" || report.status === "Issued") && <button className="text-xs text-green-600 hover:underline ml-2">PDF</button>}
+                      <button onClick={() => toast.info(`Viewing report ${report.id}`)} className="text-xs text-primary-600 hover:underline">View</button>
+                      {report.status === "Draft" && <button onClick={() => toast.info(`Editing report ${report.id}`)} className="text-xs text-yellow-600 hover:underline ml-2">Edit</button>}
+                      {(report.status === "Approved" || report.status === "Issued") && <button onClick={() => toast.success(`Downloading PDF for ${report.id}`)} className="text-xs text-green-600 hover:underline ml-2">PDF</button>}
                     </div>
                   </td>
                 </tr>

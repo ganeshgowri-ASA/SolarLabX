@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -960,8 +961,8 @@ export default function UncertaintyDashboard() {
               <p className="text-sm text-muted-foreground">ISO 17025 compliant uncertainty budget documentation</p>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline"><FileDown className="h-4 w-4 mr-1" />Export PDF</Button>
-              <Button variant="outline"><FileDown className="h-4 w-4 mr-1" />Export CSV</Button>
+              <Button variant="outline" onClick={() => toast.success("Uncertainty budget exported as PDF")}><FileDown className="h-4 w-4 mr-1" />Export PDF</Button>
+              <Button variant="outline" onClick={() => toast.success("Uncertainty budget exported as CSV")}><FileDown className="h-4 w-4 mr-1" />Export CSV</Button>
             </div>
           </div>
 

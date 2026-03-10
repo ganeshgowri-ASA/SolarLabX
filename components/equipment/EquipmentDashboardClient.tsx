@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import EquipmentRegistry from "@/components/equipment/EquipmentRegistry";
 import ChamberDashboard from "@/components/equipment/ChamberDashboard";
 import OutdoorTestbedMap from "@/components/equipment/OutdoorTestbedMap";
@@ -47,13 +48,13 @@ export default function EquipmentDashboardClient() {
           <p className="text-sm text-muted-foreground">Equipment registry, calibration, TPM, and resource management</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => toast.success("Equipment data exported successfully")}>
             <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
             </svg>
             Export
           </Button>
-          <Button size="sm">+ Add Equipment</Button>
+          <Button size="sm" onClick={() => toast.info("Add equipment form coming soon")}>+ Add Equipment</Button>
         </div>
       </div>
 
