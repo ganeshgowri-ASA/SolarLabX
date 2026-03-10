@@ -1,15 +1,17 @@
 "use client";
 
-
+import { use } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ReportViewer } from "@/components/reports/ReportViewer";
 import { SignatureBlock } from "@/components/reports/SignatureBlock";
 import { PDFGenerator } from "@/components/reports/PDFGenerator";
+import { DetailedTestReport } from "@/components/reports/DetailedTestReport";
 import { sampleReports } from "@/lib/mock-data";
+import { getTestDefinitions, type DetailedTestResult } from "@/lib/report-test-definitions";
 
-export default function ReportDetailPage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default function ReportDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const report = sampleReports.find((r) => r.id === id);
 
   if (!report) {
@@ -23,6 +25,26 @@ export default function ReportDetailPage({ params }: { params: { id: string } })
       </div>
     );
   }
+
+  // Build detailed test results from the sample report data
+  const testDefs = getTestDefinitions(report.reportType);
+  const detailedResults: DetailedTestResult[] = report.testResults.map((tr) => {
+    const def = testDefs.find((d) => d.clause.includes(tr.clause) || d.testName === tr.testName);
+    return {
+      testId: def?.id || tr.clause,
+      clause: tr.clause,
+      testName: tr.testName,
+      result: tr.result,
+      values: tr.value ? { [def?.resultFields[0]?.label || "Value"]: tr.value } : {},
+      observations: "",
+      equipmentUsed: def?.equipmentUsed || [],
+      testDate: report.createdAt,
+      testedBy: report.preparedBy,
+    };
+  });
+
+  const standardLabel = report.standard;
+  const hasDetailedDefs = testDefs.length > 0;
 
   return (
     <div className="space-y-6">
@@ -39,8 +61,35 @@ export default function ReportDetailPage({ params }: { params: { id: string } })
         </div>
       </div>
 
-      <ReportViewer report={report} />
-      <SignatureBlock report={report} />
+      {hasDetailedDefs ? (
+        <DetailedTestReport
+          reportNumber={report.reportNumber}
+          reportVersion="1.0"
+          standard={standardLabel}
+          standardTitle={report.title}
+          moduleInfo={{
+            moduleId: report.moduleId,
+            manufacturer: report.manufacturer,
+            model: "",
+            serialNumber: "",
+            ratedPower: "",
+            dimensions: "",
+            cellType: "",
+            numberOfCells: "",
+          }}
+          testResults={detailedResults}
+          testDefinitions={testDefs}
+          reportDate={report.createdAt}
+          preparedBy={report.preparedBy}
+          reviewedBy={report.reviewedBy}
+          approvedBy={report.approvedBy}
+        />
+      ) : (
+        <>
+          <ReportViewer report={report} />
+          <SignatureBlock report={report} />
+        </>
+      )}
     </div>
   );
 }
