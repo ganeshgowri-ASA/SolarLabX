@@ -26,6 +26,9 @@ import {
   MessageSquareWarning,
   MessageCircle,
   GitBranch,
+  ClipboardList,
+  LineChart,
+  Gauge,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -57,11 +60,15 @@ const iconMap = {
   MessageSquareWarning,
   MessageCircle,
   GitBranch,
+  ClipboardList,
+  LineChart,
+  Gauge,
 } as const;
 
 const navItems = [
   { title: "Dashboard", href: "/", icon: "LayoutDashboard" },
   { title: "LIMS", href: "/lims", icon: "FlaskConical" },
+  { title: "Test Protocols", href: "/lims/tests", icon: "ClipboardList" },
   { title: "QMS", href: "/qms", icon: "FileCheck" },
   { title: "Audit", href: "/audit", icon: "ClipboardCheck" },
   { title: "Projects", href: "/projects", icon: "FolderKanban" },
@@ -71,6 +78,8 @@ const navItems = [
   { title: "SOP Gen", href: "/sop-gen", icon: "BookOpen" },
   { title: "Reports", href: "/reports", icon: "FileBarChart" },
   { title: "Data Analysis", href: "/data-analysis", icon: "BarChart3" },
+  { title: "IV Curve", href: "/iv-curve", icon: "LineChart" },
+  { title: "NMOT/NOCT", href: "/nmot-noct", icon: "Gauge" },
   { title: "Statistics", href: "/statistics", icon: "BarChart3" },
   { title: "Traceability", href: "/traceability", icon: "GitBranch" },
   { title: "RCA", href: "/rca", icon: "SearchCheck" },
