@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { Task } from "@/lib/types/projects";
 import { cn } from "@/lib/utils";
 
@@ -7,6 +8,9 @@ interface GanttChartProps {
   tasks: Task[];
   projectStart: string;
   projectEnd: string;
+  projectName?: string;
+  projectManager?: string;
+  completionPercent?: number;
 }
 
 const priorityColors: Record<string, string> = {
@@ -25,7 +29,8 @@ const columnBarColors: Record<string, string> = {
   Backlog: "bg-gray-300",
 };
 
-export default function GanttChart({ tasks, projectStart, projectEnd }: GanttChartProps) {
+export default function GanttChart({ tasks, projectStart, projectEnd, projectName, projectManager, completionPercent }: GanttChartProps) {
+  const ganttRef = useRef<HTMLDivElement>(null);
   const start = new Date(projectStart);
   const end = new Date(projectEnd);
   const totalDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
@@ -79,13 +84,126 @@ export default function GanttChart({ tasks, projectStart, projectEnd }: GanttCha
     }
   });
 
+  const handleDownloadPDF = () => {
+    const el = ganttRef.current;
+    if (!el) return;
+
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+
+    const startFormatted = start.toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" });
+    const endFormatted = end.toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" });
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Gantt Chart - ${projectName || "Project"}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: 'Segoe UI', system-ui, sans-serif; padding: 30px; font-size: 11px; color: #1a1a1a; }
+          .header { text-align: center; border-bottom: 3px solid #1e40af; padding-bottom: 12px; margin-bottom: 20px; }
+          .header h1 { font-size: 18px; color: #1e40af; }
+          .header p { font-size: 11px; color: #6b7280; margin-top: 2px; }
+          .meta-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+          .meta-item { border: 1px solid #e5e7eb; border-radius: 4px; padding: 8px; }
+          .meta-item .label { font-size: 9px; text-transform: uppercase; color: #6b7280; font-weight: 600; }
+          .meta-item .value { font-size: 12px; font-weight: 600; color: #1a1a1a; margin-top: 2px; }
+          .gantt-content { overflow: visible; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+          th { background: #f1f5f9; text-align: left; padding: 6px 8px; font-size: 9px; font-weight: 600; color: #475569; text-transform: uppercase; border: 1px solid #e2e8f0; }
+          td { padding: 5px 8px; font-size: 10px; border: 1px solid #e2e8f0; }
+          .priority-P0 { color: #dc2626; font-weight: 700; }
+          .priority-P1 { color: #ea580c; font-weight: 600; }
+          .priority-P2 { color: #ca8a04; }
+          .priority-P3 { color: #2563eb; }
+          .priority-P4 { color: #6b7280; }
+          .status-done { color: #16a34a; }
+          .status-progress { color: #2563eb; }
+          .status-todo { color: #ca8a04; }
+          .status-backlog { color: #6b7280; }
+          .critical { background: #fef2f2; }
+          .legend { display: flex; gap: 12px; margin-top: 12px; padding-top: 8px; border-top: 1px solid #e2e8f0; }
+          .legend span { font-size: 9px; color: #6b7280; display: flex; align-items: center; gap: 4px; }
+          .legend .dot { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+          .footer { margin-top: 24px; text-align: center; font-size: 9px; color: #9ca3af; border-top: 1px solid #e2e8f0; padding-top: 8px; }
+          @media print { body { padding: 15px; } @page { size: landscape; margin: 10mm; } }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Project Gantt Chart</h1>
+          <p>${projectName || "Project"}</p>
+        </div>
+        <div class="meta-grid">
+          <div class="meta-item"><div class="label">Project</div><div class="value">${projectName || "-"}</div></div>
+          <div class="meta-item"><div class="label">Timeline</div><div class="value">${startFormatted} - ${endFormatted}</div></div>
+          <div class="meta-item"><div class="label">Project Manager</div><div class="value">${projectManager || "-"}</div></div>
+          <div class="meta-item"><div class="label">Completion</div><div class="value">${completionPercent ?? "-"}%</div></div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width:30%">Task</th>
+              <th>Priority</th>
+              <th>Status</th>
+              <th>Assignee</th>
+              <th>Start</th>
+              <th>End</th>
+              <th>Progress</th>
+              <th>Critical Path</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tasks.map((task) => {
+              const isCrit = criticalIds.has(task.id);
+              const statusClass = task.column === "Done" ? "status-done" : task.column === "In Progress" ? "status-progress" : task.column === "To Do" ? "status-todo" : "status-backlog";
+              return `<tr class="${isCrit ? "critical" : ""}">
+                <td>${task.name}</td>
+                <td class="priority-${task.priority}">${task.priority}</td>
+                <td class="${statusClass}">${task.column}</td>
+                <td>${task.assignee}</td>
+                <td>${new Date(task.startDate).toLocaleDateString("en-IN", { month: "short", day: "numeric" })}</td>
+                <td>${new Date(task.endDate).toLocaleDateString("en-IN", { month: "short", day: "numeric" })}</td>
+                <td>${task.completionPercent}%</td>
+                <td>${isCrit ? "Yes" : "-"}</td>
+              </tr>`;
+            }).join("")}
+          </tbody>
+        </table>
+        <div class="legend">
+          <span><span class="dot" style="background:#16a34a"></span> Done</span>
+          <span><span class="dot" style="background:#2563eb"></span> In Progress</span>
+          <span><span class="dot" style="background:#ca8a04"></span> To Do</span>
+          <span><span class="dot" style="background:#6b7280"></span> Backlog</span>
+          <span><span class="dot" style="background:#ef4444"></span> Critical Path</span>
+        </div>
+        <div class="footer">SolarLabX Project Management | Generated ${new Date().toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" })} | Confidential</div>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+    setTimeout(() => { printWindow.print(); }, 300);
+  };
+
   return (
-    <div className="rounded-lg border bg-card p-4 overflow-x-auto">
+    <div ref={ganttRef} className="rounded-lg border bg-card p-4 overflow-x-auto">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-foreground">Gantt Chart with Dependencies</h3>
-        <div className="flex items-center gap-1">
-          <span className="h-2 w-2 rounded-full bg-red-500 inline-block" />
-          <span className="text-[10px] text-muted-foreground mr-2">Critical Path</span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
+            <span className="h-2 w-2 rounded-full bg-red-500 inline-block" />
+            <span className="text-[10px] text-muted-foreground mr-2">Critical Path</span>
+          </div>
+          <button
+            onClick={handleDownloadPDF}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border bg-white text-foreground hover:bg-muted transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Download Gantt PDF
+          </button>
         </div>
       </div>
 

@@ -4,7 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { auditPlans, auditFindings, auditMetrics } from "@/lib/data/audit-data";
 import { FindingSeverityBadge, FindingStatusBadge } from "@/components/audit/FindingSeverityBadge";
-import { FindingsTrendChart, ClosureRateChart } from "@/components/audit/TrendChart";
+import { FindingsTrendChart, ClosureRateChart, DepartmentFindingsChart, FindingTypePareto, RecurrenceChart } from "@/components/audit/TrendChart";
+import AuditReportGenerator from "@/components/audit/AuditReportGenerator";
 import { formatDate, cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -767,7 +768,16 @@ export default function AuditDashboard() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-900">Audit Reports</h2>
-        <button onClick={() => toast.info("Report generation coming soon")} className="btn-primary text-sm">+ Generate Report</button>
+      </div>
+
+      {/* Report Generator */}
+      <div className="card">
+        <h3 className="text-sm font-semibold text-gray-900 mb-3">Generate Audit Report</h3>
+        <AuditReportGenerator
+          plans={auditPlans}
+          findings={auditFindings}
+          correctiveActions={correctiveActions}
+        />
       </div>
 
       <div className="card overflow-hidden">
@@ -854,8 +864,6 @@ export default function AuditDashboard() {
   // Tab: Trend Analysis
   // ---------------------------------------------------------------------------
   const renderTrends = () => {
-    const maxTotal = Math.max(...departmentTrendData.map((d) => d.total));
-
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -863,94 +871,25 @@ export default function AuditDashboard() {
           <span className="text-xs text-gray-500">Data period: Oct 2025 - Mar 2026</span>
         </div>
 
-        {/* Charts from imported data */}
+        {/* Charts Row 1: Stacked Bar + Grouped Bar with Closure Line */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <FindingsTrendChart data={auditMetrics.findingsByMonth} />
           <ClosureRateChart data={auditMetrics.closureRate} />
         </div>
 
-        {/* Findings by Department */}
-        <div className="card">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4">Findings by Department</h3>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Department</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Major NC</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Minor NC</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Observation</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">OFI</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase w-48">Distribution</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {departmentTrendData.map((dept) => (
-                  <tr key={dept.department} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm text-gray-900 font-medium">{dept.department}</td>
-                    <td className="px-4 py-3 text-sm">
-                      {dept.majorNC > 0 ? <span className="badge bg-red-100 text-red-700">{dept.majorNC}</span> : <span className="text-gray-400">0</span>}
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      {dept.minorNC > 0 ? <span className="badge bg-orange-100 text-orange-700">{dept.minorNC}</span> : <span className="text-gray-400">0</span>}
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      {dept.observation > 0 ? <span className="badge bg-yellow-100 text-yellow-700">{dept.observation}</span> : <span className="text-gray-400">0</span>}
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      {dept.ofi > 0 ? <span className="badge bg-blue-100 text-blue-700">{dept.ofi}</span> : <span className="text-gray-400">0</span>}
-                    </td>
-                    <td className="px-4 py-3 text-sm font-bold text-gray-900">{dept.total}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-0.5 h-4">
-                        {dept.majorNC > 0 && (
-                          <div
-                            className="bg-red-500 rounded-l"
-                            style={{ width: `${(dept.majorNC / maxTotal) * 100}%` }}
-                            title={`Major NC: ${dept.majorNC}`}
-                          />
-                        )}
-                        {dept.minorNC > 0 && (
-                          <div
-                            className="bg-orange-500"
-                            style={{ width: `${(dept.minorNC / maxTotal) * 100}%` }}
-                            title={`Minor NC: ${dept.minorNC}`}
-                          />
-                        )}
-                        {dept.observation > 0 && (
-                          <div
-                            className="bg-yellow-500"
-                            style={{ width: `${(dept.observation / maxTotal) * 100}%` }}
-                            title={`Observation: ${dept.observation}`}
-                          />
-                        )}
-                        {dept.ofi > 0 && (
-                          <div
-                            className="bg-blue-500 rounded-r"
-                            style={{ width: `${(dept.ofi / maxTotal) * 100}%` }}
-                            title={`OFI: ${dept.ofi}`}
-                          />
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="flex gap-4 mt-3 pt-2 border-t text-xs text-gray-500">
-            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-500 inline-block" /> Major NC</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-orange-500 inline-block" /> Minor NC</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-yellow-500 inline-block" /> Observation</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-blue-500 inline-block" /> OFI</span>
-          </div>
+        {/* Charts Row 2: Horizontal Bar by Department + Pareto */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <DepartmentFindingsChart data={departmentTrendData} />
+          <FindingTypePareto data={departmentTrendData} />
         </div>
 
-        {/* Recurring Findings */}
+        {/* Recurrence Analysis Chart */}
+        <RecurrenceChart data={recurrenceData} />
+
+        {/* Recurring Findings Table */}
         <div className="card">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4">Recurring Findings Analysis</h3>
-          <p className="text-xs text-gray-500 mb-4">Findings that have been identified multiple times across audits, indicating potential systemic issues.</p>
+          <h3 className="text-sm font-semibold text-gray-900 mb-4">Recurring Findings Details</h3>
+          <p className="text-xs text-gray-500 mb-4">Findings identified multiple times across audits, indicating potential systemic issues.</p>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">

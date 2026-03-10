@@ -140,7 +140,14 @@ export default function ProjectDetailClient({ params }: { params: Promise<{ id: 
 
       {/* Gantt Chart */}
       {project.tasks.length > 0 && (
-        <GanttChart tasks={project.tasks} projectStart={project.startDate} projectEnd={project.endDate} />
+        <GanttChart
+          tasks={project.tasks}
+          projectStart={project.startDate}
+          projectEnd={project.endDate}
+          projectName={project.name}
+          projectManager={project.projectManager}
+          completionPercent={project.completionPercent}
+        />
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
