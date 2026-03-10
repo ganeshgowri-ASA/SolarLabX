@@ -24,6 +24,7 @@ import {
   Search,
   MessageSquareWarning,
   MessageCircle,
+  GitBranch,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,7 @@ const iconMap = {
   Search,
   MessageSquareWarning,
   MessageCircle,
+  GitBranch,
 } as const;
 
 const navItems = [
@@ -68,6 +70,7 @@ const navItems = [
   { title: "SOP Gen", href: "/sop-gen", icon: "BookOpen" },
   { title: "Reports", href: "/reports", icon: "FileBarChart" },
   { title: "Statistics", href: "/statistics", icon: "BarChart3" },
+  { title: "Traceability", href: "/traceability", icon: "GitBranch" },
   { title: "RCA", href: "/rca", icon: "SearchCheck" },
   { title: "Complaints", href: "/complaints", icon: "MessageSquareWarning" },
   { title: "Chatbot", href: "/chatbot", icon: "MessageCircle" },
