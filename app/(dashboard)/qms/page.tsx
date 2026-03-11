@@ -739,7 +739,7 @@ export default function QMSDashboard() {
                   </div>
                 </div>
                 <div className="mt-4 p-4 rounded-lg bg-muted/50 text-sm text-muted-foreground">
-                  <p className="italic">Document content preview would appear here. Click "View" to open the full document in the document editor.</p>
+                  <p className="italic">Document content preview would appear here. Click &ldquo;View&rdquo; to open the full document in the document editor.</p>
                 </div>
               </CardContent>
             </Card>
