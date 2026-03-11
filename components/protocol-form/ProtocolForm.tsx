@@ -7,13 +7,17 @@ import RawDataUploader from './RawDataUploader'
 import {
   ChevronDown, ChevronUp, CheckCircle2, XCircle, AlertCircle,
   Save, Send, FileText, User, Calendar, Thermometer, Upload,
-  BarChart3, ClipboardCheck, PenLine, Info
+  BarChart3, ClipboardCheck, PenLine, Info, ExternalLink
 } from 'lucide-react'
+import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import {
   ComposedChart, Line, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer
 } from 'recharts'
+import dynamic from 'next/dynamic'
+
+const ProtocolPdfExport = dynamic(() => import('./ProtocolPdfExport'), { ssr: false })
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -629,7 +633,7 @@ export default function ProtocolForm({ protocol, onSave, onSubmit }: ProtocolFor
       </Section>
 
       {/* ── Actions ── */}
-      <div className="flex items-center gap-3 pt-2 sticky bottom-0 bg-white border-t py-3 px-1">
+      <div className="flex items-center gap-2 pt-2 sticky bottom-0 bg-white border-t py-3 px-1 flex-wrap">
         <button
           onClick={saveDraft}
           className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50"
@@ -637,6 +641,21 @@ export default function ProtocolForm({ protocol, onSave, onSubmit }: ProtocolFor
           <Save className="h-4 w-4" />
           {draftSaved ? 'Saved!' : 'Save Draft'}
         </button>
+
+        <ProtocolPdfExport
+          protocol={protocol}
+          record={buildRecord()}
+          rawFiles={rawFiles}
+        />
+
+        <Link
+          href={`/lims/tests/protocol/${protocol.id}`}
+          className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50 text-gray-600"
+        >
+          <ExternalLink className="h-4 w-4" />
+          Full Page
+        </Link>
+
         <button
           onClick={handleSubmit}
           disabled={!sampleId || !operator}

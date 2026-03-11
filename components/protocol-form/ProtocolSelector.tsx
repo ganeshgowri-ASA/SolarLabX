@@ -2,9 +2,10 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { PROTOCOLS_BY_STANDARD } from '@/lib/protocols'
 import type { ProtocolDefinition } from '@/lib/protocol-types'
-import { ChevronDown, ChevronRight, FileText, Zap, Thermometer, Eye, Shield, Wrench } from 'lucide-react'
+import { ChevronDown, ChevronRight, FileText, Zap, Thermometer, Eye, Shield, Wrench, ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const CATEGORY_ICONS = {
@@ -75,34 +76,44 @@ export default function ProtocolSelector({ selectedId, onSelect }: ProtocolSelec
                 {protocols.map(protocol => {
                   const isSelected = selectedId === protocol.id
                   return (
-                    <button
-                      key={protocol.id}
-                      onClick={() => onSelect(protocol)}
-                      className={cn(
-                        'w-full text-left px-2 py-1.5 rounded text-xs transition-colors group',
-                        isSelected
-                          ? 'bg-amber-50 border border-amber-200 text-amber-900'
-                          : 'hover:bg-gray-50 text-gray-700'
-                      )}
-                    >
-                      <div className="flex items-start gap-1.5">
-                        <div className={cn(
-                          'flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] font-medium flex-shrink-0 mt-0.5',
-                          CATEGORY_COLORS[protocol.category]
-                        )}>
-                          {CATEGORY_ICONS[protocol.category]}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1 flex-wrap">
-                            <span className="font-medium text-[10px] text-gray-500">{protocol.code}</span>
-                            {protocol.critical && (
-                              <span className="text-[9px] bg-red-100 text-red-600 px-1 rounded">Critical</span>
-                            )}
+                    <div key={protocol.id} className="relative group">
+                      <button
+                        onClick={() => onSelect(protocol)}
+                        className={cn(
+                          'w-full text-left px-2 py-1.5 rounded text-xs transition-colors pr-6',
+                          isSelected
+                            ? 'bg-amber-50 border border-amber-200 text-amber-900'
+                            : 'hover:bg-gray-50 text-gray-700'
+                        )}
+                      >
+                        <div className="flex items-start gap-1.5">
+                          <div className={cn(
+                            'flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] font-medium flex-shrink-0 mt-0.5',
+                            CATEGORY_COLORS[protocol.category]
+                          )}>
+                            {CATEGORY_ICONS[protocol.category]}
                           </div>
-                          <div className="text-[11px] leading-tight text-gray-700 line-clamp-2">{protocol.name}</div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1 flex-wrap">
+                              <span className="font-medium text-[10px] text-gray-500">{protocol.code}</span>
+                              {protocol.critical && (
+                                <span className="text-[9px] bg-red-100 text-red-600 px-1 rounded">Critical</span>
+                              )}
+                            </div>
+                            <div className="text-[11px] leading-tight text-gray-700 line-clamp-2">{protocol.name}</div>
+                          </div>
                         </div>
-                      </div>
-                    </button>
+                      </button>
+                      {/* Open full page link */}
+                      <Link
+                        href={`/lims/tests/protocol/${protocol.id}`}
+                        title="Open full form page"
+                        className="absolute right-1.5 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-amber-600"
+                        onClick={e => e.stopPropagation()}
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                      </Link>
+                    </div>
                   )
                 })}
               </div>
