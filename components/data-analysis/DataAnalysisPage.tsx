@@ -54,6 +54,11 @@ import {
   Wind,
   FlaskConical,
   ClipboardList,
+  Eye,
+  Camera,
+  AlertTriangle,
+  RefreshCw,
+  Layers,
 } from "lucide-react"
 import { SPCControlCharts } from "./SPCControlCharts"
 import { StatisticsOverview } from "./StatisticsOverview"
@@ -464,6 +469,26 @@ export default function DataAnalysisPage() {
           <TabsTrigger value="weather" className="text-xs">
             <Sun className="mr-1 h-3 w-3" />
             Weather QA
+          </TabsTrigger>
+          <TabsTrigger value="bypass" className="text-xs">
+            <Zap className="mr-1 h-3 w-3" />
+            Bypass Diode
+          </TabsTrigger>
+          <TabsTrigger value="bifaciality" className="text-xs">
+            <BarChart3 className="mr-1 h-3 w-3" />
+            Bifaciality
+          </TabsTrigger>
+          <TabsTrigger value="lightsoaking" className="text-xs">
+            <Sun className="mr-1 h-3 w-3" />
+            Light Soaking
+          </TabsTrigger>
+          <TabsTrigger value="gates" className="text-xs">
+            <Target className="mr-1 h-3 w-3" />
+            Gates
+          </TabsTrigger>
+          <TabsTrigger value="visionai" className="text-xs">
+            <Activity className="mr-1 h-3 w-3" />
+            Solar Vision AI
           </TabsTrigger>
           <TabsTrigger value="protocols" className="text-xs">
             <ClipboardList className="mr-1 h-3 w-3" />
@@ -1600,6 +1625,547 @@ export default function DataAnalysisPage() {
             </p>
           </div>
           <WeatherQA />
+        </TabsContent>
+
+        {/* ===================== TAB: BYPASS DIODE ===================== */}
+        <TabsContent value="bypass" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Bypass Diode Test Analysis</h2>
+            <p className="text-sm text-muted-foreground">
+              Forward/reverse I-V characteristics, thermal evaluation per IEC 61215 MQT 18 &amp; IEC 61730 MST 22
+            </p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {[
+              { label: "Diodes Tested", value: "24", sub: "8 modules × 3 diodes", color: "text-blue-600" },
+              { label: "Pass Rate", value: "95.8%", sub: "23/24 passed", color: "text-green-600" },
+              { label: "Avg Forward Vf", value: "0.52 V", sub: "at 5A test current", color: "text-purple-600" },
+              { label: "Max Junction Temp", value: "68°C", sub: "below Tj,max = 80°C", color: "text-amber-600" },
+            ].map(({ label, value, sub, color }) => (
+              <Card key={label}>
+                <CardContent className="pt-4 pb-3">
+                  <CardDescription>{label}</CardDescription>
+                  <div className={`text-2xl font-bold ${color}`}>{value}</div>
+                  <p className="text-xs text-muted-foreground">{sub}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Zap className="h-4 w-4 text-yellow-500" />
+                  Forward I-V Characteristics
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={220}>
+                  <LineChart data={[
+                    { v: 0.0, m1: 0.00, m2: 0.00, m3: 0.00 },
+                    { v: 0.1, m1: 0.01, m2: 0.01, m3: 0.01 },
+                    { v: 0.2, m1: 0.05, m2: 0.04, m3: 0.05 },
+                    { v: 0.3, m1: 0.20, m2: 0.18, m3: 0.22 },
+                    { v: 0.4, m1: 0.80, m2: 0.75, m3: 0.85 },
+                    { v: 0.45, m1: 1.80, m2: 1.70, m3: 1.95 },
+                    { v: 0.5, m1: 3.50, m2: 3.30, m3: 3.80 },
+                    { v: 0.52, m1: 5.00, m2: 4.80, m3: 5.20 },
+                    { v: 0.55, m1: 8.00, m2: 7.60, m3: 8.40 },
+                  ]}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="v" label={{ value: "Vf (V)", position: "insideBottom", offset: -5 }} tick={{ fontSize: 10 }} />
+                    <YAxis label={{ value: "If (A)", angle: -90, position: "insideLeft" }} tick={{ fontSize: 10 }} />
+                    <Tooltip formatter={(v: number) => `${v.toFixed(2)} A`} />
+                    <Legend />
+                    <Line type="monotone" dataKey="m1" name="Module 1" stroke="#3b82f6" dot={false} strokeWidth={2} />
+                    <Line type="monotone" dataKey="m2" name="Module 2" stroke="#22c55e" dot={false} strokeWidth={2} />
+                    <Line type="monotone" dataKey="m3" name="Module 3" stroke="#f59e0b" dot={false} strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Thermometer className="h-4 w-4 text-red-500" />
+                  Bypass Diode Thermal Results (MQT 18)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {[
+                    { module: "SMP-2026-041", d1: 52, d2: 55, d3: 50, status: "PASS" },
+                    { module: "SMP-2026-042", d1: 61, d2: 68, d3: 63, status: "PASS" },
+                    { module: "SMP-2026-043", d1: 58, d2: 57, d3: 59, status: "PASS" },
+                    { module: "SMP-2026-044", d1: 65, d2: 82, d3: 64, status: "FAIL" },
+                  ].map(({ module, d1, d2, d3, status }) => (
+                    <div key={module} className="flex items-center gap-3 p-2 rounded-lg border">
+                      <span className="text-xs font-mono w-28">{module}</span>
+                      <div className="flex gap-2 flex-1">
+                        {[d1, d2, d3].map((t, i) => (
+                          <span key={i} className={`text-xs px-2 py-0.5 rounded font-mono ${t > 80 ? 'bg-red-100 text-red-700' : t > 70 ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
+                            D{i + 1}: {t}°C
+                          </span>
+                        ))}
+                      </div>
+                      <span className={`text-xs font-bold ${status === 'PASS' ? 'text-green-600' : 'text-red-600'}`}>{status}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">Tj,max = 80°C (rated). Values after 1h Isc loading + 10 thermal cycles.</p>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* ===================== TAB: BIFACIALITY ===================== */}
+        <TabsContent value="bifaciality" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Bifaciality Analysis</h2>
+            <p className="text-sm text-muted-foreground">
+              Front/rear power ratio, bifaciality factor (φ), albedo sensitivity per IEC TS 60904-1-2
+            </p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {[
+              { label: "Bifaciality Factor (φ)", value: "72.3%", sub: "Prear/Pfront ratio", color: "text-blue-600" },
+              { label: "Front Pmax (STC)", value: "415 W", sub: "at 1000 W/m² front", color: "text-green-600" },
+              { label: "Rear Pmax (STC)", value: "300 W", sub: "at 1000 W/m² rear", color: "text-purple-600" },
+              { label: "Energy Gain (15% albedo)", value: "+8.2%", sub: "annual yield estimate", color: "text-amber-600" },
+            ].map(({ label, value, sub, color }) => (
+              <Card key={label}>
+                <CardContent className="pt-4 pb-3">
+                  <CardDescription>{label}</CardDescription>
+                  <div className={`text-2xl font-bold ${color}`}>{value}</div>
+                  <p className="text-xs text-muted-foreground">{sub}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4 text-blue-500" />
+                  Front vs. Rear Power (Sample Batch)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={[
+                    { id: "S1", front: 418, rear: 302 },
+                    { id: "S2", front: 415, rear: 299 },
+                    { id: "S3", front: 412, rear: 295 },
+                    { id: "S4", front: 419, rear: 305 },
+                    { id: "S5", front: 416, rear: 301 },
+                  ]}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="id" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 10 }} domain={[280, 430]} />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="front" name="Front Pmax (W)" fill="#3b82f6" />
+                    <Bar dataKey="rear" name="Rear Pmax (W)" fill="#22c55e" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-green-500" />
+                  Bifaciality Factor φ Distribution
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={[
+                    { bin: "68–70%", count: 1 },
+                    { bin: "70–72%", count: 3 },
+                    { bin: "72–74%", count: 6 },
+                    { bin: "74–76%", count: 4 },
+                    { bin: "76–78%", count: 2 },
+                  ]}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="bin" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 10 }} />
+                    <Tooltip />
+                    <Bar dataKey="count" name="Count" fill="#a855f7">
+                      {[0,1,2,3,4].map(i => <Cell key={i} fill={i === 2 ? "#7c3aed" : "#c4b5fd"} />)}
+                    </Bar>
+                    <ReferenceLine y={0} />
+                  </BarChart>
+                </ResponsiveContainer>
+                <p className="text-xs text-muted-foreground mt-2">Mean φ = 72.3% ± 2.1% (1σ). Manufacturer spec: 70% min.</p>
+              </CardContent>
+            </Card>
+          </div>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Albedo Sensitivity – Energy Gain vs. Ground Reflectance</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={200}>
+                <LineChart data={[
+                  { albedo: 5, gain: 0.8 }, { albedo: 10, gain: 2.1 }, { albedo: 15, gain: 3.8 },
+                  { albedo: 20, gain: 5.2 }, { albedo: 25, gain: 6.9 }, { albedo: 30, gain: 8.4 },
+                  { albedo: 40, gain: 10.8 }, { albedo: 50, gain: 13.1 },
+                ]}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="albedo" label={{ value: "Albedo (%)", position: "insideBottom", offset: -5 }} tick={{ fontSize: 10 }} />
+                  <YAxis label={{ value: "Energy Gain (%)", angle: -90, position: "insideLeft" }} tick={{ fontSize: 10 }} />
+                  <Tooltip formatter={(v: number) => `+${v}%`} />
+                  <Line type="monotone" dataKey="gain" name="Energy Gain" stroke="#22c55e" strokeWidth={2} dot={{ r: 3 }} />
+                  <ReferenceLine x={20} stroke="#f59e0b" strokeDasharray="4 4" label={{ value: "Grass", fontSize: 10 }} />
+                  <ReferenceLine x={80} stroke="#3b82f6" strokeDasharray="4 4" label={{ value: "Snow", fontSize: 10 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ===================== TAB: LIGHT SOAKING ===================== */}
+        <TabsContent value="lightsoaking" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Light Soaking &amp; Stabilization Analysis</h2>
+            <p className="text-sm text-muted-foreground">
+              Power vs. time stabilization curves for LID/LeTID monitoring per IEC 61215 light soaking requirements
+            </p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-4">
+            {[
+              { label: "Initial Pmax", value: "412.5 W", sub: "pre-light soak", color: "text-blue-600" },
+              { label: "Stabilized Pmax", value: "409.8 W", sub: "after 5 kWh/m²", color: "text-green-600" },
+              { label: "LID (ΔPmax)", value: "-0.65%", sub: "within 2% limit", color: "text-amber-600" },
+              { label: "Stabilization Time", value: "4.2 h", sub: "at 1 kW/m²", color: "text-purple-600" },
+            ].map(({ label, value, sub, color }) => (
+              <Card key={label}>
+                <CardContent className="pt-4 pb-3">
+                  <CardDescription>{label}</CardDescription>
+                  <div className={`text-2xl font-bold ${color}`}>{value}</div>
+                  <p className="text-xs text-muted-foreground">{sub}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-amber-500" />
+                Pmax vs. Cumulative Irradiance (Light Soaking Curve)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={260}>
+                <LineChart data={[
+                  { kwh: 0, pmax: 412.5 }, { kwh: 0.5, pmax: 411.8 }, { kwh: 1.0, pmax: 411.0 },
+                  { kwh: 1.5, pmax: 410.5 }, { kwh: 2.0, pmax: 410.2 }, { kwh: 2.5, pmax: 410.0 },
+                  { kwh: 3.0, pmax: 409.9 }, { kwh: 4.0, pmax: 409.8 }, { kwh: 5.0, pmax: 409.8 },
+                  { kwh: 7.5, pmax: 409.8 }, { kwh: 10.0, pmax: 409.7 },
+                ]}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="kwh" label={{ value: "Cumulative Irradiance (kWh/m²)", position: "insideBottom", offset: -5 }} tick={{ fontSize: 10 }} />
+                  <YAxis domain={[408, 414]} label={{ value: "Pmax (W)", angle: -90, position: "insideLeft" }} tick={{ fontSize: 10 }} />
+                  <Tooltip formatter={(v: number) => `${v.toFixed(1)} W`} />
+                  <Line type="monotone" dataKey="pmax" name="Pmax" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3 }} />
+                  <ReferenceLine y={412.5 * 0.98} stroke="#ef4444" strokeDasharray="4 4" label={{ value: "2% limit", position: "right", fontSize: 10 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">LeTID Monitoring (Elevated Temperature Stabilization)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={200}>
+                  <LineChart data={[
+                    { h: 0, pmax: 412.5 }, { h: 24, pmax: 411.0 }, { h: 48, pmax: 410.2 },
+                    { h: 96, pmax: 409.5 }, { h: 168, pmax: 409.1 }, { h: 240, pmax: 409.0 },
+                    { h: 336, pmax: 409.2 }, { h: 500, pmax: 409.8 }, { h: 672, pmax: 410.1 },
+                  ]}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="h" label={{ value: "Time (h)", position: "insideBottom", offset: -5 }} tick={{ fontSize: 10 }} />
+                    <YAxis domain={[407, 414]} tick={{ fontSize: 10 }} />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="pmax" name="Pmax (85°C soak)" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 2 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+                <p className="text-xs text-muted-foreground mt-2">85°C thermal annealing after LeTID degradation. Recovery phase visible after 240h.</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Multi-Sample LID Comparison</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {[
+                    { id: "SMP-2026-041", initial: 415.2, stabilized: 412.5, lid: -0.65 },
+                    { id: "SMP-2026-042", initial: 413.8, stabilized: 411.2, lid: -0.63 },
+                    { id: "SMP-2026-043", initial: 416.1, stabilized: 413.0, lid: -0.74 },
+                    { id: "SMP-2026-044", initial: 414.5, stabilized: 411.8, lid: -0.65 },
+                    { id: "SMP-2026-045", initial: 415.0, stabilized: 406.8, lid: -1.98 },
+                  ].map(({ id, initial, stabilized, lid }) => (
+                    <div key={id} className="flex items-center gap-3 text-xs p-2 rounded-lg border">
+                      <span className="font-mono w-28">{id}</span>
+                      <span className="text-muted-foreground">{initial}W → {stabilized}W</span>
+                      <span className={`ml-auto font-bold ${Math.abs(lid) > 1.5 ? 'text-amber-600' : 'text-green-600'}`}>{lid.toFixed(2)}%</span>
+                      <span className={`px-2 py-0.5 rounded ${Math.abs(lid) < 2 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                        {Math.abs(lid) < 2 ? 'PASS' : 'FAIL'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* ===================== TAB: GATES ===================== */}
+        <TabsContent value="gates" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Gates Analysis – Degradation Gates per IEC 61215</h2>
+            <p className="text-sm text-muted-foreground">
+              Sequential test matrix gates: pass/fail at each degradation checkpoint, cumulative performance tracking
+            </p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-4">
+            {[
+              { label: "Gates Passed", value: "18/21", sub: "across all test sequences", color: "text-green-600" },
+              { label: "Gates Failed", value: "3", sub: "require investigation", color: "text-red-600" },
+              { label: "Max Degradation", value: "-3.8%", sub: "DH1000 gate (limit: 5%)", color: "text-amber-600" },
+              { label: "Waived Gates", value: "0", sub: "all required gates tested", color: "text-gray-600" },
+            ].map(({ label, value, sub, color }) => (
+              <Card key={label}>
+                <CardContent className="pt-4 pb-3">
+                  <CardDescription>{label}</CardDescription>
+                  <div className={`text-2xl font-bold ${color}`}>{value}</div>
+                  <p className="text-xs text-muted-foreground">{sub}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">IEC 61215 Sequential Test Gates – Pmax Degradation</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-2 pr-4 font-semibold">Gate</th>
+                      <th className="text-left py-2 pr-4">Test Sequence</th>
+                      <th className="text-right py-2 pr-4">ΔPmax (%)</th>
+                      <th className="text-right py-2 pr-4">Limit (%)</th>
+                      <th className="text-right py-2 pr-4">R_ins</th>
+                      <th className="text-center py-2">Result</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { gate: "G1", seq: "MQT 01→02→03", dpmax: -0.2, limit: 5, rins: "OK", pass: true },
+                      { gate: "G2", seq: "→MQT 10 (UV)→02→03", dpmax: -0.8, limit: 5, rins: "OK", pass: true },
+                      { gate: "G3", seq: "→MQT 11 (TC200)→02→03→07", dpmax: -1.4, limit: 5, rins: "OK", pass: true },
+                      { gate: "G4", seq: "→MQT 12 (HF10)→02→03→07", dpmax: -1.9, limit: 5, rins: "OK", pass: true },
+                      { gate: "G5", seq: "→MQT 13 (DH1000)→02→03→07", dpmax: -3.8, limit: 5, rins: "OK", pass: true },
+                      { gate: "G6", seq: "→MQT 11×2 (TC400)→02→03→07", dpmax: -2.6, limit: 5, rins: "OK", pass: true },
+                      { gate: "G7a", seq: "MQT 14 (Robustness)→02", dpmax: -0.1, limit: 5, rins: "OK", pass: true },
+                      { gate: "G7b", seq: "MQT 15 (Wet Leakage)→02", dpmax: -0.3, limit: 5, rins: "OK", pass: true },
+                      { gate: "G8", seq: "MQT 16 (Mech Load)→02→07", dpmax: -1.1, limit: 5, rins: "OK", pass: true },
+                      { gate: "G9", seq: "MQT 17 (Hail)→02→07", dpmax: -0.5, limit: 5, rins: "OK", pass: true },
+                      { gate: "G10", seq: "MQT 18 (Bypass Diode)→11×2→02→07", dpmax: -5.2, limit: 5, rins: "FAIL", pass: false },
+                    ].map(({ gate, seq, dpmax, limit, rins, pass }) => (
+                      <tr key={gate} className={`border-b ${!pass ? 'bg-red-50' : ''}`}>
+                        <td className="py-1.5 pr-4 font-mono font-bold text-muted-foreground">{gate}</td>
+                        <td className="py-1.5 pr-4 text-muted-foreground">{seq}</td>
+                        <td className={`py-1.5 pr-4 text-right font-mono font-bold ${Math.abs(dpmax) > limit ? 'text-red-600' : Math.abs(dpmax) > limit * 0.7 ? 'text-amber-600' : 'text-green-600'}`}>{dpmax.toFixed(1)}%</td>
+                        <td className="py-1.5 pr-4 text-right text-muted-foreground">≤ {limit}%</td>
+                        <td className={`py-1.5 pr-4 text-right ${rins === 'OK' ? 'text-green-600' : 'text-red-600'} font-medium`}>{rins}</td>
+                        <td className="py-1.5 text-center">
+                          <span className={`px-2 py-0.5 rounded font-bold text-xs ${pass ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                            {pass ? 'PASS' : 'FAIL'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ===================== TAB: SOLAR VISION AI ===================== */}
+        <TabsContent value="visionai" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Solar Vision AI – EL, IR &amp; Visual Inspection</h2>
+            <p className="text-sm text-muted-foreground">
+              AI-powered defect detection: electroluminescence (EL), infrared (IR) thermal analysis, visual inspection
+            </p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {[
+              { label: "Modules Analyzed", value: "48", sub: "EL + IR + Visual", color: "text-blue-600" },
+              { label: "Defects Detected", value: "12", sub: "across 8 modules", color: "text-red-600" },
+              { label: "Crack Rate", value: "8.3%", sub: "cell cracks (EL)", color: "text-amber-600" },
+              { label: "Hotspot Rate", value: "4.2%", sub: "modules with hotspots (IR)", color: "text-orange-600" },
+            ].map(({ label, value, sub, color }) => (
+              <Card key={label}>
+                <CardContent className="pt-4 pb-3">
+                  <CardDescription>{label}</CardDescription>
+                  <div className={`text-2xl font-bold ${color}`}>{value}</div>
+                  <p className="text-xs text-muted-foreground">{sub}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-3">
+            {/* EL Analysis */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Camera className="h-4 w-4 text-blue-500" />
+                  EL Image Analysis – Crack Detection
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="w-full h-32 bg-gradient-to-br from-gray-900 to-gray-700 rounded-lg flex items-center justify-center mb-3 relative overflow-hidden">
+                  <div className="absolute inset-0 grid grid-cols-6 grid-rows-4 opacity-30">
+                    {Array.from({ length: 24 }).map((_, i) => (
+                      <div key={i} className={`border border-gray-500 ${[3, 8, 15].includes(i) ? 'bg-red-500/60' : ''}`} />
+                    ))}
+                  </div>
+                  <span className="text-white text-xs font-mono relative z-10">EL Image Preview</span>
+                </div>
+                <div className="space-y-1 text-xs">
+                  {[
+                    { defect: "Cell Cracks", count: 4, severity: "Medium" },
+                    { defect: "Inactive Areas", count: 2, severity: "High" },
+                    { defect: "Shunts", count: 1, severity: "Low" },
+                    { defect: "Contact Issues", count: 0, severity: "—" },
+                  ].map(({ defect, count, severity }) => (
+                    <div key={defect} className="flex items-center justify-between p-1.5 rounded bg-muted/50">
+                      <span>{defect}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold">{count}</span>
+                        <span className={`px-1.5 py-0.5 rounded text-xs ${severity === 'High' ? 'bg-red-100 text-red-700' : severity === 'Medium' ? 'bg-amber-100 text-amber-700' : severity === 'Low' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{severity}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* IR Analysis */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Thermometer className="h-4 w-4 text-red-500" />
+                  IR Thermal Analysis – Hotspot Detection
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="w-full h-32 rounded-lg mb-3 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #1e40af 0%, #7c3aed 30%, #dc2626 60%, #fbbf24 85%, #fef3c7 100%)' }}>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-full bg-white/80 border-2 border-red-400 flex items-center justify-center">
+                      <span className="text-red-700 text-xs font-bold">ΔT</span>
+                    </div>
+                  </div>
+                  <span className="absolute bottom-1 right-2 text-white text-xs font-mono">IR Thermal Map</span>
+                </div>
+                <div className="space-y-1 text-xs">
+                  {[
+                    { defect: "Hotspot (ΔT>20°C)", count: 2, temp: "+31°C" },
+                    { defect: "Warm Cell (ΔT 5–20°C)", count: 5, temp: "+12°C avg" },
+                    { defect: "Bypass Diode Active", count: 1, temp: "+45°C" },
+                    { defect: "Normal Cells", count: 56, temp: "+2°C avg" },
+                  ].map(({ defect, count, temp }) => (
+                    <div key={defect} className="flex items-center justify-between p-1.5 rounded bg-muted/50">
+                      <span>{defect}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold">{count}</span>
+                        <span className="text-muted-foreground">{temp}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Visual Inspection */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Eye className="h-4 w-4 text-purple-500" />
+                  Visual Inspection AI
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="w-full h-32 bg-gradient-to-br from-blue-50 to-gray-100 rounded-lg flex items-center justify-center mb-3 relative overflow-hidden border">
+                  <div className="grid grid-cols-4 grid-rows-3 w-full h-full opacity-50 p-1 gap-0.5">
+                    {Array.from({ length: 12 }).map((_, i) => (
+                      <div key={i} className={`rounded ${[5].includes(i) ? 'bg-amber-300' : 'bg-gray-300'}`} />
+                    ))}
+                  </div>
+                  <span className="absolute bottom-1 right-2 text-gray-600 text-xs font-mono">Visual Scan</span>
+                </div>
+                <div className="space-y-1 text-xs">
+                  {[
+                    { defect: "Discoloration", count: 1, severity: "Minor" },
+                    { defect: "Delamination", count: 0, severity: "—" },
+                    { defect: "Glass Breakage", count: 0, severity: "—" },
+                    { defect: "Frame Damage", count: 0, severity: "—" },
+                    { defect: "Label Illegible", count: 0, severity: "—" },
+                    { defect: "Snail Trails", count: 3, severity: "Minor" },
+                  ].map(({ defect, count, severity }) => (
+                    <div key={defect} className="flex items-center justify-between p-1 rounded bg-muted/50">
+                      <span>{defect}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold">{count}</span>
+                        <span className={`px-1 py-0.5 rounded ${severity === 'Minor' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'}`}>{severity}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Defect Summary */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-blue-500" />
+                Defect Pareto – All Inspection Types
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={[
+                  { defect: "Warm Cells", count: 5, type: "IR" },
+                  { defect: "Snail Trails", count: 4, type: "Visual" },
+                  { defect: "Cell Cracks", count: 4, type: "EL" },
+                  { defect: "Inactive Areas", count: 2, type: "EL" },
+                  { defect: "Hotspots >20°C", count: 2, type: "IR" },
+                  { defect: "Discoloration", count: 1, type: "Visual" },
+                  { defect: "Bypass Active", count: 1, type: "IR" },
+                  { defect: "Shunts", count: 1, type: "EL" },
+                ].sort((a, b) => b.count - a.count)} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 10 }} />
+                  <YAxis dataKey="defect" type="category" width={100} tick={{ fontSize: 10 }} />
+                  <Tooltip />
+                  <Bar dataKey="count" name="Occurrences" fill="#3b82f6">
+                    {[0,1,2,3,4,5,6,7].map(i => <Cell key={i} fill={["#ef4444","#f59e0b","#3b82f6","#8b5cf6","#22c55e","#06b6d4","#ec4899","#6366f1"][i]} />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* ===================== TAB: TEST PROTOCOLS ===================== */}
