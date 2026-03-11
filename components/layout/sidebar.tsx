@@ -27,8 +27,7 @@ import {
   MessageCircle,
   GitBranch,
   ClipboardList,
-  LineChart,
-  Gauge,
+  Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -61,8 +60,7 @@ const iconMap = {
   MessageCircle,
   GitBranch,
   ClipboardList,
-  LineChart,
-  Gauge,
+  Package,
 } as const;
 
 const navItems = [
@@ -78,8 +76,7 @@ const navItems = [
   { title: "SOP Gen", href: "/sop-gen", icon: "BookOpen" },
   { title: "Reports", href: "/reports", icon: "FileBarChart" },
   { title: "Data Analysis", href: "/data-analysis", icon: "BarChart3" },
-  { title: "IV Curve", href: "/iv-curve", icon: "LineChart" },
-  { title: "NMOT/NOCT", href: "/nmot-noct", icon: "Gauge" },
+  { title: "IEC 62915 BoM", href: "/iec62915", icon: "Package" },
   { title: "Statistics", href: "/statistics", icon: "BarChart3" },
   { title: "Traceability", href: "/traceability", icon: "GitBranch" },
   { title: "RCA", href: "/rca", icon: "SearchCheck" },

@@ -57,3 +57,25 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  /* Fix flex child overflow for scrollable layouts */
+  .flex-col-scroll {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* Ensure cards don't bleed over each other */
+  .card-stack > * {
+    position: relative;
+    z-index: auto;
+  }
+
+  /* Prevent content panels from overlapping in grid/flex layouts */
+  .panel-grid {
+    display: grid;
+    align-items: start;
+  }
+}
