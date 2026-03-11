@@ -11,7 +11,7 @@ import {
   ClipboardList, FlaskConical, Calendar, BarChart3, CheckCircle2,
   Clock, AlertCircle, XCircle, ChevronRight, Search, Plus, Filter,
   Zap, Thermometer, Droplets, Sun, Wind, Activity, TrendingUp,
-  FileText, Users, Wrench, ArrowRight, Info
+  FileText, Users, Wrench, ArrowRight, Info, Globe
 } from "lucide-react"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -301,11 +301,165 @@ const IEC_61701_MQTS: MQT[] = [
     acceptance: ["No new cell cracks >5% area", "No new inactive strings"] },
 ]
 
+// ─── UL 61215 MQTs (US Market) ───────────────────────────────────────────────
+
+const UL_61215_MQTS: MQT[] = [
+  { id: "ul61215-t1", code: "UL T1", name: "Visual Inspection (UL)", standard: "UL 61215", clause: "4.1",
+    category: "visual", duration: "1h", sequence: 1, critical: false,
+    description: "UL-specific visual inspection for US market requirements including NEC labeling compliance",
+    equipment: ["Lightbox", "Camera", "UL Label Verification Kit"],
+    acceptance: ["UL listing mark present", "NEC compliant labeling", "No visual defects"] },
+  { id: "ul61215-t2", code: "UL T2", name: "Maximum Power at STC", standard: "UL 61215", clause: "4.2",
+    category: "electrical", duration: "2h", sequence: 2, critical: true,
+    description: "I-V measurement per UL 61215 with NRTL witnessing requirements for UL listing",
+    equipment: ["Flash Tester (NRTL calibrated)", "Reference Cell (NIST traceable)", "Temperature Sensor"],
+    acceptance: ["Pmax ≥ Pnom × 0.97", "NIST-traceable calibration chain verified"] },
+  { id: "ul61215-t3", code: "UL T3", name: "Grounding Continuity (UL 1703)", standard: "UL 61215", clause: "4.3",
+    category: "safety", duration: "1h", sequence: 3, critical: true,
+    description: "Ground continuity per UL 1703 for US NEC compliance; bonding lugs evaluation",
+    equipment: ["Ground Bond Tester", "Torque Wrench"],
+    acceptance: ["Ground bond ≤ 0.1 Ω", "Bonding lug rated for application"] },
+  { id: "ul61215-t4", code: "UL T4", name: "Dielectric Withstand (Hi-Pot)", standard: "UL 61215", clause: "4.4",
+    category: "safety", duration: "1h", sequence: 4, critical: true,
+    description: "Hi-Pot test per UL 1703 at 2×Vsys+1000V; includes module class fire test for UL listing",
+    equipment: ["Hi-Pot Tester (UL verified)", "HV Power Supply"],
+    acceptance: ["No breakdown at test voltage", "Leakage < 50 μA", "Class C fire rating"] },
+  { id: "ul61215-t5", code: "UL T5", name: "Thermal Cycling (TC200) – UL", standard: "UL 61215", clause: "4.5",
+    category: "environmental", duration: "670h", sequence: 5, critical: true,
+    description: "200 thermal cycles -40°C to +85°C; witnessed by UL NRTL for US certification",
+    equipment: ["NRTL-qualified Thermal Chamber", "Flash Tester", "EL Camera"],
+    acceptance: ["Pmax degradation ≤ 5%", "No delamination", "Insulation maintained"] },
+  { id: "ul61215-t6", code: "UL T6", name: "Damp Heat DH1000 – UL", standard: "UL 61215", clause: "4.6",
+    category: "environmental", duration: "1050h", sequence: 6, critical: true,
+    description: "1000 h at 85°C/85%RH for UL listing with NRTL-witnessed performance verification",
+    equipment: ["NRTL-qualified Humidity Chamber", "Flash Tester"],
+    acceptance: ["Pmax degradation ≤ 5%", "R_ins × Area ≥ 40 MΩ·m²"] },
+  { id: "ul61215-t7", code: "UL T7", name: "Arc Fault Current Initiating (AFCI)", standard: "UL 61215", clause: "4.7",
+    category: "safety", duration: "2h", sequence: 7, critical: true,
+    description: "US-specific arc fault current initiator test per NEC 690.11 for roof-mounted applications",
+    equipment: ["Arc Fault Tester", "DC Disconnect", "Wiring Harness"],
+    acceptance: ["AFCI protection activates within spec", "No sustained arcing"] },
+]
+
+// ─── UL 61730 MQTs (US Market Safety) ────────────────────────────────────────
+
+const UL_61730_MQTS: MQT[] = [
+  { id: "ul61730-t1", code: "UL S1", name: "Fire Classification Test", standard: "UL 61730", clause: "S10.1",
+    category: "safety", duration: "4h", sequence: 1, critical: true,
+    description: "UL fire class test per UL 790 / ASTM E108; Class A, B, or C rating for US market",
+    equipment: ["Fire Test Chamber", "Ignition Source", "Airflow Apparatus"],
+    acceptance: ["Minimum Class C rating", "No flame spread beyond 6 ft", "No burning droplets"] },
+  { id: "ul61730-t2", code: "UL S2", name: "Electrical Isolation Test (UL 1703)", standard: "UL 61730", clause: "S10.2",
+    category: "safety", duration: "2h", sequence: 2, critical: true,
+    description: "Comprehensive electrical isolation per UL 1703 for UL listing; includes ground fault test",
+    equipment: ["Insulation Tester (1000V)", "Ground Fault Detector"],
+    acceptance: ["Insulation resistance ≥ 50 MΩ", "No ground fault current"] },
+  { id: "ul61730-t3", code: "UL S3", name: "Water Spray Test (Hose-Down)", standard: "UL 61730", clause: "S10.3",
+    category: "safety", duration: "3h", sequence: 3, critical: false,
+    description: "Water spray per UL 1703 simulating rain and cleaning operations; IP65 verification",
+    equipment: ["Spray Nozzle", "Water Supply", "Leakage Current Meter"],
+    acceptance: ["Leakage current < 50 μA during spray", "IP65 enclosure verified"] },
+  { id: "ul61730-t4", code: "UL S4", name: "Continuity of Grounding Circuit", standard: "UL 61730", clause: "S10.4",
+    category: "safety", duration: "1h", sequence: 4, critical: true,
+    description: "Frame and rack grounding continuity per NEC 250 for US code compliance",
+    equipment: ["Ground Bond Tester", "Milliohmmeter"],
+    acceptance: ["All ground paths ≤ 0.1 Ω", "Compliant with NEC 250.166"] },
+]
+
+// ─── ASTM Standards ───────────────────────────────────────────────────────────
+
+const ASTM_MQTS: MQT[] = [
+  { id: "astm-e2848-t1", code: "E2848 T1", name: "Reporting Conditions Determination", standard: "ASTM E2848", clause: "Section 5",
+    category: "electrical", duration: "2h", sequence: 1, critical: true,
+    description: "Determine reporting irradiance and temperature per ASTM E2848 for capacity test; applicable to utility-scale PV",
+    equipment: ["Pyranometer", "Pyrheliometer", "Temperature Logger"],
+    acceptance: ["Reporting conditions established", "Measurement uncertainty quantified"] },
+  { id: "astm-e2848-t2", code: "E2848 T2", name: "Measured Power Correction to RC", standard: "ASTM E2848", clause: "Section 7",
+    category: "electrical", duration: "8h", sequence: 2, critical: true,
+    description: "Power measurement and correction to Reporting Conditions using regression model per ASTM E2848",
+    equipment: ["Pyranometer", "Power Meter", "Data Logger", "Weather Station"],
+    acceptance: ["Measured Pac/PDC within ±1% of predicted", "R² ≥ 0.98 for regression"] },
+  { id: "astm-e2848-t3", code: "E2848 T3", name: "Capacity Test (DC/AC)", standard: "ASTM E2848", clause: "Section 8",
+    category: "electrical", duration: "4h", sequence: 3, critical: true,
+    description: "Final AC/DC capacity test at reporting conditions; used for performance guarantee assessment",
+    equipment: ["Revenue-grade Power Meter", "Reference Solar Cell", "Data Acquisition System"],
+    acceptance: ["System power ≥ contract guarantee", "Uncertainty ≤ ±1.5%"] },
+  { id: "astm-e1036-t1", code: "E1036 T1", name: "Electrical Performance at STC", standard: "ASTM E1036", clause: "Section 7",
+    category: "electrical", duration: "3h", sequence: 1, critical: true,
+    description: "I-V curve measurement per ASTM E1036 at Standard Test Conditions using pulsed solar simulator",
+    equipment: ["Flash Solar Simulator (ASTM class A)", "Reference Cell (NIST traceable)", "IV Tracer"],
+    acceptance: ["Uncertainty in Pmax ≤ ±2%", "Simulator spectral match within ASTM class limits"] },
+  { id: "astm-e1036-t2", code: "E1036 T2", name: "Temperature Coefficient Measurement", standard: "ASTM E1036", clause: "Section 9",
+    category: "electrical", duration: "4h", sequence: 2, critical: false,
+    description: "α(Isc), β(Voc), γ(Pmax) determination per ASTM E1036 from -10 to +60°C",
+    equipment: ["Climate Chamber", "Flash Tester", "Reference Cell"],
+    acceptance: ["Temperature coefficients within ±10% of manufacturer data"] },
+  { id: "astm-e1036-t3", code: "E1036 T3", name: "Stability Conditioning", standard: "ASTM E1036", clause: "Section 6",
+    category: "electrical", duration: "2h", sequence: 3, critical: false,
+    description: "Light soaking stabilization procedure per ASTM E1036 before primary measurements",
+    equipment: ["Solar Simulator or Outdoor Rack", "Pyranometer"],
+    acceptance: ["Pmax stabilizes within ±1% over 3 consecutive measurements"] },
+  { id: "astm-e1040-t1", code: "E1040 T1", name: "Spectral Response Measurement", standard: "ASTM E1040", clause: "Section 6",
+    category: "electrical", duration: "3h", sequence: 1, critical: false,
+    description: "Differential spectral responsivity measurement per ASTM E1040 for cell/module characterization",
+    equipment: ["Monochromator", "Lock-In Amplifier", "Calibrated Reference Cell"],
+    acceptance: ["SR uncertainty < 2%", "Wavelength accuracy ± 1 nm"] },
+]
+
+// ─── VDE Standards (German/European Market) ──────────────────────────────────
+
+const VDE_MQTS: MQT[] = [
+  { id: "vde-t1", code: "VDE V1", name: "Visual & Documentation Check (VDE)", standard: "VDE 0126-23", clause: "5.1",
+    category: "visual", duration: "1h", sequence: 1, critical: false,
+    description: "VDE-specific documentation and labeling review per VDE 0126-23 / DIN VDE requirements for German market",
+    equipment: ["Documentation Review Kit", "Camera"],
+    acceptance: ["CE marking present", "VDE test mark", "German/EU labeling compliance"] },
+  { id: "vde-t2", code: "VDE V2", name: "Dielectric Strength (VDE 0303-8)", standard: "VDE 0126-23", clause: "5.2",
+    category: "safety", duration: "1h", sequence: 2, critical: true,
+    description: "Dielectric strength test per VDE 0303-8 with VDE-specific test conditions and documentation",
+    equipment: ["VDE-calibrated Hi-Pot Tester"],
+    acceptance: ["No breakdown at 2×Vsys+1000V", "VDE certification documentation complete"] },
+  { id: "vde-t3", code: "VDE V3", name: "Protective Conductor Test (VDE 0701)", standard: "VDE 0126-23", clause: "5.3",
+    category: "safety", duration: "1h", sequence: 3, critical: true,
+    description: "Protective conductor resistance test per VDE 0701-0702 for German electrical safety compliance",
+    equipment: ["VDE 0701 Test Equipment", "Calibrated Ohmmeter"],
+    acceptance: ["Protective conductor resistance ≤ 0.3 Ω", "VDE test report issued"] },
+  { id: "vde-t4", code: "VDE V4", name: "Insulation Resistance (VDE 0100-600)", standard: "VDE 0126-23", clause: "5.4",
+    category: "safety", duration: "1h", sequence: 4, critical: true,
+    description: "Insulation resistance measurement per VDE 0100-600 for German PV installation compliance",
+    equipment: ["500V/1000V Insulation Tester (VDE calibrated)"],
+    acceptance: ["R_ins ≥ 1 MΩ per VDE 0100-600 Table 6A1", "No degradation after 1 min"] },
+  { id: "vde-t5", code: "VDE V5", name: "PID Resistance Test (VDE/IEC 62804)", standard: "VDE 0126-23", clause: "5.5",
+    category: "electrical", duration: "96h", sequence: 5, critical: true,
+    description: "Potential-Induced Degradation test per IEC 62804-1 with VDE witnessing; 60°C, 85%RH, -1000V for 96h",
+    equipment: ["Climate Chamber", "HV DC Supply", "Flash Tester", "EL Camera"],
+    acceptance: ["Pmax degradation ≤ 5%", "No PID pattern in EL images"] },
+  { id: "vde-t6", code: "VDE V6", name: "Ammonia Corrosion Test (IEC 62716)", standard: "VDE 0126-23", clause: "5.6",
+    category: "environmental", duration: "100h", sequence: 6, critical: false,
+    description: "Ammonia resistance test per IEC 62716 / VDE for German agricultural/biogas environments",
+    equipment: ["Ammonia Test Chamber", "Flash Tester", "EL Camera"],
+    acceptance: ["Pmax degradation ≤ 5%", "No corrosion of contacts or frame", "R_ins maintained"] },
+  { id: "vde-t7", code: "VDE V7", name: "Dynamic Mechanical Load Test", standard: "VDE 0126-23", clause: "5.7",
+    category: "mechanical", duration: "8h", sequence: 7, critical: false,
+    description: "Dynamic mechanical load test per IEC 62782 / VDE for wind and snow load simulation with cycling",
+    equipment: ["Dynamic Load Test Frame", "Flash Tester", "EL Camera"],
+    acceptance: ["No structural failure after 1000 cycles at ±1000 Pa", "Pmax degradation ≤ 5%"] },
+  { id: "vde-t8", code: "VDE V8", name: "MCS/VDE Certification Report", standard: "VDE 0126-23", clause: "5.8",
+    category: "visual", duration: "2h", sequence: 8, critical: false,
+    description: "Final documentation and certification report preparation for VDE-AR-E 2100-712 and MCS compliance",
+    equipment: ["Document Management System"],
+    acceptance: ["All test records complete", "VDE test certificate issued", "MCS product approval submitted"] },
+]
+
 const ALL_MQTS: MQT[] = [
   ...IEC_61215_MQTS,
   ...IEC_61730_MQTS,
   ...IEC_61853_MQTS,
   ...IEC_61701_MQTS,
+  ...UL_61215_MQTS,
+  ...UL_61730_MQTS,
+  ...ASTM_MQTS,
+  ...VDE_MQTS,
 ]
 
 // ─── Mock Route Cards ──────────────────────────────────────────────────────────
@@ -426,10 +580,16 @@ const scheduleStatusColors: Record<string, string> = {
 }
 
 function getStandardColor(standard: string) {
-  if (standard.includes("61215")) return "bg-blue-500"
-  if (standard.includes("61730")) return "bg-purple-500"
-  if (standard.includes("61853")) return "bg-green-500"
-  if (standard.includes("61701")) return "bg-orange-500"
+  if (standard.startsWith("IEC 61215")) return "bg-blue-500"
+  if (standard.startsWith("IEC 61730")) return "bg-purple-500"
+  if (standard.startsWith("IEC 61853")) return "bg-green-500"
+  if (standard.startsWith("IEC 61701")) return "bg-orange-500"
+  if (standard.startsWith("UL 61215")) return "bg-sky-600"
+  if (standard.startsWith("UL 61730")) return "bg-violet-600"
+  if (standard.startsWith("ASTM E2848")) return "bg-rose-500"
+  if (standard.startsWith("ASTM E1036")) return "bg-pink-500"
+  if (standard.startsWith("ASTM E1040")) return "bg-fuchsia-500"
+  if (standard.startsWith("VDE")) return "bg-teal-600"
   return "bg-gray-500"
 }
 
@@ -445,7 +605,11 @@ export default function TestProtocolsManager() {
 
   const filteredMQTs = useMemo(() => {
     return ALL_MQTS.filter((m) => {
-      if (standardFilter !== "all" && !m.standard.includes(standardFilter)) return false
+      if (standardFilter !== "all") {
+        if (standardFilter === "VDE") {
+          if (!m.standard.startsWith("VDE") && !m.standard.includes("VDE")) return false
+        } else if (!m.standard.startsWith(standardFilter)) return false
+      }
       if (categoryFilter !== "all" && m.category !== categoryFilter) return false
       if (searchQuery && !m.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
           !m.code.toLowerCase().includes(searchQuery.toLowerCase())) return false
@@ -503,25 +667,73 @@ export default function TestProtocolsManager() {
           </div>
 
           {/* Standards Coverage */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {[
-              { std: "IEC 61215", mqts: IEC_61215_MQTS.length, desc: "Design Qualification", color: "blue", icon: Sun },
-              { std: "IEC 61730", mqts: IEC_61730_MQTS.length, desc: "Safety Qualification", color: "purple", icon: Zap },
-              { std: "IEC 61853", mqts: IEC_61853_MQTS.length, desc: "Energy Rating", color: "green", icon: TrendingUp },
-              { std: "IEC 61701", mqts: IEC_61701_MQTS.length, desc: "Salt Mist Corrosion", color: "orange", icon: Droplets },
-            ].map(({ std, mqts, desc, color, icon: Icon }) => (
-              <Card key={std} className={`border-l-4 border-l-${color}-500`}>
-                <CardContent className="pt-4 pb-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Icon className={`h-4 w-4 text-${color}-500`} />
-                    <span className="text-sm font-semibold">{std}</span>
-                  </div>
-                  <div className="text-xs text-gray-500 mb-2">{desc}</div>
-                  <div className="text-2xl font-bold">{mqts}</div>
-                  <div className="text-xs text-gray-400">test sequences</div>
-                </CardContent>
-              </Card>
-            ))}
+          <div>
+            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-2">
+              <span className="inline-block w-2 h-2 rounded-full bg-blue-500" />IEC Standards (International)
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+              {[
+                { std: "IEC 61215", mqts: IEC_61215_MQTS.length, desc: "Design Qualification", color: "border-l-blue-500", iconColor: "text-blue-500", icon: Sun },
+                { std: "IEC 61730", mqts: IEC_61730_MQTS.length, desc: "Safety Qualification", color: "border-l-purple-500", iconColor: "text-purple-500", icon: Zap },
+                { std: "IEC 61853", mqts: IEC_61853_MQTS.length, desc: "Energy Rating", color: "border-l-green-500", iconColor: "text-green-500", icon: TrendingUp },
+                { std: "IEC 61701", mqts: IEC_61701_MQTS.length, desc: "Salt Mist Corrosion", color: "border-l-orange-500", iconColor: "text-orange-500", icon: Droplets },
+              ].map(({ std, mqts, desc, color, iconColor, icon: Icon }) => (
+                <Card key={std} className={`border-l-4 ${color}`}>
+                  <CardContent className="pt-4 pb-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Icon className={`h-4 w-4 ${iconColor}`} />
+                      <span className="text-sm font-semibold">{std}</span>
+                    </div>
+                    <div className="text-xs text-gray-500 mb-2">{desc}</div>
+                    <div className="text-2xl font-bold">{mqts}</div>
+                    <div className="text-xs text-gray-400">test sequences</div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-2">
+              <span className="inline-block w-2 h-2 rounded-full bg-sky-600" />UL Standards (US Market)
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+              {[
+                { std: "UL 61215", mqts: UL_61215_MQTS.length, desc: "US Design Qualification", color: "border-l-sky-500", iconColor: "text-sky-600", icon: Sun },
+                { std: "UL 61730", mqts: UL_61730_MQTS.length, desc: "US Safety Qualification", color: "border-l-violet-500", iconColor: "text-violet-600", icon: Zap },
+              ].map(({ std, mqts, desc, color, iconColor, icon: Icon }) => (
+                <Card key={std} className={`border-l-4 ${color}`}>
+                  <CardContent className="pt-4 pb-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Icon className={`h-4 w-4 ${iconColor}`} />
+                      <span className="text-sm font-semibold">{std}</span>
+                    </div>
+                    <div className="text-xs text-gray-500 mb-2">{desc}</div>
+                    <div className="text-2xl font-bold">{mqts}</div>
+                    <div className="text-xs text-gray-400">test sequences</div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-2">
+              <span className="inline-block w-2 h-2 rounded-full bg-rose-500" />ASTM Standards (US) &amp; VDE (German Market)
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { std: "ASTM E2848", mqts: ASTM_MQTS.filter(m => m.standard === "ASTM E2848").length, desc: "PV System Capacity Test", color: "border-l-rose-500", iconColor: "text-rose-500", icon: BarChart3 },
+                { std: "ASTM E1036", mqts: ASTM_MQTS.filter(m => m.standard === "ASTM E1036").length, desc: "Cell/Module Electrical", color: "border-l-pink-500", iconColor: "text-pink-500", icon: Zap },
+                { std: "VDE 0126-23", mqts: VDE_MQTS.length, desc: "German Market Compliance", color: "border-l-teal-500", iconColor: "text-teal-600", icon: CheckCircle2 },
+              ].map(({ std, mqts, desc, color, iconColor, icon: Icon }) => (
+                <Card key={std} className={`border-l-4 ${color}`}>
+                  <CardContent className="pt-4 pb-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Icon className={`h-4 w-4 ${iconColor}`} />
+                      <span className="text-sm font-semibold">{std}</span>
+                    </div>
+                    <div className="text-xs text-gray-500 mb-2">{desc}</div>
+                    <div className="text-2xl font-bold">{mqts}</div>
+                    <div className="text-xs text-gray-400">test sequences</div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
 
           {/* Active Route Cards Summary */}
@@ -606,12 +818,25 @@ export default function TestProtocolsManager() {
               <Input placeholder="Search MQTs..." className="pl-8 h-8 text-xs w-48"
                      value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
             </div>
-            <div className="flex gap-1">
-              {["all", "61215", "61730", "61853", "61701"].map(std => (
-                <button key={std} onClick={() => setStandardFilter(std)}
+            <div className="flex flex-wrap gap-1">
+              {[
+                { key: "all", label: "All", cls: "bg-gray-700" },
+                { key: "IEC 61215", label: "IEC 61215", cls: "bg-blue-500" },
+                { key: "IEC 61730", label: "IEC 61730", cls: "bg-purple-500" },
+                { key: "IEC 61853", label: "IEC 61853", cls: "bg-green-500" },
+                { key: "IEC 61701", label: "IEC 61701", cls: "bg-orange-500" },
+                { key: "UL 61215", label: "UL 61215", cls: "bg-sky-600" },
+                { key: "UL 61730", label: "UL 61730", cls: "bg-violet-600" },
+                { key: "ASTM E2848", label: "ASTM E2848", cls: "bg-rose-500" },
+                { key: "ASTM E1036", label: "ASTM E1036", cls: "bg-pink-500" },
+                { key: "VDE", label: "VDE", cls: "bg-teal-600" },
+              ].map(({ key, label, cls }) => (
+                <button key={key} onClick={() => setStandardFilter(key === "all" ? "all" : key)}
                         className={`px-2 py-1 text-xs rounded font-medium transition-colors ${
-                          standardFilter === std ? `${std === "all" ? "bg-gray-700" : std === "61215" ? "bg-blue-500" : std === "61730" ? "bg-purple-500" : std === "61853" ? "bg-green-500" : "bg-orange-500"} text-white` : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
-                  {std === "all" ? "All" : `IEC ${std}`}
+                          standardFilter === (key === "all" ? "all" : key)
+                            ? `${cls} text-white`
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
+                  {label}
                 </button>
               ))}
             </div>
