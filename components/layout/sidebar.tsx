@@ -78,6 +78,7 @@ const navItems = [
   { title: "Data Analysis", href: "/data-analysis", icon: "BarChart3" },
   { title: "IEC 62915 BoM", href: "/iec62915", icon: "Package" },
   { title: "Statistics", href: "/statistics", icon: "BarChart3" },
+  { title: "Test Flow", href: "/test-flow", icon: "GitBranch" },
   { title: "Traceability", href: "/traceability", icon: "GitBranch" },
   { title: "RCA", href: "/rca", icon: "SearchCheck" },
   { title: "Complaints", href: "/complaints", icon: "MessageSquareWarning" },
