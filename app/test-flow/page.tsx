@@ -12,6 +12,7 @@ import {
   mockApprovals, mockKPIData, prePostComparisonData, pmaxSequenceData,
   type ServiceRequest, type IVMeasurement, type IEC61215SequenceStep
 } from '@/lib/test-flow-data'
+import { TestDatabasesTab } from '@/components/test-flow/TestDatabasesTab'
 
 // ---------- Utilities ----------
 const statusColor: Record<string, string> = {
@@ -39,6 +40,7 @@ const TABS = [
   { id: 'service', label: 'Service Request' },
   { id: 'flow', label: 'Data Flow Map' },
   { id: 'ivdb', label: 'IV Database' },
+  { id: 'testdb', label: 'Test Databases' },
   { id: 'prepost', label: 'Pre/Post Compare' },
   { id: 'sequence', label: 'IEC 61215 Sequence' },
   { id: 'equipment', label: 'Equipment' },
@@ -1046,6 +1048,7 @@ export default function TestFlowPage() {
         {activeTab === 'service' && <ServiceRequestTab />}
         {activeTab === 'flow' && <DataFlowTab activeRequest={activeRequest} />}
         {activeTab === 'ivdb' && <IVDatabaseTab />}
+        {activeTab === 'testdb' && <TestDatabasesTab />}
         {activeTab === 'prepost' && <PrePostCompareTab />}
         {activeTab === 'sequence' && <SequenceTrackerTab />}
         {activeTab === 'equipment' && <EquipmentTab />}
