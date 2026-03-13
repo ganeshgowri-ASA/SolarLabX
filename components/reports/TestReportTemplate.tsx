@@ -7,7 +7,6 @@ import { Printer, Download, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
-// Import all sections
 import {
   Section1CoverPage,
   Section2ModuleDescription,
@@ -68,13 +67,9 @@ const TOC_SECTIONS = [
 
 export default function TestReportTemplate() {
   const [activeSection, setActiveSection] = useState("section-1");
-  const reportRef = useRef<HTMLDivElement>(null);
 
-  // Scroll spy using IntersectionObserver
   useEffect(() => {
-    const observers: IntersectionObserver[] = [];
     const sectionEls = TOC_SECTIONS.map(({ id }) => document.getElementById(id)).filter(Boolean);
-
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
@@ -86,7 +81,6 @@ export default function TestReportTemplate() {
       },
       { threshold: 0.15, rootMargin: "-80px 0px -60% 0px" }
     );
-
     sectionEls.forEach((el) => el && observer.observe(el));
     return () => observer.disconnect();
   }, []);
@@ -96,26 +90,17 @@ export default function TestReportTemplate() {
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   }, []);
 
-  const handlePrint = () => window.print();
-
-  const handleDownloadPDF = () => {
-    alert("To save as PDF: use Print → Save as PDF in your browser print dialog.");
-    window.print();
-  };
-
   return (
     <>
-      {/* Print styles */}
       <style>{`
         @media print {
           .no-print { display: none !important; }
-          .print-content { margin: 0 !important; padding: 0 !important; }
           body { font-size: 10pt; }
           section { page-break-inside: avoid; }
           h2 { page-break-after: avoid; }
           table { font-size: 9pt; }
-          .recharts-wrapper { page-break-inside: avoid; }
         }
+        @page { size: A4; margin: 15mm; }
       `}</style>
 
       {/* Top action bar */}
@@ -123,29 +108,29 @@ export default function TestReportTemplate() {
         <div className="flex items-center gap-2">
           <FileText className="h-5 w-5 text-primary" />
           <span className="font-semibold text-sm">Report: SLX-TERF-2024-0047</span>
-          <span className="text-xs text-muted-foreground">IEC 61215:2021 + IEC 61730:2023 Full Sequential TERF</span>
+          <span className="text-xs text-muted-foreground hidden md:block">IEC 61215:2021 + IEC 61730:2023 Full Sequential TERF</span>
         </div>
         <div className="flex gap-2">
           <Link href="/reports">
-            <Button variant="outline" size="sm">← Back to Reports</Button>
+            <Button variant="outline" size="sm">← Back</Button>
           </Link>
-          <Button variant="outline" size="sm" onClick={handlePrint}>
-            <Printer className="h-4 w-4 mr-1" /> Print Report
+          <Button variant="outline" size="sm" onClick={() => window.print()}>
+            <Printer className="h-4 w-4 mr-1" /> Print
           </Button>
-          <Button size="sm" onClick={handleDownloadPDF} className="bg-blue-600 hover:bg-blue-700 text-white">
+          <Button size="sm" onClick={() => { alert("Use Print → Save as PDF in the browser print dialog."); window.print(); }}
+            className="bg-blue-600 hover:bg-blue-700 text-white">
             <Download className="h-4 w-4 mr-1" /> Download PDF
           </Button>
         </div>
       </div>
 
-      {/* Main layout: TOC sidebar + report content */}
       <div className="flex gap-4">
         {/* TOC Sidebar */}
         <aside className="no-print w-60 shrink-0">
           <div className="sticky top-4">
             <div className="bg-card border rounded-lg overflow-hidden">
               <div className="px-3 py-2 border-b bg-muted">
-                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Table of Contents</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Contents</span>
               </div>
               <ScrollArea className="h-[calc(100vh-200px)]">
                 <nav className="p-2 space-y-0.5">
@@ -170,32 +155,30 @@ export default function TestReportTemplate() {
         </aside>
 
         {/* Report content */}
-        <main ref={reportRef} className="flex-1 min-w-0 print-content">
-          <div className="space-y-2">
-            <Section1CoverPage />
-            <Section2ModuleDescription />
-            <Section3VisualInspection />
-            <Section4STCPerformance />
-            <Section5InsulationResistance />
-            <Section6WetLeakage />
-            <Section7GroundContinuity />
-            <Section8ImpulseVoltage />
-            <Section9ELImaging />
-            <Section10ThermalCycling />
-            <Section11HumidityFreeze />
-            <Section12DampHeat />
-            <Section13UVPreconditioning />
-            <Section14MechanicalLoad />
-            <Section15HailTest />
-            <Section16BypassDiodeThermal />
-            <Section17HotSpotEndurance />
-            <Section18NMOT />
-            <Section19Stabilization />
-            <Section20FullSequenceSummary />
-            <Section21PIDTest />
-            <Section22LeTIDTest />
-            <Section23Conclusion />
-          </div>
+        <main className="flex-1 min-w-0">
+          <Section1CoverPage />
+          <Section2ModuleDescription />
+          <Section3VisualInspection />
+          <Section4STCPerformance />
+          <Section5InsulationResistance />
+          <Section6WetLeakage />
+          <Section7GroundContinuity />
+          <Section8ImpulseVoltage />
+          <Section9ELImaging />
+          <Section10ThermalCycling />
+          <Section11HumidityFreeze />
+          <Section12DampHeat />
+          <Section13UVPreconditioning />
+          <Section14MechanicalLoad />
+          <Section15HailTest />
+          <Section16BypassDiodeThermal />
+          <Section17HotSpotEndurance />
+          <Section18NMOT />
+          <Section19Stabilization />
+          <Section20FullSequenceSummary />
+          <Section21PIDTest />
+          <Section22LeTIDTest />
+          <Section23Conclusion />
         </main>
       </div>
     </>
