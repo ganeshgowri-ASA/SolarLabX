@@ -13,6 +13,9 @@ import {
   type ServiceRequest, type IVMeasurement, type IEC61215SequenceStep
 } from '@/lib/test-flow-data'
 import { TestDatabasesTab } from '@/components/test-flow/TestDatabasesTab'
+import { SequentialGraphsTab } from '@/components/test-flow/SequentialGraphsTab'
+import { ReferenceMaterialsTab } from '@/components/test-flow/ReferenceMaterialsTab'
+import { ChamberMonitorTab } from '@/components/test-flow/ChamberMonitorTab'
 
 // ---------- Utilities ----------
 const statusColor: Record<string, string> = {
@@ -46,6 +49,9 @@ const TABS = [
   { id: 'equipment', label: 'Equipment' },
   { id: 'kpi', label: 'KPI Dashboard' },
   { id: 'approval', label: 'Approval Workflow' },
+  { id: 'seq-graphs', label: 'Sequential Graphs' },
+  { id: 'ref-materials', label: 'Reference Materials' },
+  { id: 'chamber-monitor', label: 'Chamber Monitor' },
 ]
 
 // ==============================
@@ -1054,6 +1060,9 @@ export default function TestFlowPage() {
         {activeTab === 'equipment' && <EquipmentTab />}
         {activeTab === 'kpi' && <KPIDashboardTab />}
         {activeTab === 'approval' && <ApprovalWorkflowTab />}
+        {activeTab === 'seq-graphs' && <SequentialGraphsTab />}
+        {activeTab === 'ref-materials' && <ReferenceMaterialsTab />}
+        {activeTab === 'chamber-monitor' && <ChamberMonitorTab />}
       </div>
     </div>
   )
