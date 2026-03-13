@@ -38,6 +38,11 @@ export default function ReportsDashboard() {
           <Link href="/reports/templates">
             <Button variant="outline">Templates</Button>
           </Link>
+          <Link href="/reports/test-report-template">
+            <Button variant="outline" className="border-green-600 text-green-700 hover:bg-green-50 dark:border-green-500 dark:text-green-400 dark:hover:bg-green-950">
+              TERF Template
+            </Button>
+          </Link>
         </div>
       </div>
 
