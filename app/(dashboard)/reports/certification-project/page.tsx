@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
+import { IVCurveComparisonChart } from "@/components/reports/IVCurveComparisonChart"
+import { PmaxStabilizationChart, PowerDegradationChart, DEFAULT_STABILIZATION_DATA, DEFAULT_DEGRADATION_DATA, DEFAULT_SAMPLE_IDS } from "@/components/reports/ReportSummaryCharts"
 
 /* ───────────────────────────── sample data ───────────────────────────── */
 
@@ -597,7 +599,35 @@ export default function CertificationProjectReportPage() {
           </CardContent>
         </Card>
 
-        {/* ═══════ 5. EQUIPMENT UTILIZATION ═══════ */}
+        {/* ═══════ 5. PERFORMANCE CHARACTERIZATION ═══════ */}
+        <Card className="print-break">
+          <CardHeader className="pb-3">
+            <CardTitle>5. Performance Characterization</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <IVCurveComparisonChart
+              preParams={{ voc: 49.8, isc: 13.25, vmp: 41.7, imp: 12.00, pmax: 500, ff: 0.756 }}
+              postParams={{ voc: 49.5, isc: 13.18, vmp: 41.4, imp: 11.92, pmax: 493.5, ff: 0.757 }}
+              title="Certification Project – I-V Curve Comparison"
+              height={260}
+            />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <PmaxStabilizationChart
+                data={DEFAULT_STABILIZATION_DATA}
+                sampleIds={DEFAULT_SAMPLE_IDS}
+                ratedPmax={500}
+                height={200}
+              />
+              <PowerDegradationChart
+                data={DEFAULT_DEGRADATION_DATA}
+                sampleIds={DEFAULT_SAMPLE_IDS}
+                height={200}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ═══════ 6. EQUIPMENT UTILIZATION ═══════ */}
         <Card className="print-break">
           <CardHeader className="pb-3">
             <CardTitle>5. Equipment Utilization</CardTitle>

@@ -18,6 +18,8 @@ import {
 import { CheckCircle, XCircle, Printer, FileText, Sun, Zap, Droplets, TrendingUp, ChevronDown, ChevronUp } from "lucide-react"
 import { DEFAULT_LAB_DETAILS } from "@/lib/report-test-definitions"
 import { ExportToolbar } from "@/components/reports/ExportToolbar"
+import { IVCurveComparisonChart } from "@/components/reports/IVCurveComparisonChart"
+import { PmaxStabilizationChart, InsulationResistanceChart, PowerDegradationChart, DEFAULT_STABILIZATION_DATA, DEFAULT_INSULATION_DATA, DEFAULT_DEGRADATION_DATA, DEFAULT_SAMPLE_IDS } from "@/components/reports/ReportSummaryCharts"
 
 // ─── Test Results Data ────────────────────────────────────────────────────────
 
@@ -461,22 +463,35 @@ export default function IECFullReportView() {
               </CardContent>
             </Card>
             <Card>
-              <CardHeader className="pb-1"><CardTitle className="text-xs">I-V & P-V Curve at STC (Initial)</CardTitle></CardHeader>
+              <CardHeader className="pb-1"><CardTitle className="text-xs">I-V & P-V Curve Comparison (Pre vs Post)</CardTitle></CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={200}>
-                  <ComposedChart data={ivCurveData}>
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                    <XAxis dataKey="v" tick={{ fontSize: 9 }} label={{ value: "Voltage (V)", position: "insideBottom", offset: -5, fontSize: 9 }} />
-                    <YAxis yAxisId="l" tick={{ fontSize: 9 }} label={{ value: "I (A)", angle: -90, position: "insideLeft", fontSize: 9 }} />
-                    <YAxis yAxisId="r" orientation="right" tick={{ fontSize: 9 }} label={{ value: "P (W)", angle: 90, position: "insideRight", fontSize: 9 }} />
-                    <Tooltip />
-                    <Legend wrapperStyle={{ fontSize: 10 }} />
-                    <Line yAxisId="l" type="monotone" dataKey="i" stroke="#2563eb" name="I (A)" dot={false} strokeWidth={2} />
-                    <Line yAxisId="r" type="monotone" dataKey="p" stroke="#f97316" name="P (W)" dot={false} strokeWidth={2} />
-                  </ComposedChart>
-                </ResponsiveContainer>
+                <IVCurveComparisonChart
+                  preParams={{ voc: 49.28, isc: 10.48, vmp: 40.12, imp: 10.01, pmax: 401.5, ff: 0.782 }}
+                  postParams={{ voc: 48.91, isc: 10.31, vmp: 39.80, imp: 9.90, pmax: 378.3, ff: 0.750 }}
+                  title="Pre vs Post Full Test Sequence"
+                  height={200}
+                />
               </CardContent>
             </Card>
+          </div>
+          {/* Summary Charts */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
+            <PmaxStabilizationChart
+              data={DEFAULT_STABILIZATION_DATA}
+              sampleIds={DEFAULT_SAMPLE_IDS}
+              ratedPmax={430}
+              height={200}
+            />
+            <InsulationResistanceChart
+              data={DEFAULT_INSULATION_DATA}
+              sampleIds={DEFAULT_SAMPLE_IDS}
+              height={200}
+            />
+            <PowerDegradationChart
+              data={DEFAULT_DEGRADATION_DATA}
+              sampleIds={DEFAULT_SAMPLE_IDS}
+              height={200}
+            />
           </div>
           {IEC_61215_RESULTS.map((r, i) => <TestRow key={r.id} r={r} idx={i} />)}
         </TabsContent>

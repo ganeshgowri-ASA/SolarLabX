@@ -2,6 +2,8 @@
 "use client";
 
 import { useState } from "react";
+import { IVCurveComparisonChart } from "@/components/reports/IVCurveComparisonChart";
+import { PmaxStabilizationChart, InsulationResistanceChart, PowerDegradationChart } from "@/components/reports/ReportSummaryCharts";
 
 const REPORT_NO = "SLX-RPT-PID-2026-001";
 
@@ -692,9 +694,35 @@ export default function PIDReportPage() {
           </table>
         </div>
 
+        {/* ═══════════════ I-V CURVE & SUMMARY CHARTS ═══════════════ */}
+        <div className="page-break" style={{ padding: "12mm 20mm", fontSize: "9pt" }}>
+          <SectionHeader num="11" title="I-V CURVE COMPARISON & SUMMARY ANALYSIS" />
+          <IVCurveComparisonChart
+            preParams={{ voc: 43.24, isc: 12.85, vmp: 35.92, imp: 12.03, pmax: 432.1, ff: 0.7791 }}
+            postParams={{ voc: 43.18, isc: 12.84, vmp: 35.88, imp: 12.02, pmax: 431.8, ff: 0.7789 }}
+            title="PID Test – I-V Curve Overlay (Pre vs Post)"
+            height={280}
+          />
+          <div style={{ marginTop: "16px" }}>
+            <PmaxStabilizationChart
+              data={[
+                { stage: "Initial", "SLX-M001": 432.1, "SLX-M002": 431.9, "SLX-M003": 432.0, "SLX-M004": 431.8 },
+                { stage: "Pre-PID", "SLX-M001": 432.0, "SLX-M002": 431.8, "SLX-M003": 431.9, "SLX-M004": 431.7 },
+                { stage: "PID -V", "SLX-M001": 431.8, "SLX-M002": 431.6, "SLX-M003": 431.7, "SLX-M004": 431.5 },
+                { stage: "Recovery", "SLX-M001": 431.9, "SLX-M002": 431.7, "SLX-M003": 431.8, "SLX-M004": 431.6 },
+                { stage: "PID +V", "SLX-M001": 431.8, "SLX-M002": 431.6, "SLX-M003": 431.7, "SLX-M004": 431.5 },
+                { stage: "Final", "SLX-M001": 431.8, "SLX-M002": 431.6, "SLX-M003": 431.7, "SLX-M004": 431.5 },
+              ]}
+              sampleIds={["SLX-M001", "SLX-M002", "SLX-M003", "SLX-M004"]}
+              ratedPmax={430}
+              height={230}
+            />
+          </div>
+        </div>
+
         {/* ═══════════════ CONCLUSIONS ═══════════════ */}
         <div className="page-break" style={{ padding: "12mm 20mm", fontSize: "9pt" }}>
-          <SectionHeader num="11" title="CONCLUSIONS" />
+          <SectionHeader num="12" title="CONCLUSIONS" />
           <div style={{ padding: "12px 16px", background: "#f0fdf4", border: "2px solid #22c55e", borderRadius: "6px", marginBottom: "16px" }}>
             <div style={{ fontSize: "11pt", fontWeight: "700", color: "#15803d", marginBottom: "6px" }}>✓ ALL SAMPLES PASSED – IEC TS 62804-1:2015 Method A</div>
             <p style={{ fontSize: "8.5pt", color: "#166534" }}>

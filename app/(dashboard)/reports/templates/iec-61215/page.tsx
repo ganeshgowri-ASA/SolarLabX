@@ -9,6 +9,8 @@ import {
 import {
   Tabs, TabsContent, TabsList, TabsTrigger,
 } from "@/components/ui/tabs";
+import { IVCurveComparisonChart } from "@/components/reports/IVCurveComparisonChart";
+import { PmaxStabilizationChart, InsulationResistanceChart, PowerDegradationChart, DEFAULT_STABILIZATION_DATA, DEFAULT_INSULATION_DATA, DEFAULT_DEGRADATION_DATA, DEFAULT_SAMPLE_IDS } from "@/components/reports/ReportSummaryCharts";
 
 const REPORT_NO = "SLX-RPT-IEC61215-2026-001";
 const ACCENT = "#1e3a5f";
@@ -790,6 +792,42 @@ export default function IEC61215Page() {
                   ))}
                 </tbody>
               </table>
+
+              {/* I-V Curve Comparison */}
+              <div className="page-break">
+                <SH title="I-V CURVE COMPARISON (PRE vs POST TEST SEQUENCE)" accent={ACCENT} />
+                <IVCurveComparisonChart
+                  preParams={{ voc: 43.24, isc: 12.85, vmp: 35.31, imp: 12.20, pmax: 430.8, ff: 0.7786 }}
+                  postParams={{ voc: 43.10, isc: 12.80, vmp: 35.15, imp: 12.15, pmax: 429.2, ff: 0.7770 }}
+                  title="IEC 61215 Full Sequence – I-V Curve Overlay"
+                  height={300}
+                />
+              </div>
+
+              {/* Summary Charts */}
+              <div className="page-break">
+                <SH title="SUMMARY ANALYSIS CHARTS" accent={ACCENT} />
+                <div style={{ marginBottom: "16px" }}>
+                  <PmaxStabilizationChart
+                    data={DEFAULT_STABILIZATION_DATA}
+                    sampleIds={DEFAULT_SAMPLE_IDS}
+                    ratedPmax={430}
+                    height={250}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4" style={{ marginBottom: "16px" }}>
+                  <InsulationResistanceChart
+                    data={DEFAULT_INSULATION_DATA}
+                    sampleIds={DEFAULT_SAMPLE_IDS}
+                    height={220}
+                  />
+                  <PowerDegradationChart
+                    data={DEFAULT_DEGRADATION_DATA}
+                    sampleIds={DEFAULT_SAMPLE_IDS}
+                    height={220}
+                  />
+                </div>
+              </div>
 
               {/* Conclusion */}
               <SH title="CONCLUSION & CERTIFICATION STATEMENT" accent={ACCENT} />

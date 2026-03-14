@@ -2,6 +2,8 @@
 "use client";
 
 import { useState } from "react";
+import { IVCurveComparisonChart } from "@/components/reports/IVCurveComparisonChart";
+import { PmaxStabilizationChart } from "@/components/reports/ReportSummaryCharts";
 
 const REPORT_NO = "SLX-RPT-LETID-2026-001";
 
@@ -479,9 +481,34 @@ export default function LeTIDReportPage() {
           </table>
         </div>
 
+        {/* ═══════════════ I-V CURVE & SUMMARY CHARTS ═══════════════ */}
+        <div className="page-break" style={{ padding: "12mm 20mm", fontSize: "9pt" }}>
+          <SectionHeader num="8" title="I-V CURVE COMPARISON & STABILIZATION" accent="#0f4c81" />
+          <IVCurveComparisonChart
+            preParams={{ voc: 49.98, isc: 13.87, vmp: 42.01, imp: 13.04, pmax: 547.8, ff: 0.7901 }}
+            postParams={{ voc: 49.91, isc: 13.83, vmp: 41.48, imp: 12.95, pmax: 537.1, ff: 0.7831 }}
+            title="LeTID Test – I-V Curve Overlay (Initial vs Post-LeTID)"
+            height={280}
+          />
+          <div style={{ marginTop: "16px" }}>
+            <PmaxStabilizationChart
+              data={[
+                { stage: "Initial (A)", "SLX-M101": 547.8, "SLX-M102": 547.2, "SLX-M103": 547.5 },
+                { stage: "Post B-O (B)", "SLX-M101": 534.2, "SLX-M102": 533.8, "SLX-M103": 534.0 },
+                { stage: "LeTID 162h", "SLX-M101": 531.5, "SLX-M102": 531.1, "SLX-M103": 531.3 },
+                { stage: "LeTID 324h", "SLX-M101": 533.8, "SLX-M102": 533.4, "SLX-M103": 533.6 },
+                { stage: "Post-LeTID (C)", "SLX-M101": 537.1, "SLX-M102": 536.7, "SLX-M103": 536.9 },
+              ]}
+              sampleIds={["SLX-M101", "SLX-M102", "SLX-M103"]}
+              ratedPmax={545}
+              height={230}
+            />
+          </div>
+        </div>
+
         {/* ═══════════════ CONCLUSIONS ═══════════════ */}
         <div className="page-break" style={{ padding: "12mm 20mm", fontSize: "9pt" }}>
-          <SectionHeader num="8" title="CONCLUSIONS" accent="#0f4c81" />
+          <SectionHeader num="9" title="CONCLUSIONS" accent="#0f4c81" />
 
           <div style={{ padding: "12px 16px", background: "#f0fdf4", border: "2px solid #22c55e", borderRadius: "6px", marginBottom: "16px" }}>
             <div style={{ fontSize: "11pt", fontWeight: "700", color: "#15803d", marginBottom: "6px" }}>✓ ALL SAMPLES PASSED – IEC CD 61215:2020 LeTID Protocol</div>

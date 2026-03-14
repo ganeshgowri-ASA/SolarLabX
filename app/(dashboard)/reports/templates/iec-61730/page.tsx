@@ -9,6 +9,8 @@ import {
 import {
   Tabs, TabsContent, TabsList, TabsTrigger,
 } from "@/components/ui/tabs";
+import { IVCurveComparisonChart } from "@/components/reports/IVCurveComparisonChart";
+import { PmaxStabilizationChart, InsulationResistanceChart } from "@/components/reports/ReportSummaryCharts";
 
 const ACCENT = "#7c2d12";
 
@@ -847,6 +849,34 @@ export default function IEC61730ReportPage() {
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* I-V Curve Comparison */}
+              <div className="page-break" style={{ marginBottom: "24px" }}>
+                <h3 className="text-sm font-bold uppercase tracking-wider mb-3" style={{ color: ACCENT, borderBottom: `2px solid ${ACCENT}`, paddingBottom: "4px" }}>
+                  I-V Curve Comparison (Pre vs Post Safety Tests)
+                </h3>
+                <IVCurveComparisonChart
+                  preParams={{ voc: 43.24, isc: 12.85, vmp: 35.31, imp: 12.20, pmax: 430.8, ff: 0.7786 }}
+                  postParams={{ voc: 43.15, isc: 12.82, vmp: 35.20, imp: 12.16, pmax: 426.1, ff: 0.7695 }}
+                  title="IEC 61730 Safety Tests – I-V Curve Overlay"
+                  height={280}
+                />
+              </div>
+
+              {/* Insulation Resistance Trend */}
+              <div style={{ marginBottom: "24px" }}>
+                <InsulationResistanceChart
+                  data={[
+                    { stage: "Initial", "SM-007": 6500, "SM-008": 6480 },
+                    { stage: "Post-Impulse", "SM-007": 6350, "SM-008": 6320 },
+                    { stage: "Post-Dielectric", "SM-007": 6200, "SM-008": 6180 },
+                    { stage: "Post-TC200", "SM-007": 5980, "SM-008": 5950 },
+                    { stage: "Final", "SM-007": 5820, "SM-008": 5800 },
+                  ]}
+                  sampleIds={["SM-007", "SM-008"]}
+                  height={220}
+                />
               </div>
 
               {/* Overall result banner */}
