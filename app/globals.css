@@ -84,34 +84,95 @@
 @media print {
   @page {
     size: A4 portrait;
-    /* Standard body pages: 20mm top/bottom, 15mm left/right (within safe area for margin boxes) */
-    margin: 20mm 15mm 20mm 15mm;
+    margin: 15mm;
   }
 
-  /* Cover page: 30mm all sides — overridden by @page :first in component inline styles */
-  @page :first {
-    margin: 30mm 30mm 30mm 30mm;
-  }
-
-  /* Suppress all UI chrome; only the report container renders */
-  body > * {
+  /* ── Hide non-report UI elements ── */
+  .no-print,
+  [data-no-print],
+  aside,
+  header,
+  .sticky {
     display: none !important;
   }
-  #__next {
-    display: block !important;
+
+  /* ── Reset body/layout for full-width print ── */
+  body {
+    background: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    overflow: visible !important;
   }
 
-  /* Report body: Times New Roman 11pt, line-height 1.5 */
+  /* Remove layout constraints that cause cutoff */
+  .h-screen,
+  .min-h-0 {
+    height: auto !important;
+    min-height: 0 !important;
+  }
+  #__next,
+  #__next > *,
+  main,
+  [role="main"],
+  .flex-1,
+  .overflow-auto,
+  .overflow-hidden,
+  .overflow-y-auto,
+  .overflow-x-auto,
+  .isolate {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    position: static !important;
+  }
+
+  /* Remove shadows, max-width constraints */
+  .shadow, .shadow-sm, .shadow-md, .shadow-lg, .shadow-xl {
+    box-shadow: none !important;
+  }
+  .report-container,
+  .max-w-5xl,
+  .max-w-4xl,
+  .max-w-3xl {
+    max-width: 100% !important;
+    box-shadow: none !important;
+  }
+
+  /* ── Page breaks ── */
+  .page-break,
+  .print-break-before {
+    break-before: page;
+    page-break-before: always;
+  }
+  .print-break {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  /* Prevent elements from splitting across pages */
+  tr, .card, .iv-curve-chart, .pmax-stabilization-chart,
+  .insulation-chart, .degradation-chart {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Keep table headers on each page */
+  thead {
+    display: table-header-group;
+  }
+  tfoot {
+    display: table-footer-group;
+  }
+
+  /* ── IEC Full Report specific styles ── */
   #iec-print-report {
     font-family: 'Times New Roman', Times, serif !important;
     font-size: 11pt !important;
     line-height: 1.5 !important;
     color: #000 !important;
   }
-
-  /* Tables: 10pt, 0.5pt borders, 8px cell padding, alt-row coloring */
   #iec-print-report table {
-    max-width: 170mm;
+    max-width: 100%;
     word-break: break-word;
     table-layout: auto;
     font-size: 10pt;
@@ -126,28 +187,32 @@
   #iec-print-report tr:nth-child(even) {
     background: #f9f9f9;
   }
-
-  /* Prevent table rows from splitting across pages */
   #iec-print-report tr {
     page-break-inside: avoid;
     break-inside: avoid;
   }
 
-  /* Remove rounded corners for print */
-  #iec-print-report .rounded,
-  #iec-print-report .rounded-md,
-  #iec-print-report .rounded-lg {
+  /* ── Charts: ensure Recharts render properly in print ── */
+  .recharts-wrapper,
+  .recharts-surface {
+    overflow: visible !important;
+  }
+  .recharts-responsive-container {
+    min-height: 200px;
+  }
+
+  /* Remove border-radius for cleaner print */
+  .rounded, .rounded-md, .rounded-lg, .rounded-xl, .rounded-2xl {
     border-radius: 0 !important;
   }
 
-  /* Charts: constrain to column width so they don't overflow */
-  #iec-print-report .print-chart-col {
-    overflow: hidden;
-    max-width: 79mm;
+  /* Ensure grid layouts work in print */
+  .grid {
+    display: grid !important;
   }
-  #iec-print-report .print-chart-col .recharts-wrapper,
-  #iec-print-report .print-chart-col .recharts-surface {
-    max-width: 100% !important;
-    width: 100% !important;
+
+  /* Generated report content */
+  #generated-report-content {
+    display: block !important;
   }
 }
