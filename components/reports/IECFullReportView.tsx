@@ -117,9 +117,20 @@ function SecH({ num, title }: { num: string; title: string }) {
   return (
     <div
       className="font-bold text-blue-900 border-b-2 border-blue-700 pb-1 mb-3 mt-6 uppercase tracking-wide"
-      style={{ fontSize: "11pt" }}
+      style={{ fontSize: "14pt", lineHeight: "1.2" }}
     >
       {num} {title}
+    </div>
+  )
+}
+
+function SubSecH({ label }: { label: string }) {
+  return (
+    <div
+      className="font-bold text-blue-800 border-b border-blue-200 pb-1 mb-2 mt-3"
+      style={{ fontSize: "12pt", lineHeight: "1.2" }}
+    >
+      {label}
     </div>
   )
 }
@@ -128,8 +139,14 @@ function SecH({ num, title }: { num: string; title: string }) {
 
 function TestRow({ r, idx }: { r: any; idx: number }) {
   return (
-    <div className={`border rounded mb-2 ${r.pass ? "border-green-200" : "border-red-200"}`}>
-      <div className={`flex items-center justify-between px-3 py-2 text-xs ${r.pass ? "bg-green-50" : "bg-red-50"}`}>
+    <div
+      className={`mb-2 ${r.pass ? "border-green-300" : "border-red-300"}`}
+      style={{ border: `0.5pt solid ${r.pass ? "#86efac" : "#fca5a5"}`, borderRadius: 0 }}
+    >
+      <div
+        className={`flex items-center justify-between px-3 py-2 text-xs ${r.pass ? "bg-green-50" : "bg-red-50"}`}
+        style={{ fontSize: "10pt", padding: "8px 12px" }}
+      >
         <div className="flex items-center gap-2">
           <span className="text-gray-400 w-5 shrink-0">{idx + 1}.</span>
           {r.pass ? <CheckCircle className="h-3.5 w-3.5 text-green-600 shrink-0" /> : <XCircle className="h-3.5 w-3.5 text-red-600 shrink-0" />}
@@ -138,17 +155,20 @@ function TestRow({ r, idx }: { r: any; idx: number }) {
         </div>
         <div className="flex items-center gap-3 shrink-0">
           <span className="text-gray-400 hidden md:inline">{r.date} · {r.technician}</span>
-          <span className={`px-1.5 py-0.5 rounded font-bold ${r.pass ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+          <span
+            className={`font-bold ${r.pass ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
+            style={{ padding: "2px 6px", border: `0.5pt solid ${r.pass ? "#16a34a" : "#dc2626"}` }}
+          >
             {r.pass ? "PASS" : "FAIL"}
           </span>
         </div>
       </div>
       {Object.keys(r.values).length > 0 && (
-        <div className="px-3 py-2 grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-0.5">
-          {Object.entries(r.values).map(([k, v]) => (
-            <div key={k} className="flex justify-between text-xs gap-1">
-              <span className="text-gray-400 capitalize">{k.replace(/([A-Z])/g, " $1")}</span>
-              <span className="font-mono font-medium">{String(v)}</span>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-0.5" style={{ padding: "8px 12px" }}>
+          {Object.entries(r.values).map(([k, v], vi) => (
+            <div key={k} className="flex justify-between gap-1" style={{ fontSize: "10pt", background: vi % 2 === 0 ? "#f9f9f9" : "transparent", padding: "2px 4px" }}>
+              <span className="font-bold capitalize text-gray-600">{k.replace(/([A-Z])/g, " $1")}</span>
+              <span className="font-mono">{String(v)}</span>
             </div>
           ))}
         </div>
@@ -161,15 +181,19 @@ function TestRow({ r, idx }: { r: any; idx: number }) {
 
 function TrfTableRow({ idx, r, std }: { idx: number; r: any; std: string }) {
   const keyVal = Object.values(r.values)[0] || "—"
+  const rowBg = idx % 2 === 0 ? "#f9f9f9" : "#ffffff"
   return (
-    <tr className={r.pass ? "" : "bg-red-50"}>
-      <td className="border border-gray-300 p-1 text-center text-gray-400">{idx + 1}</td>
-      <td className="border border-gray-300 p-1 font-mono text-gray-500 whitespace-nowrap">{r.clause.split(" /")[0]}</td>
-      <td className="border border-gray-300 p-1">{r.testName}</td>
-      <td className="border border-gray-300 p-1 text-gray-600 text-xs">{String(keyVal)}</td>
-      <td className="border border-gray-300 p-1 whitespace-nowrap text-gray-500">{r.technician}</td>
-      <td className="border border-gray-300 p-1 font-mono whitespace-nowrap text-gray-500">{r.date}</td>
-      <td className={`border border-gray-300 p-1 text-center font-bold ${r.pass ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
+    <tr style={{ background: r.pass ? rowBg : "#fef2f2", fontSize: "10pt" }}>
+      <td className="border border-gray-300 text-center text-gray-400" style={{ padding: "8px", borderColor: "#333", borderWidth: "0.5pt" }}>{idx + 1}</td>
+      <td className="border font-mono text-gray-500 whitespace-nowrap" style={{ padding: "8px", borderColor: "#333", borderWidth: "0.5pt" }}>{r.clause.split(" /")[0]}</td>
+      <td className="border font-semibold" style={{ padding: "8px", borderColor: "#333", borderWidth: "0.5pt" }}>{r.testName}</td>
+      <td className="border text-gray-600" style={{ padding: "8px", borderColor: "#333", borderWidth: "0.5pt" }}>{String(keyVal)}</td>
+      <td className="border whitespace-nowrap text-gray-500" style={{ padding: "8px", borderColor: "#333", borderWidth: "0.5pt" }}>{r.technician}</td>
+      <td className="border font-mono whitespace-nowrap text-gray-500" style={{ padding: "8px", borderColor: "#333", borderWidth: "0.5pt" }}>{r.date}</td>
+      <td
+        className={`border text-center font-bold ${r.pass ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}
+        style={{ padding: "8px", borderColor: "#333", borderWidth: "0.5pt" }}
+      >
         {r.pass ? "PASS" : "FAIL"}
       </td>
     </tr>
@@ -452,13 +476,16 @@ export default function IECFullReportView() {
           ref={printRef}
           id="iec-print-report"
           className="mt-6 border-4 border-gray-800 bg-white print:border-0"
-          style={{ fontFamily: "Arial, sans-serif", fontSize: "11px", lineHeight: "1.5" }}
+          style={{ fontFamily: "'Times New Roman', Times, serif", fontSize: "0.6875rem", lineHeight: "1.5" }}
         >
           {/* ── SCREEN HEADER – visible on screen, hidden in print (replaced by @page margin box) ── */}
-          <div className="rpt-screen-hdr flex items-center justify-between bg-blue-50 border-b-2 border-blue-900 px-6 py-2 text-xs">
+          <div
+            className="rpt-screen-hdr flex items-center justify-between bg-blue-50 border-b-2 border-blue-900 px-6"
+            style={{ height: "15mm", fontSize: "9pt", borderBottomWidth: "0.5pt", borderBottomColor: "#000" }}
+          >
             <span className="font-semibold text-blue-900">{lab.labName}</span>
-            <span className="text-gray-600">Document No: {moduleInfo.testRef}</span>
-            <span className="text-gray-600">Rev: 00</span>
+            <span className="text-gray-600">Doc No: {moduleInfo.testRef} | Rev: 00</span>
+            <span className="text-gray-500 text-xs">Page X of Y</span>
           </div>
 
           {/* ── COVER PAGE (page 1) ──────────────────────────────────────────── */}
@@ -479,7 +506,7 @@ export default function IECFullReportView() {
               Accreditation No: <strong>{lab.accreditationNumber}</strong> · {lab.accreditationBody}
             </div>
             <div style={{ height: "1px", background: "#1e3a5f", margin: "7mm 0" }} />
-            <div style={{ fontSize: "30pt", fontWeight: "bold", letterSpacing: "5px", color: "#1e3a5f", marginBottom: "3mm" }}>
+            <div style={{ fontSize: "24pt", fontWeight: "bold", letterSpacing: "5px", color: "#1e3a5f", marginBottom: "3mm", lineHeight: "1.2" }}>
               TEST REPORT
             </div>
             <div style={{ fontSize: "13pt", fontWeight: "600", color: "#444", marginBottom: "4mm" }}>
@@ -558,7 +585,7 @@ export default function IECFullReportView() {
           </div>
 
           {/* ── REPORT BODY ──────────────────────────────────────────────────── */}
-          <div style={{ padding: "0 20mm 10mm 20mm" }}>
+          <div style={{ padding: "0 20mm 10mm 20mm", fontFamily: "'Times New Roman', Times, serif" }}>
 
             {/* ── SECTION 1: General Information ──────────────────────────── */}
             <div style={{ pageBreakBefore: "always" }}>
@@ -753,32 +780,41 @@ export default function IECFullReportView() {
               <SecH num="6." title="Detailed Test Results" />
               {printSummaries.map(({ key, std, results }, sIdx) => (
                 <div key={key} className="mb-6" style={{ pageBreakBefore: sIdx > 0 ? "always" : "auto" }}>
-                  <div className="font-bold text-xs text-blue-800 mb-2 mt-3 border-b border-blue-200 pb-1">
-                    6.{sIdx + 1}&nbsp;&nbsp;{std} — Detailed Results
-                  </div>
+                  <SubSecH label={`6.${sIdx + 1}  ${std} — Detailed Results`} />
                   {results.map((r, idx) => {
                     const bg = r.pass ? "#f0fdf4" : "#fef2f2"
                     const color = r.pass ? "#16a34a" : "#dc2626"
                     return (
-                      <div key={r.id} className="border rounded mb-2" style={{ borderColor: r.pass ? "#bbf7d0" : "#fecaca", pageBreakInside: "avoid" }}>
-                        <div className="flex items-center justify-between px-2 py-1.5 text-xs" style={{ background: bg }}>
-                          <span className="font-semibold">{idx + 1}. {r.testName}</span>
-                          <span className="font-mono text-gray-400">{r.clause}</span>
+                      <div
+                        key={r.id}
+                        className="mb-2"
+                        style={{
+                          border: `0.5pt solid ${r.pass ? "#86efac" : "#fca5a5"}`,
+                          borderRadius: 0,
+                          pageBreakInside: "avoid",
+                        }}
+                      >
+                        <div
+                          className="flex items-center justify-between"
+                          style={{ background: bg, padding: "8px", fontSize: "10pt" }}
+                        >
+                          <span className="font-bold">{idx + 1}. {r.testName}</span>
+                          <span className="font-mono text-gray-500">{r.clause}</span>
                           <span className="font-bold ml-2" style={{ color }}>{r.pass ? "✓ PASS" : "✗ FAIL"}</span>
                         </div>
-                        <div className="px-2 py-1.5 grid grid-cols-3 gap-x-3 gap-y-0.5">
-                          {Object.entries(r.values).map(([k, v]) => (
-                            <div key={k} className="flex flex-col text-xs">
-                              <span className="text-gray-400 capitalize">{k.replace(/([A-Z])/g, " $1")}</span>
-                              <span className="font-mono font-semibold">{String(v)}</span>
+                        <div className="grid grid-cols-3 gap-x-3 gap-y-0.5" style={{ padding: "8px", fontSize: "10pt" }}>
+                          {Object.entries(r.values).map(([k, v], vi) => (
+                            <div key={k} className="flex flex-col" style={{ background: vi % 2 === 0 ? "#f9f9f9" : "transparent", padding: "2px 4px" }}>
+                              <span className="font-bold capitalize text-gray-600">{k.replace(/([A-Z])/g, " $1")}</span>
+                              <span className="font-mono">{String(v)}</span>
                             </div>
                           ))}
-                          <div className="flex flex-col text-xs">
-                            <span className="text-gray-400">Technician</span>
-                            <span className="font-medium">{r.technician}</span>
+                          <div className="flex flex-col" style={{ background: "#f9f9f9", padding: "2px 4px" }}>
+                            <span className="font-bold text-gray-600">Technician</span>
+                            <span>{r.technician}</span>
                           </div>
-                          <div className="flex flex-col text-xs">
-                            <span className="text-gray-400">Test Date</span>
+                          <div className="flex flex-col" style={{ padding: "2px 4px" }}>
+                            <span className="font-bold text-gray-600">Test Date</span>
                             <span className="font-mono">{r.date}</span>
                           </div>
                         </div>
@@ -790,9 +826,7 @@ export default function IECFullReportView() {
 
               {/* 6.5 Visual Inspection Records */}
               <div style={{ pageBreakBefore: "always" }}>
-                <div className="font-bold text-xs text-blue-800 mb-2 mt-3 border-b border-blue-200 pb-1">
-                  6.5&nbsp;&nbsp;Visual Inspection Records
-                </div>
+                <SubSecH label="6.5  Visual Inspection Records" />
                 <table className="w-full border-collapse text-xs mb-4">
                   <thead>
                     <tr className="bg-gray-100">
@@ -951,9 +985,15 @@ export default function IECFullReportView() {
           </div>{/* end report body */}
 
           {/* ── SCREEN FOOTER – visible on screen, hidden in print (replaced by @page margin box) ── */}
-          <div className="rpt-screen-ftr flex items-center justify-between border-t border-gray-300 bg-gray-50 px-6 py-2 text-xs text-gray-500">
-            <span>This report shall not be reproduced except in full without written approval of the issuing laboratory</span>
-            <span className="font-mono">{moduleInfo.testRef} · Issue Date: {today}</span>
+          <div
+            className="rpt-screen-ftr flex items-center justify-between border-t bg-gray-50 px-6"
+            style={{ height: "12mm", fontSize: "9pt", borderTopWidth: "0.5pt", borderTopColor: "#000" }}
+          >
+            <span className="text-gray-500">Issue Date: {today}</span>
+            <span className="text-gray-400 text-center text-xs" style={{ maxWidth: "60%" }}>
+              This report shall not be reproduced except in full without written approval of SolarLabX Testing Laboratory
+            </span>
+            <span className="font-semibold text-gray-600">CONFIDENTIAL</span>
           </div>
 
         </div>
@@ -964,37 +1004,103 @@ export default function IECFullReportView() {
         @media print {
           @page {
             size: A4 portrait;
-            margin: 25mm 20mm 22mm 20mm;
-            @top-left   { content: "${lab.labName}"; font-size: 8pt; font-family: Arial, sans-serif; color: #1e3a5f; }
-            @top-center { content: "Document No: ${moduleInfo.testRef}"; font-size: 8pt; font-family: Arial, sans-serif; }
-            @top-right  { content: "Rev: 00"; font-size: 8pt; font-family: Arial, sans-serif; }
-            @bottom-left   { content: "This report shall not be reproduced except in full without written approval"; font-size: 6.5pt; font-family: Arial, sans-serif; color: #555; }
-            @bottom-center { content: "Page " counter(page) " of " counter(pages); font-size: 8pt; font-family: Arial, sans-serif; }
-            @bottom-right  { content: "Issue Date: ${today}"; font-size: 7pt; font-family: Arial, sans-serif; }
+            margin: 20mm 15mm 20mm 15mm;
+            @top-left {
+              content: "SolarLabX Testing Laboratory";
+              font-size: 9pt;
+              font-family: 'Times New Roman', serif;
+              color: #1e3a5f;
+              font-weight: bold;
+              border-bottom: 0.5pt solid #000;
+              padding-bottom: 2mm;
+            }
+            @top-center {
+              content: "Doc No: ${moduleInfo.testRef} | Rev: 00";
+              font-size: 9pt;
+              font-family: 'Times New Roman', serif;
+              color: #333;
+              border-bottom: 0.5pt solid #000;
+              padding-bottom: 2mm;
+            }
+            @top-right {
+              content: "Page " counter(page) " of " counter(pages);
+              font-size: 9pt;
+              font-family: 'Times New Roman', serif;
+              color: #333;
+              border-bottom: 0.5pt solid #000;
+              padding-bottom: 2mm;
+            }
+            @bottom-left {
+              content: "Issue Date: ${today}";
+              font-size: 9pt;
+              font-family: 'Times New Roman', serif;
+              color: #555;
+              border-top: 0.5pt solid #000;
+              padding-top: 2mm;
+            }
+            @bottom-center {
+              content: "This report shall not be reproduced except in full without written approval of SolarLabX Testing Laboratory";
+              font-size: 7pt;
+              font-family: 'Times New Roman', serif;
+              color: #666;
+              border-top: 0.5pt solid #000;
+              padding-top: 2mm;
+            }
+            @bottom-right {
+              content: "CONFIDENTIAL";
+              font-size: 9pt;
+              font-family: 'Times New Roman', serif;
+              color: #333;
+              font-weight: bold;
+              border-top: 0.5pt solid #000;
+              padding-top: 2mm;
+            }
           }
-          /* Cover page: no running header/footer */
+          /* Cover page (first): larger margins, no running header/footer */
           @page :first {
-            margin: 20mm 20mm 20mm 20mm;
+            margin: 30mm 30mm 30mm 30mm;
             @top-left { content: none; } @top-center { content: none; } @top-right { content: none; }
             @bottom-left { content: none; } @bottom-center { content: none; } @bottom-right { content: none; }
           }
 
-          /* Hide all UI; only the report renders */
+          /* Hide all UI chrome; only the report renders */
           body > * { display: none !important; }
           #iec-print-report { display: block !important; margin: 0 !important; padding: 0 !important; border: none !important; }
 
           /* Hide screen header/footer bands in print */
           .rpt-screen-hdr, .rpt-screen-ftr { display: none !important; }
 
+          /* Body font for print */
+          #iec-print-report {
+            font-family: 'Times New Roman', Times, serif !important;
+            font-size: 11pt !important;
+            line-height: 1.5 !important;
+            color: #000 !important;
+          }
+
+          /* Table text: 10pt */
+          #iec-print-report table {
+            max-width: 170mm;
+            word-break: break-word;
+            font-size: 10pt;
+          }
+          #iec-print-report td, #iec-print-report th {
+            overflow-wrap: break-word;
+            word-break: break-word;
+            padding: 8px;
+            border: 0.5pt solid #333;
+          }
+          #iec-print-report tr { page-break-inside: avoid; break-inside: avoid; }
+          #iec-print-report tr:nth-child(even) { background: #f9f9f9; }
+
+          /* Remove rounded corners for print */
+          #iec-print-report [style*="border-radius"] { border-radius: 0 !important; }
+          #iec-print-report .rounded, #iec-print-report .rounded-md, #iec-print-report .rounded-lg { border-radius: 0 !important; }
+
           /* Charts: clamp to column width */
           .print-chart-col { overflow: hidden; max-width: 79mm; }
           .print-chart-col .recharts-wrapper,
           .print-chart-col .recharts-surface { max-width: 100% !important; width: 100% !important; }
-
-          /* Tables: prevent horizontal overflow */
-          #iec-print-report table { max-width: 170mm; word-break: break-word; }
-          #iec-print-report td, #iec-print-report th { overflow-wrap: break-word; }
-          #iec-print-report tr { page-break-inside: avoid; break-inside: avoid; }
         }
 
         /* Screen: show header/footer bands */

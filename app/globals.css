@@ -84,7 +84,13 @@
 @media print {
   @page {
     size: A4 portrait;
-    margin: 25mm 20mm 22mm 20mm;
+    /* Standard body pages: 20mm top/bottom, 15mm left/right (within safe area for margin boxes) */
+    margin: 20mm 15mm 20mm 15mm;
+  }
+
+  /* Cover page: 30mm all sides — overridden by @page :first in component inline styles */
+  @page :first {
+    margin: 30mm 30mm 30mm 30mm;
   }
 
   /* Suppress all UI chrome; only the report container renders */
@@ -95,23 +101,43 @@
     display: block !important;
   }
 
-  /* Tables: prevent horizontal overflow, allow word-wrap */
+  /* Report body: Times New Roman 11pt, line-height 1.5 */
+  #iec-print-report {
+    font-family: 'Times New Roman', Times, serif !important;
+    font-size: 11pt !important;
+    line-height: 1.5 !important;
+    color: #000 !important;
+  }
+
+  /* Tables: 10pt, 0.5pt borders, 8px cell padding, alt-row coloring */
   #iec-print-report table {
     max-width: 170mm;
     word-break: break-word;
     table-layout: auto;
+    font-size: 10pt;
   }
   #iec-print-report td,
   #iec-print-report th {
     overflow-wrap: break-word;
     word-break: break-word;
-    font-size: 8.5pt;
+    padding: 8px;
+    border: 0.5pt solid #333;
+  }
+  #iec-print-report tr:nth-child(even) {
+    background: #f9f9f9;
   }
 
   /* Prevent table rows from splitting across pages */
   #iec-print-report tr {
     page-break-inside: avoid;
     break-inside: avoid;
+  }
+
+  /* Remove rounded corners for print */
+  #iec-print-report .rounded,
+  #iec-print-report .rounded-md,
+  #iec-print-report .rounded-lg {
+    border-radius: 0 !important;
   }
 
   /* Charts: constrain to column width so they don't overflow */
@@ -123,11 +149,5 @@
   #iec-print-report .print-chart-col .recharts-surface {
     max-width: 100% !important;
     width: 100% !important;
-  }
-
-  /* Overall font for the report */
-  #iec-print-report {
-    font-size: 9pt !important;
-    color: #000 !important;
   }
 }
