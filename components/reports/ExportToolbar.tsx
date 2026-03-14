@@ -4,6 +4,7 @@
 import { useState, RefObject } from "react"
 import { Button } from "@/components/ui/button"
 import { FileDown, FileText, Table2, Printer, Loader2 } from "lucide-react"
+import { toast } from "sonner"
 
 interface TestResult {
   standard: string
@@ -112,7 +113,7 @@ export function ExportToolbar({
       pdf.save(`${reportNumber}_TRF_Report.pdf`)
     } catch (err) {
       console.error("PDF export error:", err)
-      alert(
+      toast.error(
         "PDF export failed. Please use 'Print → Save as PDF' as a fallback, or toggle 'Show Full Report' before exporting."
       )
     } finally {
@@ -165,7 +166,7 @@ export function ExportToolbar({
       XLSX.writeFile(wb, `${reportNumber}_Test_Data.xlsx`)
     } catch (err) {
       console.error("Excel export error:", err)
-      alert("Excel export failed.")
+      toast.error("Excel export failed.")
     } finally {
       setLoading(null)
     }
@@ -177,8 +178,8 @@ export function ExportToolbar({
     try {
       const {
         Document, Packer, Paragraph, Table, TableRow, TableCell,
-        TextRun, HeadingLevel, AlignmentType, WidthType, BorderStyle,
-        Header, Footer, PageNumber, ShadingType,
+        TextRun, HeadingLevel, AlignmentType, BorderStyle,
+        Header, Footer, PageNumber,
       } = await import("docx")
 
       const LAB_NAME = "SolarLabX Testing Laboratory"
@@ -216,7 +217,7 @@ export function ExportToolbar({
           ],
         }
         if (opts.fill) {
-          cellOpts.shading = { type: ShadingType.CLEAR, color: "auto", fill: opts.fill }
+          cellOpts.shading = { type: "clear", color: "auto", fill: opts.fill }
         }
         if (opts.colSpan) {
           cellOpts.columnSpan = opts.colSpan
@@ -261,7 +262,7 @@ export function ExportToolbar({
         children: ["#", "Standard", "Clause", "Test Name", "Technician", "Date", "Result"].map(
           (h) =>
             new TableCell({
-              shading: { type: ShadingType.CLEAR, color: "auto", fill: "1E3A8A" },
+              shading: { type: "clear", color: "auto", fill: "1E3A8A" },
               children: [
                 new Paragraph({
                   alignment: AlignmentType.CENTER,
@@ -287,7 +288,7 @@ export function ExportToolbar({
               makeCell(r.date, { fill: i % 2 === 0 ? "F9F9F9" : "FFFFFF" }),
               new TableCell({
                 shading: {
-                  type: ShadingType.CLEAR,
+                  type: "clear",
                   color: "auto",
                   fill: r.pass ? "D1FAE5" : "FEE2E2",
                 },
@@ -325,7 +326,7 @@ export function ExportToolbar({
         tableHeader: true,
         children: ["Abbrev.", "Definition", "Abbrev.", "Definition"].map((h) =>
           new TableCell({
-            shading: { type: ShadingType.CLEAR, color: "auto", fill: "1E3A8A" },
+            shading: { type: "clear", color: "auto", fill: "1E3A8A" },
             children: [
               new Paragraph({
                 children: [new TextRun({ text: h, bold: true, color: "FFFFFF", size: 18 })],
@@ -410,7 +411,7 @@ export function ExportToolbar({
               }),
               // Report details table
               new Table({
-                width: { size: 100, type: WidthType.PERCENTAGE },
+                width: { size: 100, type: "pct" },
                 rows: [
                   new TableRow({
                     children: [
@@ -454,7 +455,7 @@ export function ExportToolbar({
               new Paragraph({
                 spacing: { before: 500 },
                 alignment: AlignmentType.LEFT,
-                shading: { type: ShadingType.CLEAR, color: "auto", fill: "FFFBEB" },
+                shading: { type: "clear", color: "auto", fill: "FFFBEB" },
                 border: {
                   top: { style: BorderStyle.SINGLE, size: 4, color: "FBBF24" },
                   bottom: { style: BorderStyle.SINGLE, size: 4, color: "FBBF24" },
@@ -511,7 +512,7 @@ export function ExportToolbar({
                 children: [new TextRun({ text: "1.  General Information", bold: true, size: 32, color: "1E3A5F" })],
               }),
               new Table({
-                width: { size: 100, type: WidthType.PERCENTAGE },
+                width: { size: 100, type: "pct" },
                 rows: [
                   new TableRow({ children: [makeCell("Testing Laboratory", { bold: true, fill: "F5F5F5" }), makeCell(LAB_NAME)] }),
                   new TableRow({ children: [makeCell("Report Number", { bold: true, fill: "F5F5F5" }), makeCell(reportNumber)] }),
@@ -531,7 +532,7 @@ export function ExportToolbar({
                 children: [new TextRun({ text: "2.  Abbreviations & Definitions", bold: true, size: 32, color: "1E3A5F" })],
               }),
               new Table({
-                width: { size: 100, type: WidthType.PERCENTAGE },
+                width: { size: 100, type: "pct" },
                 rows: [abbrevHeaderRow, ...abbrevRows],
               }),
 
@@ -560,7 +561,7 @@ export function ExportToolbar({
                 ],
               }),
               new Table({
-                width: { size: 100, type: WidthType.PERCENTAGE },
+                width: { size: 100, type: "pct" },
                 rows: [tableHeaderRow, ...tableDataRows],
               }),
 
@@ -591,7 +592,7 @@ export function ExportToolbar({
                   ],
                 }),
                 new Table({
-                  width: { size: 100, type: WidthType.PERCENTAGE },
+                  width: { size: 100, type: "pct" },
                   rows: [
                     new TableRow({
                       children: [
@@ -689,7 +690,7 @@ export function ExportToolbar({
                 children: [new TextRun({ text: "6.  Signatories & Authorisation", bold: true, size: 32, color: "1E3A5F" })],
               }),
               new Table({
-                width: { size: 100, type: WidthType.PERCENTAGE },
+                width: { size: 100, type: "pct" },
                 rows: [
                   new TableRow({
                     children: [
@@ -746,19 +747,18 @@ export function ExportToolbar({
         ],
       })
 
-      const blob = await Packer.toBlob(doc)
-      const url = URL.createObjectURL(blob)
-      const anchor = document.createElement("a")
-      anchor.href = url
-      anchor.download = `${reportNumber}_TRF.docx`
-      document.body.appendChild(anchor)
-      anchor.click()
-      document.body.removeChild(anchor)
-      URL.revokeObjectURL(url)
+      await Packer.toBlob(doc).then((blob) => {
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement("a")
+        a.href = url
+        a.download = `${reportNumber}_TRF.docx`
+        a.click()
+        URL.revokeObjectURL(url)
+      })
     } catch (err) {
       console.error("Word export error:", err)
       const msg = err instanceof Error ? err.message : String(err)
-      alert(`Word export failed: ${msg}`)
+      toast.error(`Word export failed: ${msg}`)
     } finally {
       setLoading(null)
     }
