@@ -109,6 +109,47 @@ export default function ReportsDashboard() {
         </div>
       </div>
 
+      {/* Report Templates Quick Access */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">Report Templates</h2>
+          <Link href="/reports/templates">
+            <Button variant="outline" size="sm">View All Templates →</Button>
+          </Link>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+          {[
+            { href: "/reports/templates/pid", icon: "⚡", label: "PID Test Report", std: "IEC TS 62804-1:2015", color: "#1e3a5f" },
+            { href: "/reports/templates/letid", icon: "🌡", label: "LeTID Test Report", std: "IEC CD 61215:2020", color: "#0f4c81" },
+            { href: "/reports/templates/cleaning", icon: "🤖", label: "Robotic Cleaning", std: "Custom Project Report", color: "#065f46" },
+            { href: "/reports/templates/stc-flash", icon: "📊", label: "STC Flash Analysis", std: "IEC 60904-1 / MQT06", color: "#1e3a5f" },
+            { href: "/reports/templates/iec-61215", icon: "🏆", label: "IEC 61215 Design Qual.", std: "IEC 61215:2021 · 19 MQTs", color: "#1e3a5f" },
+            { href: "/reports/templates/iec-61730", icon: "🛡", label: "IEC 61730 Safety Qual.", std: "IEC 61730:2023 · 15 MSTs", color: "#7c2d12" },
+            { href: "/reports/templates/iec-61853", icon: "☀", label: "IEC 61853 Energy Rating", std: "Power Matrix · 4 Climates", color: "#5b21b6" },
+            { href: "/reports/templates/iec-61701", icon: "🌊", label: "IEC 61701 Salt Mist", std: "Severity S4 · 200h", color: "#0e7490" },
+            { href: "/reports/templates/thermal-cycling", icon: "🔄", label: "Thermal Cycling", std: "MQT 11 · TC200", color: "#b45309" },
+            { href: "/reports/templates/humidity-freeze", icon: "❄", label: "Humidity Freeze", std: "MQT 12 · HF10", color: "#1d4ed8" },
+            { href: "/reports/templates/damp-heat", icon: "💧", label: "Damp Heat", std: "MQT 13 · DH1000", color: "#065f46" },
+            { href: "/reports/templates/mechanical-load", icon: "🏗", label: "Mechanical Load", std: "MQT 16 · ±5400 Pa", color: "#7c3aed" },
+            { href: "/reports/templates/hail", icon: "🧊", label: "Hail Impact Test", std: "MQT 17 · 25mm / 23 m/s", color: "#dc2626" },
+            { href: "/reports/templates/uv-preconditioning", icon: "🔆", label: "UV Preconditioning", std: "MQT 10 · 15 kWh/m²", color: "#6d28d9" },
+          ].map((tpl) => (
+            <Link key={tpl.href} href={tpl.href}>
+              <Card className="hover:shadow-md transition-shadow cursor-pointer border-l-4 h-full" style={{ borderLeftColor: tpl.color }}>
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-base">{tpl.icon}</span>
+                    <span className="font-semibold text-sm leading-tight">{tpl.label}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{tpl.std}</p>
+                  <span className="text-xs mt-1 inline-block" style={{ color: "#15803d", fontWeight: "600" }}>🖨 Print / PDF</span>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      </div>
+
       {/* Pending Approvals */}
       {pending > 0 && (
         <div>
