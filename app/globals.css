@@ -79,3 +79,55 @@
     align-items: start;
   }
 }
+
+/* ─── A4 Print Styles (ISO 17025 Report) ─────────────────────────────────── */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 25mm 20mm 22mm 20mm;
+  }
+
+  /* Suppress all UI chrome; only the report container renders */
+  body > * {
+    display: none !important;
+  }
+  #__next {
+    display: block !important;
+  }
+
+  /* Tables: prevent horizontal overflow, allow word-wrap */
+  #iec-print-report table {
+    max-width: 170mm;
+    word-break: break-word;
+    table-layout: auto;
+  }
+  #iec-print-report td,
+  #iec-print-report th {
+    overflow-wrap: break-word;
+    word-break: break-word;
+    font-size: 8.5pt;
+  }
+
+  /* Prevent table rows from splitting across pages */
+  #iec-print-report tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Charts: constrain to column width so they don't overflow */
+  #iec-print-report .print-chart-col {
+    overflow: hidden;
+    max-width: 79mm;
+  }
+  #iec-print-report .print-chart-col .recharts-wrapper,
+  #iec-print-report .print-chart-col .recharts-surface {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  /* Overall font for the report */
+  #iec-print-report {
+    font-size: 9pt !important;
+    color: #000 !important;
+  }
+}

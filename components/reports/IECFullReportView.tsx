@@ -115,7 +115,10 @@ const EQUIPMENT_TABLE = [
 
 function SecH({ num, title }: { num: string; title: string }) {
   return (
-    <div className="text-xs font-bold text-blue-900 border-b-2 border-blue-700 pb-1 mb-2 mt-5 uppercase tracking-wide">
+    <div
+      className="font-bold text-blue-900 border-b-2 border-blue-700 pb-1 mb-3 mt-6 uppercase tracking-wide"
+      style={{ fontSize: "11pt" }}
+    >
       {num} {title}
     </div>
   )
@@ -442,7 +445,7 @@ export default function IECFullReportView() {
       </Tabs>
 
       {/* ═══════════════════════════════════════════════════════════════════════
-          PRINT / EXPORT REPORT – IEC TRF FORMAT (Sections 1–9)
+          PRINT / EXPORT REPORT – IEC TRF FORMAT (ISO 17025 A4 Print-Ready)
           ═══════════════════════════════════════════════════════════════════════ */}
       {showPrintView && (
         <div
@@ -451,261 +454,414 @@ export default function IECFullReportView() {
           className="mt-6 border-4 border-gray-800 bg-white print:border-0"
           style={{ fontFamily: "Arial, sans-serif", fontSize: "11px", lineHeight: "1.5" }}
         >
-          {/* ── COVER PAGE ──────────────────────────────────────────────────── */}
-          <div className="bg-blue-900 text-white text-center py-8 px-6">
-            <div className="text-xs tracking-widest mb-3 opacity-60">CONFIDENTIAL</div>
-            <div className="text-2xl font-bold mb-1">{lab.labName}</div>
-            <div className="text-xs opacity-80 mb-1">{lab.address}</div>
-            <div className="text-xs opacity-70">Accreditation: {lab.accreditationNumber} · {lab.accreditationBody}</div>
-            <div className="mt-5 mb-3 h-px bg-white opacity-30" />
-            <div className="text-3xl font-bold tracking-tight mb-2">PHOTOVOLTAIC MODULE</div>
-            <div className="text-2xl font-bold mb-1">TEST REPORT</div>
-            <div className="text-base font-semibold opacity-90 mt-2">{templateConfig.title}</div>
-            <div className="mt-5 h-px bg-white opacity-30" />
-            <div className="mt-4 grid grid-cols-3 gap-4 text-xs">
-              <div><div className="opacity-60 mb-1">REPORT NUMBER</div><div className="font-bold text-sm">{moduleInfo.testRef}</div></div>
-              <div><div className="opacity-60 mb-1">ISSUE DATE</div><div className="font-bold text-sm">{today}</div></div>
-              <div><div className="opacity-60 mb-1">OVERALL RESULT</div><div className={`font-bold text-lg ${overallPass ? "text-green-300" : "text-red-300"}`}>{overallPass ? "PASS" : "FAIL"}</div></div>
+          {/* ── SCREEN HEADER – visible on screen, hidden in print (replaced by @page margin box) ── */}
+          <div className="rpt-screen-hdr flex items-center justify-between bg-blue-50 border-b-2 border-blue-900 px-6 py-2 text-xs">
+            <span className="font-semibold text-blue-900">{lab.labName}</span>
+            <span className="text-gray-600">Document No: {moduleInfo.testRef}</span>
+            <span className="text-gray-600">Rev: 00</span>
+          </div>
+
+          {/* ── COVER PAGE (page 1) ──────────────────────────────────────────── */}
+          <div style={{ pageBreakAfter: "always", padding: "18mm 20mm 12mm 20mm", textAlign: "center" }}>
+            {/* Logo placeholder */}
+            <div style={{
+              width: "40mm", height: "20mm", border: "2px dashed #bbb",
+              display: "inline-flex", alignItems: "center", justifyContent: "center",
+              marginBottom: "6mm", color: "#aaa", fontSize: "10px", borderRadius: "4px"
+            }}>
+              [Lab Logo]
+            </div>
+            <div style={{ fontSize: "18pt", fontWeight: "bold", color: "#1e3a5f", marginBottom: "2mm" }}>
+              {lab.labName}
+            </div>
+            <div style={{ fontSize: "10pt", color: "#666", marginBottom: "1mm" }}>{lab.address}</div>
+            <div style={{ fontSize: "9pt", color: "#888", marginBottom: "1mm" }}>
+              Accreditation No: <strong>{lab.accreditationNumber}</strong> · {lab.accreditationBody}
+            </div>
+            <div style={{ height: "1px", background: "#1e3a5f", margin: "7mm 0" }} />
+            <div style={{ fontSize: "30pt", fontWeight: "bold", letterSpacing: "5px", color: "#1e3a5f", marginBottom: "3mm" }}>
+              TEST REPORT
+            </div>
+            <div style={{ fontSize: "13pt", fontWeight: "600", color: "#444", marginBottom: "4mm" }}>
+              PHOTOVOLTAIC MODULE QUALIFICATION
+            </div>
+            <div style={{ fontSize: "10pt", color: "#1e3a5f", fontStyle: "italic", marginBottom: "5mm" }}>
+              {templateConfig.title}
+            </div>
+            <div style={{ height: "1px", background: "#ddd", margin: "5mm 0" }} />
+            {/* Report details table */}
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "10pt", margin: "4mm 0", textAlign: "left" }}>
+              <tbody>
+                {([
+                  ["Report Number", moduleInfo.testRef, "Standard(s)", displayStandards.map(k => ({ "61215": "IEC 61215:2021", "61730": "IEC 61730:2023", "61853": "IEC 61853:2020", "61701": "IEC 61701:2020" }[k])).join(" / ")],
+                  ["Date of Issue", today, "Date of Testing", "2026-01-15 to 2026-03-10"],
+                  ["Date of Receipt", "2026-01-10", "Date of Report", today],
+                  ["Manufacturer", moduleInfo.manufacturer, "Model No.", moduleInfo.model],
+                  ["Serial Number", moduleInfo.serial, "Rated Power (Pmax)", moduleInfo.power],
+                ] as [string,string,string,string][]).map(([k1, v1, k2, v2]) => (
+                  <tr key={k1}>
+                    <td style={{ border: "1px solid #ccc", padding: "2mm 3mm", background: "#f5f5f5", fontWeight: "600", width: "22%" }}>{k1}</td>
+                    <td style={{ border: "1px solid #ccc", padding: "2mm 3mm", width: "28%" }}>{v1}</td>
+                    <td style={{ border: "1px solid #ccc", padding: "2mm 3mm", background: "#f5f5f5", fontWeight: "600", width: "22%" }}>{k2}</td>
+                    <td style={{ border: "1px solid #ccc", padding: "2mm 3mm", width: "28%" }}>{v2}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {/* Overall result */}
+            <div style={{ margin: "5mm 0", padding: "4mm 12mm", border: `3px solid ${overallPass ? "#16a34a" : "#dc2626"}`, display: "inline-block", borderRadius: "4px" }}>
+              <div style={{ fontSize: "13pt", fontWeight: "bold", color: overallPass ? "#16a34a" : "#dc2626" }}>
+                OVERALL RESULT: {overallPass ? "PASS ✓" : "FAIL ✗"}
+              </div>
+            </div>
+            {/* Confidentiality statement */}
+            <div style={{ background: "#fef9c3", border: "1px solid #fbbf24", borderRadius: "4px", padding: "4mm 6mm", marginTop: "7mm", fontSize: "8.5pt", textAlign: "left", lineHeight: "1.6" }}>
+              <strong>CONFIDENTIAL</strong> — This report is the confidential property of {lab.labName} and is issued solely
+              for the purpose of communicating test results to the named client. This report shall not be reproduced except
+              in full without the prior written approval of the issuing laboratory. This report relates only to the items
+              tested and shall not be interpreted as certification or approval of production.
             </div>
           </div>
 
-          <div className="p-8">
-            {/* ── SECTION 1: General Information ────────────────────────────── */}
-            <SecH num="1." title="General Information" />
-            <table className="w-full border-collapse text-xs mb-4">
+          {/* ── TABLE OF CONTENTS (page 2) ───────────────────────────────────── */}
+          <div style={{ pageBreakBefore: "always", pageBreakAfter: "always", padding: "15mm 20mm 15mm 20mm" }}>
+            <div style={{ fontSize: "15pt", fontWeight: "bold", color: "#1e3a5f", marginBottom: "6mm", borderBottom: "2px solid #1e3a5f", paddingBottom: "3mm", textTransform: "uppercase", letterSpacing: "1px" }}>
+              Table of Contents
+            </div>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "10.5pt" }}>
               <tbody>
-                {[
-                  ["Testing Laboratory", lab.labName],
-                  ["Address", lab.address],
-                  ["Phone / Email", `${lab.phone || "+91-20-1234-5678"} / ${lab.email}`],
-                  ["Accreditation Body", lab.accreditationBody],
-                  ["Accreditation Number", lab.accreditationNumber],
-                  ["Test Report Number", moduleInfo.testRef],
-                  ["Issue Date", today],
-                  ["Report Version", "1.0"],
-                  ["Standard(s) Applied", displayStandards.map(k => ({ "61215": "IEC 61215:2021", "61730": "IEC 61730:2023", "61853": "IEC 61853:2020", "61701": "IEC 61701:2020" }[k])).join("; ")],
-                  ["Test Period", "2026-01-15 to 2026-03-10"],
-                  ["Test Location", `${lab.labName} – Main Testing Hall`],
-                  ["Reference", "ISO/IEC 17025:2017"],
-                ].map(([k, v]) => (
-                  <tr key={k}>
-                    <td className="border border-gray-300 p-1.5 bg-gray-50 font-semibold w-1/3">{k}</td>
-                    <td className="border border-gray-300 p-1.5">{v}</td>
+                {([
+                  ["1.", "General Information", "3", false],
+                  ["2.", "Abbreviations & Definitions", "4", false],
+                  ["3.", "Product Description", "5", false],
+                  ["4.", "Test Equipment & Conditions", "6", false],
+                  ["5.", "Test Results Summary", "7", false],
+                  ["6.", "Detailed Test Results", "9", false],
+                  ["", "6.1  IEC 61215:2021 — Design Qualification (MQT 01–19)", "9", true],
+                  ["", "6.2  IEC 61730:2023 — Safety Qualification (MST 01–52)", "12", true],
+                  ["", "6.3  IEC 61853:2020 — Energy Performance & Rating", "14", true],
+                  ["", "6.4  IEC 61701:2020 — Salt Mist Corrosion (Severity 3)", "15", true],
+                  ["", "6.5  Visual Inspection Records", "17", true],
+                  ["7.", "Performance Data & Charts", "18", false],
+                  ["8.", "Conclusions & Certification Statement", "19", false],
+                  ["9.", "Signatories & Authorisation", "20", false],
+                  ["", "Annexures", "21", false],
+                ] as [string,string,string,boolean][]).map(([num, title, page, isSub], i) => (
+                  <tr key={i} style={{ borderBottom: "1px dotted #ddd" }}>
+                    <td style={{ padding: "1.5mm 2mm", width: "10mm", fontWeight: "600", color: "#1e3a5f", verticalAlign: "top" }}>{num}</td>
+                    <td style={{ padding: "1.5mm 2mm", color: isSub ? "#555" : "#1e3a5f", paddingLeft: isSub ? "8mm" : "2mm" }}>{title}</td>
+                    <td style={{ padding: "1.5mm 2mm", textAlign: "right", width: "15mm", color: "#888", fontFamily: "monospace" }}>{page}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
 
-            {/* ── SECTION 2: Product Description ────────────────────────────── */}
-            <SecH num="2." title="Product Description (Module Under Test)" />
-            <table className="w-full border-collapse text-xs mb-4">
-              <tbody>
-                <tr className="bg-gray-50"><td colSpan={4} className="border border-gray-300 p-1.5 font-bold text-gray-700">Module Identification</td></tr>
-                <tr>
-                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50 w-1/4">Manufacturer</td>
-                  <td className="border border-gray-300 p-1.5">{moduleInfo.manufacturer}</td>
-                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50 w-1/4">Model Number</td>
-                  <td className="border border-gray-300 p-1.5">{moduleInfo.model}</td>
-                </tr>
-                <tr>
-                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Serial Number</td>
-                  <td className="border border-gray-300 p-1.5">{moduleInfo.serial}</td>
-                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Cell Technology</td>
-                  <td className="border border-gray-300 p-1.5">{moduleInfo.cellType}</td>
-                </tr>
-                <tr className="bg-gray-50"><td colSpan={4} className="border border-gray-300 p-1.5 font-bold text-gray-700 mt-2">Electrical Characteristics at STC (1000 W/m², 25°C, AM 1.5G)</td></tr>
-                <tr>
-                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Rated Power (Pmax)</td>
-                  <td className="border border-gray-300 p-1.5">{moduleInfo.power}</td>
-                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Open Circuit Voltage (Voc)</td>
-                  <td className="border border-gray-300 p-1.5">49.28 V</td>
-                </tr>
-                <tr>
-                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Short Circuit Current (Isc)</td>
-                  <td className="border border-gray-300 p-1.5">10.48 A</td>
-                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Max Power Voltage (Vmp)</td>
-                  <td className="border border-gray-300 p-1.5">40.12 V</td>
-                </tr>
-                <tr>
-                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Max Power Current (Imp)</td>
-                  <td className="border border-gray-300 p-1.5">10.01 A</td>
-                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Fill Factor (FF)</td>
-                  <td className="border border-gray-300 p-1.5">0.782</td>
-                </tr>
-                <tr>
-                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Module Efficiency</td>
-                  <td className="border border-gray-300 p-1.5">21.4%</td>
-                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">NMOT</td>
-                  <td className="border border-gray-300 p-1.5">44.2 ± 1.5°C</td>
-                </tr>
-                <tr className="bg-gray-50"><td colSpan={4} className="border border-gray-300 p-1.5 font-bold text-gray-700">Physical Characteristics</td></tr>
-                <tr>
-                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Dimensions (L×W×D)</td>
-                  <td className="border border-gray-300 p-1.5">{moduleInfo.dims}</td>
-                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Weight</td>
-                  <td className="border border-gray-300 p-1.5">{moduleInfo.weight}</td>
-                </tr>
-                <tr>
-                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Number of Cells</td>
-                  <td className="border border-gray-300 p-1.5">{moduleInfo.cells}</td>
-                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Safety Class (IEC 61730)</td>
-                  <td className="border border-gray-300 p-1.5">{moduleInfo.safetyClass}</td>
-                </tr>
-                <tr>
-                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Max System Voltage</td>
-                  <td className="border border-gray-300 p-1.5">{moduleInfo.maxSysVoltage}</td>
-                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Temperature Coeff. Pmax (γ)</td>
-                  <td className="border border-gray-300 p-1.5">-0.348%/°C</td>
-                </tr>
-              </tbody>
-            </table>
+          {/* ── REPORT BODY ──────────────────────────────────────────────────── */}
+          <div style={{ padding: "0 20mm 10mm 20mm" }}>
 
-            {/* ── SECTION 3: Test Conditions & Equipment ─────────────────────── */}
-            <SecH num="3." title="Test Conditions & Equipment" />
-            <div className="text-xs text-gray-500 mb-2">Standard Test Conditions (STC): Irradiance 1000 W/m², Cell temp. 25°C, AM 1.5G (IEC 60904-3)</div>
-            <table className="w-full border-collapse text-xs mb-4">
-              <thead>
-                <tr className="bg-blue-900 text-white">
-                  {["Equipment", "ID / Model", "Class / Range", "Cal. Date", "Cal. Certificate"].map(h => (
-                    <th key={h} className="border border-blue-800 p-1.5 text-left font-semibold">{h}</th>
+            {/* ── SECTION 1: General Information ──────────────────────────── */}
+            <div style={{ pageBreakBefore: "always" }}>
+              <SecH num="1." title="General Information" />
+              <table className="w-full border-collapse text-xs mb-4">
+                <tbody>
+                  {[
+                    ["Testing Laboratory", lab.labName],
+                    ["Address", lab.address],
+                    ["Phone / Email", `${lab.phone || "+91-20-1234-5678"} / ${lab.email}`],
+                    ["Accreditation Body", lab.accreditationBody],
+                    ["Accreditation Number", lab.accreditationNumber],
+                    ["Test Report Number", moduleInfo.testRef],
+                    ["Issue Date", today],
+                    ["Report Version", "1.0"],
+                    ["Standard(s) Applied", displayStandards.map(k => ({ "61215": "IEC 61215:2021", "61730": "IEC 61730:2023", "61853": "IEC 61853:2020", "61701": "IEC 61701:2020" }[k])).join("; ")],
+                    ["Test Period", "2026-01-15 to 2026-03-10"],
+                    ["Test Location", `${lab.labName} – Main Testing Hall`],
+                    ["Reference Standard", "ISO/IEC 17025:2017"],
+                  ].map(([k, v]) => (
+                    <tr key={k}>
+                      <td className="border border-gray-300 p-1.5 bg-gray-50 font-semibold w-1/3">{k}</td>
+                      <td className="border border-gray-300 p-1.5">{v}</td>
+                    </tr>
                   ))}
-                </tr>
-              </thead>
-              <tbody>
-                {EQUIPMENT_TABLE.map((eq, i) => (
-                  <tr key={i} className={i % 2 === 0 ? "bg-gray-50" : ""}>
-                    <td className="border border-gray-300 p-1.5 font-semibold">{eq.equipment}</td>
-                    <td className="border border-gray-300 p-1.5 font-mono text-gray-600">{eq.id}</td>
-                    <td className="border border-gray-300 p-1.5">{eq.class}</td>
-                    <td className="border border-gray-300 p-1.5 font-mono">{eq.calDate}</td>
-                    <td className="border border-gray-300 p-1.5 font-mono text-gray-500">{eq.cert}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                </tbody>
+              </table>
+            </div>
 
-            {/* ── SECTION 4: Test Results Summary ───────────────────────────── */}
-            <SecH num="4." title="Test Results Summary" />
-            {printSummaries.map(({ key, std, title, results, pass, total }) => (
-              <div key={key} className="mb-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-semibold text-xs">{std}</span>
-                  <span className="text-gray-500 text-xs">— {title}</span>
-                  <span className={`ml-auto font-bold text-xs px-2 py-0.5 rounded ${pass === total ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                    {pass === total ? "PASS" : "FAIL"} ({pass}/{total})
-                  </span>
+            {/* ── SECTION 2: Abbreviations & Definitions ──────────────────── */}
+            <div style={{ pageBreakBefore: "always", pageBreakAfter: "always" }}>
+              <SecH num="2." title="Abbreviations & Definitions" />
+              <table className="w-full border-collapse text-xs mb-4">
+                <thead>
+                  <tr className="bg-blue-900 text-white">
+                    <th className="border border-blue-800 p-1.5 text-left font-semibold w-[15%]">Abbrev.</th>
+                    <th className="border border-blue-800 p-1.5 text-left font-semibold">Definition</th>
+                    <th className="border border-blue-800 p-1.5 text-left font-semibold w-[15%]">Abbrev.</th>
+                    <th className="border border-blue-800 p-1.5 text-left font-semibold">Definition</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {([
+                    ["STC", "Standard Test Conditions (1000 W/m², 25°C, AM 1.5G)", "MQT", "Module Quality Test (IEC 61215)"],
+                    ["NMOT", "Nominal Module Operating Temperature", "MST", "Module Safety Test (IEC 61730)"],
+                    ["Pmax", "Maximum Power Point Power", "EL", "Electroluminescence Imaging"],
+                    ["Isc", "Short Circuit Current", "IR", "Infrared Thermography"],
+                    ["Voc", "Open Circuit Voltage", "PID", "Potential Induced Degradation"],
+                    ["FF", "Fill Factor", "LeTID", "Light and elevated Temperature Induced Degradation"],
+                    ["Imp", "Current at Maximum Power Point", "TC", "Thermal Cycling (-40°C to +85°C)"],
+                    ["Vmp", "Voltage at Maximum Power Point", "DH", "Damp Heat (85°C / 85% RH)"],
+                    ["α (alpha)", "Temperature Coefficient of Isc", "HF", "Humidity-Freeze"],
+                    ["β (beta)", "Temperature Coefficient of Voc", "UV", "Ultraviolet Preconditioning"],
+                    ["γ (gamma)", "Temperature Coefficient of Pmax", "IAM", "Incidence Angle Modifier"],
+                    ["GUM", "Guide to Expression of Uncertainty in Measurement (ISO/IEC 98-3)", "TRF", "Test Report Form"],
+                    ["NABL", "National Accreditation Board for Testing & Calibration Laboratories", "IAS", "International Accreditation Service"],
+                    ["ISO", "International Organization for Standardization", "IEC", "International Electrotechnical Commission"],
+                  ] as [string,string,string,string][]).map(([a1, d1, a2, d2], i) => (
+                    <tr key={i} className={i % 2 === 0 ? "bg-gray-50" : ""}>
+                      <td className="border border-gray-300 p-1.5 font-mono font-bold text-blue-900">{a1}</td>
+                      <td className="border border-gray-300 p-1.5">{d1}</td>
+                      <td className="border border-gray-300 p-1.5 font-mono font-bold text-blue-900">{a2}</td>
+                      <td className="border border-gray-300 p-1.5">{d2}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* ── SECTION 3: Product Description ──────────────────────────── */}
+            <div style={{ pageBreakBefore: "always" }}>
+              <SecH num="3." title="Product Description (Module Under Test)" />
+              <table className="w-full border-collapse text-xs mb-4">
+                <tbody>
+                  <tr className="bg-gray-50"><td colSpan={4} className="border border-gray-300 p-1.5 font-bold text-gray-700">Module Identification</td></tr>
+                  <tr>
+                    <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50 w-1/4">Manufacturer</td>
+                    <td className="border border-gray-300 p-1.5">{moduleInfo.manufacturer}</td>
+                    <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50 w-1/4">Model Number</td>
+                    <td className="border border-gray-300 p-1.5">{moduleInfo.model}</td>
+                  </tr>
+                  <tr>
+                    <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Serial Number</td>
+                    <td className="border border-gray-300 p-1.5">{moduleInfo.serial}</td>
+                    <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Cell Technology</td>
+                    <td className="border border-gray-300 p-1.5">{moduleInfo.cellType}</td>
+                  </tr>
+                  <tr className="bg-gray-50"><td colSpan={4} className="border border-gray-300 p-1.5 font-bold text-gray-700">Electrical Characteristics at STC (1000 W/m², 25°C, AM 1.5G)</td></tr>
+                  <tr>
+                    <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Rated Power (Pmax)</td>
+                    <td className="border border-gray-300 p-1.5">{moduleInfo.power}</td>
+                    <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Open Circuit Voltage (Voc)</td>
+                    <td className="border border-gray-300 p-1.5">49.28 V</td>
+                  </tr>
+                  <tr>
+                    <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Short Circuit Current (Isc)</td>
+                    <td className="border border-gray-300 p-1.5">10.48 A</td>
+                    <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Max Power Voltage (Vmp)</td>
+                    <td className="border border-gray-300 p-1.5">40.12 V</td>
+                  </tr>
+                  <tr>
+                    <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Max Power Current (Imp)</td>
+                    <td className="border border-gray-300 p-1.5">10.01 A</td>
+                    <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Fill Factor (FF)</td>
+                    <td className="border border-gray-300 p-1.5">0.782</td>
+                  </tr>
+                  <tr>
+                    <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Module Efficiency</td>
+                    <td className="border border-gray-300 p-1.5">21.4%</td>
+                    <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">NMOT</td>
+                    <td className="border border-gray-300 p-1.5">44.2 ± 1.5°C</td>
+                  </tr>
+                  <tr className="bg-gray-50"><td colSpan={4} className="border border-gray-300 p-1.5 font-bold text-gray-700">Physical Characteristics</td></tr>
+                  <tr>
+                    <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Dimensions (L×W×D)</td>
+                    <td className="border border-gray-300 p-1.5">{moduleInfo.dims}</td>
+                    <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Weight</td>
+                    <td className="border border-gray-300 p-1.5">{moduleInfo.weight}</td>
+                  </tr>
+                  <tr>
+                    <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Number of Cells</td>
+                    <td className="border border-gray-300 p-1.5">{moduleInfo.cells}</td>
+                    <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Safety Class (IEC 61730)</td>
+                    <td className="border border-gray-300 p-1.5">{moduleInfo.safetyClass}</td>
+                  </tr>
+                  <tr>
+                    <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Max System Voltage</td>
+                    <td className="border border-gray-300 p-1.5">{moduleInfo.maxSysVoltage}</td>
+                    <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Temperature Coeff. Pmax (γ)</td>
+                    <td className="border border-gray-300 p-1.5">-0.348%/°C</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* ── SECTION 4: Test Conditions & Equipment ──────────────────── */}
+            <div style={{ pageBreakBefore: "always" }}>
+              <SecH num="4." title="Test Conditions & Equipment" />
+              <div className="text-xs text-gray-500 mb-2">Standard Test Conditions (STC): Irradiance 1000 W/m², Cell temp. 25°C ± 1°C, AM 1.5G (IEC 60904-3)</div>
+              <table className="w-full border-collapse text-xs mb-4">
+                <thead>
+                  <tr className="bg-blue-900 text-white">
+                    {["Equipment", "ID / Model", "Class / Range", "Cal. Date", "Cal. Certificate"].map(h => (
+                      <th key={h} className="border border-blue-800 p-1.5 text-left font-semibold">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {EQUIPMENT_TABLE.map((eq, i) => (
+                    <tr key={i} className={i % 2 === 0 ? "bg-gray-50" : ""} style={{ pageBreakInside: "avoid" }}>
+                      <td className="border border-gray-300 p-1.5 font-semibold">{eq.equipment}</td>
+                      <td className="border border-gray-300 p-1.5 font-mono text-gray-600">{eq.id}</td>
+                      <td className="border border-gray-300 p-1.5">{eq.class}</td>
+                      <td className="border border-gray-300 p-1.5 font-mono">{eq.calDate}</td>
+                      <td className="border border-gray-300 p-1.5 font-mono text-gray-500">{eq.cert}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* ── SECTION 5: Test Results Summary ─────────────────────────── */}
+            <div style={{ pageBreakBefore: "always" }}>
+              <SecH num="5." title="Test Results Summary" />
+              {printSummaries.map(({ key, std, title, results, pass, total }) => (
+                <div key={key} className="mb-4" style={{ pageBreakInside: "avoid" }}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-semibold text-xs">{std}</span>
+                    <span className="text-gray-500 text-xs">— {title}</span>
+                    <span className={`ml-auto font-bold text-xs px-2 py-0.5 rounded ${pass === total ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                      {pass === total ? "PASS" : "FAIL"} ({pass}/{total})
+                    </span>
+                  </div>
+                  <table className="w-full border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-gray-100">
+                        {["#", "Test ID / Clause", "Test Name", "Key Value", "Technician", "Date", "Result"].map(h => (
+                          <th key={h} className="border border-gray-300 p-1 text-left font-semibold">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {results.map((r, idx) => <TrfTableRow key={r.id} idx={idx} r={r} std={key} />)}
+                    </tbody>
+                  </table>
                 </div>
-                <table className="w-full border-collapse text-xs">
+              ))}
+            </div>
+
+            {/* ── SECTION 6: Detailed Test Results ────────────────────────── */}
+            <div style={{ pageBreakBefore: "always" }}>
+              <SecH num="6." title="Detailed Test Results" />
+              {printSummaries.map(({ key, std, results }, sIdx) => (
+                <div key={key} className="mb-6" style={{ pageBreakBefore: sIdx > 0 ? "always" : "auto" }}>
+                  <div className="font-bold text-xs text-blue-800 mb-2 mt-3 border-b border-blue-200 pb-1">
+                    6.{sIdx + 1}&nbsp;&nbsp;{std} — Detailed Results
+                  </div>
+                  {results.map((r, idx) => {
+                    const bg = r.pass ? "#f0fdf4" : "#fef2f2"
+                    const color = r.pass ? "#16a34a" : "#dc2626"
+                    return (
+                      <div key={r.id} className="border rounded mb-2" style={{ borderColor: r.pass ? "#bbf7d0" : "#fecaca", pageBreakInside: "avoid" }}>
+                        <div className="flex items-center justify-between px-2 py-1.5 text-xs" style={{ background: bg }}>
+                          <span className="font-semibold">{idx + 1}. {r.testName}</span>
+                          <span className="font-mono text-gray-400">{r.clause}</span>
+                          <span className="font-bold ml-2" style={{ color }}>{r.pass ? "✓ PASS" : "✗ FAIL"}</span>
+                        </div>
+                        <div className="px-2 py-1.5 grid grid-cols-3 gap-x-3 gap-y-0.5">
+                          {Object.entries(r.values).map(([k, v]) => (
+                            <div key={k} className="flex flex-col text-xs">
+                              <span className="text-gray-400 capitalize">{k.replace(/([A-Z])/g, " $1")}</span>
+                              <span className="font-mono font-semibold">{String(v)}</span>
+                            </div>
+                          ))}
+                          <div className="flex flex-col text-xs">
+                            <span className="text-gray-400">Technician</span>
+                            <span className="font-medium">{r.technician}</span>
+                          </div>
+                          <div className="flex flex-col text-xs">
+                            <span className="text-gray-400">Test Date</span>
+                            <span className="font-mono">{r.date}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              ))}
+
+              {/* 6.5 Visual Inspection Records */}
+              <div style={{ pageBreakBefore: "always" }}>
+                <div className="font-bold text-xs text-blue-800 mb-2 mt-3 border-b border-blue-200 pb-1">
+                  6.5&nbsp;&nbsp;Visual Inspection Records
+                </div>
+                <table className="w-full border-collapse text-xs mb-4">
                   <thead>
                     <tr className="bg-gray-100">
-                      {["#", "Test ID / Clause", "Test Name", "Key Value", "Technician", "Date", "Result"].map(h => (
-                        <th key={h} className="border border-gray-300 p-1 text-left font-semibold">{h}</th>
+                      {["Inspection Point", "Initial (Pre-test)", "Post-Stress (Final)", "Observations"].map(h => (
+                        <th key={h} className="border border-gray-300 p-1.5 text-left font-semibold">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {results.map((r, idx) => <TrfTableRow key={r.id} idx={idx} r={r} std={key} />)}
+                    {[
+                      ["Front Glass Surface", "Clear, no cracks, no delamination", "Clear, no new defects", "—"],
+                      ["Rear / Backsheet", "White, intact, no discoloration", "Intact, slight UV yellowing at edges", "Within acceptance"],
+                      ["Frame & Edges", "No burrs, all corners sealed", "No corrosion, seals intact", "—"],
+                      ["Junction Box & Connectors", "IP67, sealed, no moisture", "IP67, sealed, no moisture", "—"],
+                      ["Cells & Bus Bars", "No visible cracks, uniform colour", "No new cracks detected (EL confirmed)", "EL imaging performed"],
+                      ["Markings & Labels", "Legible, per IEC 61730 Cl.5", "All labels intact and legible", "—"],
+                    ].map(([point, initial, post, obs]) => (
+                      <tr key={point} style={{ pageBreakInside: "avoid" }}>
+                        <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">{point}</td>
+                        <td className="border border-gray-300 p-1.5 text-green-700">{initial}</td>
+                        <td className="border border-gray-300 p-1.5 text-green-700">{post}</td>
+                        <td className="border border-gray-300 p-1.5 text-gray-500 italic">{obs}</td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
-            ))}
+            </div>
 
-            {/* ── SECTION 5: Detailed Test Results ──────────────────────────── */}
-            <SecH num="5." title="Detailed Test Results" />
-            {printSummaries.map(({ key, std, results }) => (
-              <div key={key} className="mb-6">
-                <div className="font-bold text-xs text-blue-800 mb-2 mt-3">{std} — Detailed Results</div>
-                {results.map((r, idx) => {
-                  const bg = r.pass ? "#f0fdf4" : "#fef2f2"
-                  const color = r.pass ? "#16a34a" : "#dc2626"
-                  return (
-                    <div key={r.id} className="border rounded mb-2" style={{ borderColor: r.pass ? "#bbf7d0" : "#fecaca", pageBreakInside: "avoid" }}>
-                      <div className="flex items-center justify-between px-2 py-1.5 text-xs" style={{ background: bg }}>
-                        <span className="font-semibold">{idx + 1}. {r.testName}</span>
-                        <span className="font-mono text-gray-400">{r.clause}</span>
-                        <span className="font-bold ml-2" style={{ color }}>{r.pass ? "✓ PASS" : "✗ FAIL"}</span>
-                      </div>
-                      <div className="px-2 py-1.5 grid grid-cols-3 md:grid-cols-5 gap-x-3 gap-y-0.5">
-                        {Object.entries(r.values).map(([k, v]) => (
-                          <div key={k} className="flex flex-col text-xs">
-                            <span className="text-gray-400 capitalize text-xs">{k.replace(/([A-Z])/g, " $1")}</span>
-                            <span className="font-mono font-semibold">{String(v)}</span>
-                          </div>
-                        ))}
-                        <div className="flex flex-col text-xs">
-                          <span className="text-gray-400">Technician</span>
-                          <span className="font-medium">{r.technician}</span>
-                        </div>
-                        <div className="flex flex-col text-xs">
-                          <span className="text-gray-400">Test Date</span>
-                          <span className="font-mono">{r.date}</span>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            ))}
-
-            {/* ── SECTION 6: Visual Inspection Records ──────────────────────── */}
-            <SecH num="6." title="Visual Inspection Records" />
-            <table className="w-full border-collapse text-xs mb-4">
-              <thead>
-                <tr className="bg-gray-100">
-                  {["Inspection Point", "Initial (Pre-test)", "Post-Stress (Final)", "Observations"].map(h => (
-                    <th key={h} className="border border-gray-300 p-1.5 text-left font-semibold">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  ["Front Glass Surface", "Clear, no cracks, no delamination", "Clear, no new defects", "—"],
-                  ["Rear / Backsheet", "White, intact, no discoloration", "Intact, slight UV yellowing at edges", "Within acceptance"],
-                  ["Frame & Edges", "No burrs, all corners sealed", "No corrosion, seals intact", "—"],
-                  ["Junction Box & Connectors", "IP67, sealed, no moisture", "IP67, sealed, no moisture", "—"],
-                  ["Cells & Bus Bars", "No visible cracks, uniform colour", "No new cracks detected (EL confirmed)", "EL imaging performed"],
-                  ["Markings & Labels", "Legible, per IEC 61730 Cl.5", "All labels intact and legible", "—"],
-                ].map(([point, initial, post, obs]) => (
-                  <tr key={point}>
-                    <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">{point}</td>
-                    <td className="border border-gray-300 p-1.5 text-green-700">{initial}</td>
-                    <td className="border border-gray-300 p-1.5 text-green-700">{post}</td>
-                    <td className="border border-gray-300 p-1.5 text-gray-500 italic">{obs}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {/* ── SECTION 7: Performance Data (Charts) ──────────────────────── */}
+            {/* ── SECTION 7: Performance Data & Charts ────────────────────── */}
             {displayStandards.includes("61215") && (
-              <>
-                <SecH num="7." title="Performance Data" />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div>
+              <div style={{ pageBreakBefore: "always" }}>
+                <SecH num="7." title="Performance Data & Charts" />
+                {/* Two charts side-by-side using ResponsiveContainer for A4 fit */}
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="print-chart-col">
                     <div className="text-xs font-semibold mb-1 text-gray-600">Fig. 7.1 — Pmax Degradation Through IEC 61215 Test Sequence</div>
-                    <ComposedChart width={370} height={200} data={degradationData}>
-                      <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                      <XAxis dataKey="stage" tick={{ fontSize: 8 }} />
-                      <YAxis domain={[370, 410]} tick={{ fontSize: 8 }} label={{ value: "Pmax (W)", angle: -90, position: "insideLeft", fontSize: 8 }} />
-                      <Tooltip />
-                      <ReferenceLine y={401.5 * 0.95} stroke="#ef4444" strokeDasharray="5 3" label={{ value: "5% limit", fill: "#ef4444", fontSize: 7 }} />
-                      <Area type="monotone" dataKey="pmax" stroke="#2563eb" fill="#dbeafe" fillOpacity={0.5} name="Pmax (W)" dot={{ r: 3, fill: "#2563eb" }} strokeWidth={2} />
-                    </ComposedChart>
+                    <div style={{ height: "55mm", overflow: "hidden" }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <ComposedChart data={degradationData}>
+                          <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                          <XAxis dataKey="stage" tick={{ fontSize: 8 }} />
+                          <YAxis domain={[370, 410]} tick={{ fontSize: 8 }} label={{ value: "Pmax (W)", angle: -90, position: "insideLeft", fontSize: 8 }} />
+                          <Tooltip />
+                          <ReferenceLine y={401.5 * 0.95} stroke="#ef4444" strokeDasharray="5 3" label={{ value: "5% limit", fill: "#ef4444", fontSize: 7 }} />
+                          <Area type="monotone" dataKey="pmax" stroke="#2563eb" fill="#dbeafe" fillOpacity={0.5} name="Pmax (W)" dot={{ r: 3, fill: "#2563eb" }} strokeWidth={2} />
+                        </ComposedChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
-                  <div>
+                  <div className="print-chart-col">
                     <div className="text-xs font-semibold mb-1 text-gray-600">Fig. 7.2 — I-V & P-V Characteristics at STC (Initial)</div>
-                    <ComposedChart width={370} height={200} data={ivCurveData.filter((_, i) => i % 5 === 0)}>
-                      <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                      <XAxis dataKey="v" tick={{ fontSize: 8 }} label={{ value: "V (V)", position: "insideBottom", offset: -5, fontSize: 8 }} />
-                      <YAxis yAxisId="l" tick={{ fontSize: 8 }} label={{ value: "I (A)", angle: -90, position: "insideLeft", fontSize: 8 }} />
-                      <YAxis yAxisId="r" orientation="right" tick={{ fontSize: 8 }} label={{ value: "P (W)", angle: 90, position: "insideRight", fontSize: 8 }} />
-                      <Tooltip />
-                      <Line yAxisId="l" type="monotone" dataKey="i" stroke="#2563eb" name="I (A)" dot={false} strokeWidth={2} />
-                      <Line yAxisId="r" type="monotone" dataKey="p" stroke="#f97316" name="P (W)" dot={false} strokeWidth={2} />
-                    </ComposedChart>
+                    <div style={{ height: "55mm", overflow: "hidden" }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <ComposedChart data={ivCurveData.filter((_, i) => i % 5 === 0)}>
+                          <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                          <XAxis dataKey="v" tick={{ fontSize: 8 }} label={{ value: "V (V)", position: "insideBottom", offset: -5, fontSize: 8 }} />
+                          <YAxis yAxisId="l" tick={{ fontSize: 8 }} label={{ value: "I (A)", angle: -90, position: "insideLeft", fontSize: 8 }} />
+                          <YAxis yAxisId="r" orientation="right" tick={{ fontSize: 8 }} label={{ value: "P (W)", angle: 90, position: "insideRight", fontSize: 8 }} />
+                          <Tooltip />
+                          <Legend wrapperStyle={{ fontSize: 9 }} />
+                          <Line yAxisId="l" type="monotone" dataKey="i" stroke="#2563eb" name="I (A)" dot={false} strokeWidth={2} />
+                          <Line yAxisId="r" type="monotone" dataKey="p" stroke="#f97316" name="P (W)" dot={false} strokeWidth={2} />
+                        </ComposedChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
                 </div>
-                <table className="w-full border-collapse text-xs mb-4">
+                <table className="w-full border-collapse text-xs mb-4" style={{ pageBreakInside: "avoid" }}>
                   <thead>
                     <tr className="bg-gray-100">
                       <th className="border border-gray-300 p-1.5 text-left">Test Stage</th>
@@ -732,71 +888,118 @@ export default function IECFullReportView() {
                     })}
                   </tbody>
                 </table>
-              </>
+              </div>
             )}
 
-            {/* ── SECTION 8: Conclusions & Certification Statement ───────────── */}
-            <SecH num="8." title="Conclusions & Certification Statement" />
-            <div className="border border-gray-300 rounded p-4 mb-4 bg-gray-50 text-xs">
-              <p className="mb-2">
-                The photovoltaic module identified in Section 2 of this report has been tested in accordance with the requirements of{" "}
-                <strong>{templateConfig.title}</strong> at the testing laboratory identified in Section 1.
-              </p>
-              <p className="mb-2">
-                Based on the test results documented in this report, the module under test has{" "}
-                <strong className={overallPass ? "text-green-700" : "text-red-700"}>
-                  {overallPass ? "PASSED" : "FAILED"}
-                </strong>{" "}
-                all applicable test requirements. A total of{" "}
-                <strong>{allResultsForExport.filter(r => r.pass).length}</strong> of{" "}
-                <strong>{allResultsForExport.length}</strong> tests passed.
-              </p>
-              <p className="mb-2">
-                All measurements were performed using calibrated equipment as listed in Section 3 with valid traceability
-                to national/international standards. Measurement uncertainty is evaluated per GUM (ISO/IEC Guide 98-3)
-                and was found to be within acceptable limits for all measurements performed.
-              </p>
-              <p className="text-gray-500 italic">
-                Note: This test report relates only to the sample(s) tested and shall not be construed as certification
-                or approval of production. Results apply exclusively to the item(s) submitted for test.
-              </p>
+            {/* ── SECTION 8: Conclusions & Certification Statement ─────────── */}
+            <div style={{ pageBreakBefore: "always" }}>
+              <SecH num="8." title="Conclusions & Certification Statement" />
+              <div className="border border-gray-300 rounded p-4 mb-4 bg-gray-50 text-xs">
+                <p className="mb-2">
+                  The photovoltaic module identified in Section 3 of this report has been tested in accordance with the requirements of{" "}
+                  <strong>{templateConfig.title}</strong> at the testing laboratory identified in Section 1.
+                </p>
+                <p className="mb-2">
+                  Based on the test results documented in this report, the module under test has{" "}
+                  <strong className={overallPass ? "text-green-700" : "text-red-700"}>
+                    {overallPass ? "PASSED" : "FAILED"}
+                  </strong>{" "}
+                  all applicable test requirements. A total of{" "}
+                  <strong>{allResultsForExport.filter(r => r.pass).length}</strong> of{" "}
+                  <strong>{allResultsForExport.length}</strong> tests passed.
+                </p>
+                <p className="mb-2">
+                  All measurements were performed using calibrated equipment as listed in Section 4 with valid traceability
+                  to national/international standards. Measurement uncertainty is evaluated per GUM (ISO/IEC Guide 98-3)
+                  and was found to be within acceptable limits for all measurements performed.
+                </p>
+                <p className="text-gray-500 italic">
+                  Note: This test report relates only to the sample(s) tested and shall not be construed as certification
+                  or approval of production. Results apply exclusively to the item(s) submitted for test.
+                </p>
+              </div>
             </div>
 
-            {/* ── SECTION 9: Signatories ─────────────────────────────────────── */}
-            <SecH num="9." title="Signatories & Authorisation" />
-            <div className="grid grid-cols-3 gap-4 mb-4">
-              {[
-                { role: "Prepared By", name: "Dr. Rajesh Kumar", designation: "Senior Test Engineer", date: today },
-                { role: "Reviewed By", name: "Dr. Priya Sharma", designation: "Technical Manager", date: today },
-                { role: "Approved By", name: "Dr. Arun Patel", designation: "Laboratory Manager", date: today },
-              ].map(({ role, name, designation, date }) => (
-                <div key={role} className="border border-gray-300 rounded p-3">
-                  <div className="font-bold text-xs text-gray-600 mb-3">{role}</div>
-                  <div className="h-12 border-b border-dashed border-gray-400 mb-2" />
-                  <div className="font-semibold text-xs">{name}</div>
-                  <div className="text-xs text-gray-500">{designation}</div>
-                  <div className="text-xs text-gray-400 mt-1">Date: {date}</div>
-                </div>
-              ))}
+            {/* ── SECTION 9: Signatories ───────────────────────────────────── */}
+            <div style={{ pageBreakBefore: "always" }}>
+              <SecH num="9." title="Signatories & Authorisation" />
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                {[
+                  { role: "Prepared By", name: "Dr. Rajesh Kumar", designation: "Senior Test Engineer", date: today },
+                  { role: "Reviewed By", name: "Dr. Priya Sharma", designation: "Technical Manager", date: today },
+                  { role: "Approved By", name: "Dr. Arun Patel", designation: "Laboratory Manager", date: today },
+                ].map(({ role, name, designation, date }) => (
+                  <div key={role} className="border border-gray-300 rounded p-3">
+                    <div className="font-bold text-xs text-gray-600 mb-3">{role}</div>
+                    <div className="h-12 border-b border-dashed border-gray-400 mb-2" />
+                    <div className="font-semibold text-xs">{name}</div>
+                    <div className="text-xs text-gray-500">{designation}</div>
+                    <div className="text-xs text-gray-400 mt-1">Date: {date}</div>
+                  </div>
+                ))}
+              </div>
+              {/* Report footer disclaimer */}
+              <div className="border-t border-gray-200 pt-3 text-center text-xs text-gray-400">
+                <p>This report is issued under accreditation <strong>{lab.accreditationNumber}</strong> of{" "}
+                  <strong>{lab.accreditationBody}</strong>.</p>
+                <p>This report shall not be reproduced except in full without the written permission of the laboratory.</p>
+                <p className="mt-1">ISO/IEC 17025:2017 Compliant Test Report · {lab.labName} · {lab.email}</p>
+                <p className="mt-1 font-mono">{moduleInfo.testRef} · v1.0 · {today}</p>
+              </div>
             </div>
 
-            {/* Footer disclaimer */}
-            <div className="border-t border-gray-200 pt-3 text-center text-xs text-gray-400">
-              <p>This report is issued under accreditation <strong>{lab.accreditationNumber}</strong> of{" "}
-                <strong>{lab.accreditationBody}</strong>.</p>
-              <p>This report shall not be reproduced except in full without the written permission of the laboratory.</p>
-              <p className="mt-1">ISO/IEC 17025:2017 Compliant Test Report · {lab.labName} · {lab.email}</p>
-              <p className="mt-1 font-mono">{moduleInfo.testRef} · v1.0 · {today}</p>
-            </div>
+          </div>{/* end report body */}
+
+          {/* ── SCREEN FOOTER – visible on screen, hidden in print (replaced by @page margin box) ── */}
+          <div className="rpt-screen-ftr flex items-center justify-between border-t border-gray-300 bg-gray-50 px-6 py-2 text-xs text-gray-500">
+            <span>This report shall not be reproduced except in full without written approval of the issuing laboratory</span>
+            <span className="font-mono">{moduleInfo.testRef} · Issue Date: {today}</span>
           </div>
+
         </div>
       )}
 
       <style>{`
+        /* ─── A4 Print: @page margin boxes (Chrome/Edge) ──────────────────── */
         @media print {
-          body > *:not(#iec-print-report) { display: none !important; }
-          #iec-print-report { display: block !important; border: none !important; }
-          .page-break { page-break-before: always; }
+          @page {
+            size: A4 portrait;
+            margin: 25mm 20mm 22mm 20mm;
+            @top-left   { content: "${lab.labName}"; font-size: 8pt; font-family: Arial, sans-serif; color: #1e3a5f; }
+            @top-center { content: "Document No: ${moduleInfo.testRef}"; font-size: 8pt; font-family: Arial, sans-serif; }
+            @top-right  { content: "Rev: 00"; font-size: 8pt; font-family: Arial, sans-serif; }
+            @bottom-left   { content: "This report shall not be reproduced except in full without written approval"; font-size: 6.5pt; font-family: Arial, sans-serif; color: #555; }
+            @bottom-center { content: "Page " counter(page) " of " counter(pages); font-size: 8pt; font-family: Arial, sans-serif; }
+            @bottom-right  { content: "Issue Date: ${today}"; font-size: 7pt; font-family: Arial, sans-serif; }
+          }
+          /* Cover page: no running header/footer */
+          @page :first {
+            margin: 20mm 20mm 20mm 20mm;
+            @top-left { content: none; } @top-center { content: none; } @top-right { content: none; }
+            @bottom-left { content: none; } @bottom-center { content: none; } @bottom-right { content: none; }
+          }
+
+          /* Hide all UI; only the report renders */
+          body > * { display: none !important; }
+          #iec-print-report { display: block !important; margin: 0 !important; padding: 0 !important; border: none !important; }
+
+          /* Hide screen header/footer bands in print */
+          .rpt-screen-hdr, .rpt-screen-ftr { display: none !important; }
+
+          /* Charts: clamp to column width */
+          .print-chart-col { overflow: hidden; max-width: 79mm; }
+          .print-chart-col .recharts-wrapper,
+          .print-chart-col .recharts-surface { max-width: 100% !important; width: 100% !important; }
+
+          /* Tables: prevent horizontal overflow */
+          #iec-print-report table { max-width: 170mm; word-break: break-word; }
+          #iec-print-report td, #iec-print-report th { overflow-wrap: break-word; }
+          #iec-print-report tr { page-break-inside: avoid; break-inside: avoid; }
+        }
+
+        /* Screen: show header/footer bands */
+        @media screen {
+          .rpt-screen-hdr, .rpt-screen-ftr { display: flex; }
         }
       `}</style>
     </div>
