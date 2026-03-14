@@ -1065,7 +1065,7 @@ export default function IEC61730ReportPage() {
                     All measuring instruments and test equipment used in this testing campaign are calibrated by
                     NABL-accredited calibration laboratories. Calibration certificates are traceable to the{" "}
                     <strong>National Physical Laboratory (NPL), New Delhi</strong> for primary measurement standards
-                    and to <strong>BIPM</strong> via NABL's mutual recognition arrangement under the CIPM MRA.
+                    and to <strong>BIPM</strong> via NABL&apos;s mutual recognition arrangement under the CIPM MRA.
                   </p>
                   <p>
                     Calibration validity was verified prior to test commencement. All calibration due dates extend
