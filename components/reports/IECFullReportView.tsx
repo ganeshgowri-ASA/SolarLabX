@@ -9,11 +9,15 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import {
-  ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis,
-  CartesianGrid, Tooltip, Legend, ReferenceLine, ComposedChart, Area, Cell
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
+} from "@/components/ui/select"
+import {
+  ResponsiveContainer, LineChart, Line, ComposedChart, Area,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine
 } from "recharts"
-import { CheckCircle, XCircle, Printer, FileText, Sun, Zap, Droplets, TrendingUp } from "lucide-react"
+import { CheckCircle, XCircle, Printer, FileText, Sun, Zap, Droplets, TrendingUp, ChevronDown, ChevronUp } from "lucide-react"
 import { DEFAULT_LAB_DETAILS } from "@/lib/report-test-definitions"
+import { ExportToolbar } from "@/components/reports/ExportToolbar"
 
 // ─── Test Results Data ────────────────────────────────────────────────────────
 
@@ -95,7 +99,29 @@ const powerMatrixData = [100, 200, 400, 600, 800, 1000, 1100].map(G => ({
   T75: parseFloat((401.5 * G / 1000 * (1 - 0.00348 * 50)).toFixed(1)),
 }))
 
-// ─── Result Row ───────────────────────────────────────────────────────────────
+// ─── Equipment data for Section 3 ────────────────────────────────────────────
+
+const EQUIPMENT_TABLE = [
+  { equipment: "Solar Simulator", id: "SS-001 (Sinton 1000)", class: "Class A+A+A (IEC 60904-9 Ed.3)", calDate: "2026-01-10", cert: "CAL-SS-2026-01" },
+  { equipment: "Reference Cell", id: "RC-WPVS-01 (c-Si)", class: "Spec: 10×10 mm", calDate: "2026-01-05", cert: "CAL-RC-2026-01" },
+  { equipment: "TC Chamber", id: "ESPEC TSE-11-A", class: "-70°C to +180°C, ±1°C", calDate: "2026-01-08", cert: "CAL-CH-2026-02" },
+  { equipment: "HF/DH Chamber", id: "Memmert HCP 1080", class: "10–95°C, 10–98%RH, ±1°C/±2%", calDate: "2026-01-08", cert: "CAL-CH-2026-03" },
+  { equipment: "EL Camera", id: "Xenics Xeva-FPA-2.5-320", class: "320×256 px, InGaAs", calDate: "2026-01-12", cert: "CAL-EL-2026-01" },
+  { equipment: "Insulation Tester", id: "Fluke 1550C MegOhm Meter", class: "1000 V DC, 1 GΩ max", calDate: "2026-01-06", cert: "CAL-IT-2026-01" },
+  { equipment: "Hi-Pot Tester", id: "Chroma 19053", class: "0–6 kV DC/AC, 0–10 mA", calDate: "2026-01-06", cert: "CAL-HP-2026-01" },
+]
+
+// ─── Section heading helper ───────────────────────────────────────────────────
+
+function SecH({ num, title }: { num: string; title: string }) {
+  return (
+    <div className="text-xs font-bold text-blue-900 border-b-2 border-blue-700 pb-1 mb-2 mt-5 uppercase tracking-wide">
+      {num} {title}
+    </div>
+  )
+}
+
+// ─── Test Result Row ──────────────────────────────────────────────────────────
 
 function TestRow({ r, idx }: { r: any; idx: number }) {
   return (
@@ -128,19 +154,43 @@ function TestRow({ r, idx }: { r: any; idx: number }) {
   )
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// ─── TRF Section 4 Summary Table Row ─────────────────────────────────────────
+
+function TrfTableRow({ idx, r, std }: { idx: number; r: any; std: string }) {
+  const keyVal = Object.values(r.values)[0] || "—"
+  return (
+    <tr className={r.pass ? "" : "bg-red-50"}>
+      <td className="border border-gray-300 p-1 text-center text-gray-400">{idx + 1}</td>
+      <td className="border border-gray-300 p-1 font-mono text-gray-500 whitespace-nowrap">{r.clause.split(" /")[0]}</td>
+      <td className="border border-gray-300 p-1">{r.testName}</td>
+      <td className="border border-gray-300 p-1 text-gray-600 text-xs">{String(keyVal)}</td>
+      <td className="border border-gray-300 p-1 whitespace-nowrap text-gray-500">{r.technician}</td>
+      <td className="border border-gray-300 p-1 font-mono whitespace-nowrap text-gray-500">{r.date}</td>
+      <td className={`border border-gray-300 p-1 text-center font-bold ${r.pass ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
+        {r.pass ? "PASS" : "FAIL"}
+      </td>
+    </tr>
+  )
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function IECFullReportView() {
   const [activeStd, setActiveStd] = useState("61215")
   const [showPrintView, setShowPrintView] = useState(false)
+  const [selectedTemplate, setSelectedTemplate] = useState("full")
   const [moduleInfo, setModuleInfo] = useState({
     manufacturer: "SolarTech Industries Pvt. Ltd.",
     model: "STI-400M-HJT", serial: "STI2025-041-001",
     power: "400 Wp", dims: "1755×1038×35 mm",
     cellType: "HJT (Heterojunction)", cells: "144 half-cut (6×24)",
     testRef: "TR-2026-0089",
+    weight: "22.5 kg",
+    safetyClass: "Class II (Double insulated)",
+    maxSysVoltage: "1500 V DC",
   })
 
+  const printRef = useRef<HTMLDivElement>(null)
   const lab = DEFAULT_LAB_DETAILS
   const today = "2026-03-10"
 
@@ -152,9 +202,45 @@ export default function IECFullReportView() {
   }
   const overallPass = Object.values(summaries).every(s => s.pass === s.total)
 
+  // Template → display configuration
+  const templateConfig = useMemo(() => {
+    const configs = {
+      "61215": { title: "IEC 61215:2021 Design Qualification TRF", standards: ["61215"] },
+      "61730": { title: "IEC 61730:2023 Safety Qualification TRF", standards: ["61730"] },
+      "combined": { title: "IEC 61215:2021 + IEC 61730:2023 Combined TRF", standards: ["61215", "61730"] },
+      "full": { title: "IEC 61215 / IEC 61730 / IEC 61853 / IEC 61701 Multi-Standard TRF", standards: ["61215", "61730", "61853", "61701"] },
+      "custom": { title: "Custom Lab Test Report", standards: ["61215", "61730", "61853", "61701"] },
+    }
+    return configs[selectedTemplate] || configs["full"]
+  }, [selectedTemplate])
+
+  const displayStandards = templateConfig.standards
+
+  // Flatten all results for export (standard-tagged)
+  const allResultsForExport = useMemo(() => {
+    const map = {
+      "61215": IEC_61215_RESULTS.map(r => ({ ...r, standard: "IEC 61215:2021" })),
+      "61730": IEC_61730_RESULTS.map(r => ({ ...r, standard: "IEC 61730:2023" })),
+      "61853": IEC_61853_RESULTS.map(r => ({ ...r, standard: "IEC 61853:2020" })),
+      "61701": IEC_61701_RESULTS.map(r => ({ ...r, standard: "IEC 61701:2020" })),
+    }
+    return displayStandards.flatMap(s => map[s] || [])
+  }, [displayStandards])
+
+  const printSummaries = useMemo(() => {
+    const s = summaries
+    return displayStandards.map(k => ({
+      key: k,
+      std: { "61215": "IEC 61215:2021", "61730": "IEC 61730:2023", "61853": "IEC 61853:2020", "61701": "IEC 61701:2020" }[k],
+      title: { "61215": "Design Qualification & Type Approval", "61730": "Module Safety Qualification", "61853": "Energy Performance & Rating", "61701": "Salt Mist Corrosion (Severity 3 – 96h)" }[k],
+      results: { "61215": IEC_61215_RESULTS, "61730": IEC_61730_RESULTS, "61853": IEC_61853_RESULTS, "61701": IEC_61701_RESULTS }[k],
+      ...s[k],
+    }))
+  }, [displayStandards])
+
   return (
     <div className="space-y-4">
-      {/* Config panel */}
+      {/* ─── Config panel ─────────────────────────────────────────────────── */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
@@ -163,8 +249,9 @@ export default function IECFullReportView() {
           </CardTitle>
           <CardDescription className="text-xs">IEC 61215:2021 / IEC 61730:2023 / IEC 61853:2020 / IEC 61701:2020 – All MQTs/MSTs</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+        <CardContent className="space-y-3">
+          {/* Editable module info */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[["Manufacturer", "manufacturer"], ["Model", "model"], ["Serial No.", "serial"], ["Test Ref.", "testRef"]].map(([lbl, key]) => (
               <div key={key} className="space-y-0.5">
                 <Label className="text-xs">{lbl}</Label>
@@ -172,18 +259,48 @@ export default function IECFullReportView() {
               </div>
             ))}
           </div>
-          <div className="flex gap-2">
-            <Button size="sm" className="h-7 text-xs bg-blue-600 hover:bg-blue-700" onClick={() => window.print()}>
-              <Printer className="h-3 w-3 mr-1" /> Print / Save as PDF
-            </Button>
-            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setShowPrintView(!showPrintView)}>
+
+          {/* Template selector + Export toolbar */}
+          <div className="flex flex-wrap items-center gap-3 pt-1 border-t">
+            <div className="flex items-center gap-2">
+              <Label className="text-xs font-medium whitespace-nowrap">Report Template:</Label>
+              <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+                <SelectTrigger className="h-7 text-xs w-64">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="full" className="text-xs">Full Multi-Standard (IEC 61215 + 61730 + 61853 + 61701)</SelectItem>
+                  <SelectItem value="61215" className="text-xs">IEC 61215:2021 TRF (Design Qualification)</SelectItem>
+                  <SelectItem value="61730" className="text-xs">IEC 61730:2023 TRF (Safety Qualification)</SelectItem>
+                  <SelectItem value="combined" className="text-xs">Combined IEC 61215 + IEC 61730 TRF</SelectItem>
+                  <SelectItem value="custom" className="text-xs">Custom Lab Report Format</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <ExportToolbar
+              printRef={printRef}
+              reportNumber={moduleInfo.testRef}
+              reportTitle={templateConfig.title}
+              allResults={allResultsForExport}
+              isPrintVisible={showPrintView}
+              setIsPrintVisible={setShowPrintView}
+            />
+
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs"
+              onClick={() => setShowPrintView(!showPrintView)}
+            >
+              {showPrintView ? <ChevronUp className="h-3.5 w-3.5 mr-1" /> : <ChevronDown className="h-3.5 w-3.5 mr-1" />}
               {showPrintView ? "Hide" : "Show"} Full Report
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Compliance overview */}
+      {/* ─── Compliance overview cards ─────────────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { std: "61215", label: "IEC 61215:2021", desc: "Design Qualification", color: "border-l-blue-500", icon: Sun },
@@ -212,7 +329,7 @@ export default function IECFullReportView() {
         })}
       </div>
 
-      {/* Tabbed test results */}
+      {/* ─── Interactive tabbed test results ──────────────────────────────── */}
       <Tabs value={activeStd} onValueChange={setActiveStd}>
         <TabsList className="bg-muted">
           <TabsTrigger value="61215" className="text-xs">IEC 61215 ({summaries["61215"].total} tests)</TabsTrigger>
@@ -294,12 +411,12 @@ export default function IECFullReportView() {
                     {powerMatrixData.map(row => (
                       <tr key={row.G}>
                         <td className="border p-1.5 font-semibold bg-gray-50">{row.G}</td>
-                        {["T15", "T25", "T50", "T75"].map((k, ti) => {
+                        {["T15", "T25", "T50", "T75"].map((k) => {
                           const pmax = (row as any)[k]
                           const ratio = pmax / 420
                           return (
                             <td key={k} className="border p-1.5 text-center font-mono"
-                                style={{ backgroundColor: `rgba(37,99,235,${Math.min(ratio, 1).toFixed(2)})`, color: ratio > 0.5 ? "white" : "inherit" }}>
+                              style={{ backgroundColor: `rgba(37,99,235,${Math.min(ratio, 1).toFixed(2)})`, color: ratio > 0.5 ? "white" : "inherit" }}>
                               {pmax}
                             </td>
                           )
@@ -324,133 +441,352 @@ export default function IECFullReportView() {
         </TabsContent>
       </Tabs>
 
-      {/* ═══ PRINT-READY REPORT ═══════════════════════════════════════ */}
+      {/* ═══════════════════════════════════════════════════════════════════════
+          PRINT / EXPORT REPORT – IEC TRF FORMAT (Sections 1–9)
+          ═══════════════════════════════════════════════════════════════════════ */}
       {showPrintView && (
-        <div className="mt-6 border-4 border-gray-800 p-6 print:border-0" id="iec-print-report">
-          {/* Cover */}
-          <div className="text-center mb-8 pb-6 border-b-2 border-gray-300">
-            <div className="text-xl font-bold">{lab.labName}</div>
-            <div className="text-sm text-gray-500">{lab.accreditationBody}</div>
-            <div className="text-xs text-gray-400">Accreditation No: {lab.accreditationNumber} | {lab.address}</div>
-            <div className="mt-4 text-2xl font-bold text-blue-900">PHOTOVOLTAIC MODULE TEST REPORT</div>
-            <div className="text-base font-semibold text-gray-700 mt-1">
-              IEC 61215:2021 / IEC 61730:2023 / IEC 61853:2020 / IEC 61701:2020
+        <div
+          ref={printRef}
+          id="iec-print-report"
+          className="mt-6 border-4 border-gray-800 bg-white print:border-0"
+          style={{ fontFamily: "Arial, sans-serif", fontSize: "11px", lineHeight: "1.5" }}
+        >
+          {/* ── COVER PAGE ──────────────────────────────────────────────────── */}
+          <div className="bg-blue-900 text-white text-center py-8 px-6">
+            <div className="text-xs tracking-widest mb-3 opacity-60">CONFIDENTIAL</div>
+            <div className="text-2xl font-bold mb-1">{lab.labName}</div>
+            <div className="text-xs opacity-80 mb-1">{lab.address}</div>
+            <div className="text-xs opacity-70">Accreditation: {lab.accreditationNumber} · {lab.accreditationBody}</div>
+            <div className="mt-5 mb-3 h-px bg-white opacity-30" />
+            <div className="text-3xl font-bold tracking-tight mb-2">PHOTOVOLTAIC MODULE</div>
+            <div className="text-2xl font-bold mb-1">TEST REPORT</div>
+            <div className="text-base font-semibold opacity-90 mt-2">{templateConfig.title}</div>
+            <div className="mt-5 h-px bg-white opacity-30" />
+            <div className="mt-4 grid grid-cols-3 gap-4 text-xs">
+              <div><div className="opacity-60 mb-1">REPORT NUMBER</div><div className="font-bold text-sm">{moduleInfo.testRef}</div></div>
+              <div><div className="opacity-60 mb-1">ISSUE DATE</div><div className="font-bold text-sm">{today}</div></div>
+              <div><div className="opacity-60 mb-1">OVERALL RESULT</div><div className={`font-bold text-lg ${overallPass ? "text-green-300" : "text-red-300"}`}>{overallPass ? "PASS" : "FAIL"}</div></div>
             </div>
           </div>
 
-          {/* Module + Report info */}
-          <div className="grid grid-cols-2 gap-6 mb-6 text-xs">
-            <div>
-              <div className="font-bold text-gray-600 uppercase text-xs mb-2">Module Under Test</div>
-              {[["Manufacturer", moduleInfo.manufacturer], ["Model", moduleInfo.model], ["Serial No.", moduleInfo.serial], ["Rated Power", moduleInfo.power], ["Dimensions", moduleInfo.dims], ["Cell Technology", moduleInfo.cellType]].map(([k, v]) => (
-                <div key={k} className="flex gap-2 mb-0.5"><span className="text-gray-400 w-28 shrink-0">{k}:</span><span className="font-medium">{v}</span></div>
-              ))}
-            </div>
-            <div>
-              <div className="font-bold text-gray-600 uppercase text-xs mb-2">Report Details</div>
-              {[["Report No.", moduleInfo.testRef], ["Report Date", today], ["Test Period", "2026-01-15 to 2026-03-10"], ["Prepared By", "Dr. Rajesh Kumar"], ["Reviewed By", "Dr. Priya Sharma"], ["Overall Result", overallPass ? "PASS" : "FAIL"]].map(([k, v]) => (
-                <div key={k} className="flex gap-2 mb-0.5">
-                  <span className="text-gray-400 w-28 shrink-0">{k}:</span>
-                  <span className={`font-medium ${k === "Overall Result" ? (overallPass ? "text-green-700 font-bold" : "text-red-700 font-bold") : ""}`}>{v}</span>
+          <div className="p-8">
+            {/* ── SECTION 1: General Information ────────────────────────────── */}
+            <SecH num="1." title="General Information" />
+            <table className="w-full border-collapse text-xs mb-4">
+              <tbody>
+                {[
+                  ["Testing Laboratory", lab.labName],
+                  ["Address", lab.address],
+                  ["Phone / Email", `${lab.phone || "+91-20-1234-5678"} / ${lab.email}`],
+                  ["Accreditation Body", lab.accreditationBody],
+                  ["Accreditation Number", lab.accreditationNumber],
+                  ["Test Report Number", moduleInfo.testRef],
+                  ["Issue Date", today],
+                  ["Report Version", "1.0"],
+                  ["Standard(s) Applied", displayStandards.map(k => ({ "61215": "IEC 61215:2021", "61730": "IEC 61730:2023", "61853": "IEC 61853:2020", "61701": "IEC 61701:2020" }[k])).join("; ")],
+                  ["Test Period", "2026-01-15 to 2026-03-10"],
+                  ["Test Location", `${lab.labName} – Main Testing Hall`],
+                  ["Reference", "ISO/IEC 17025:2017"],
+                ].map(([k, v]) => (
+                  <tr key={k}>
+                    <td className="border border-gray-300 p-1.5 bg-gray-50 font-semibold w-1/3">{k}</td>
+                    <td className="border border-gray-300 p-1.5">{v}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* ── SECTION 2: Product Description ────────────────────────────── */}
+            <SecH num="2." title="Product Description (Module Under Test)" />
+            <table className="w-full border-collapse text-xs mb-4">
+              <tbody>
+                <tr className="bg-gray-50"><td colSpan={4} className="border border-gray-300 p-1.5 font-bold text-gray-700">Module Identification</td></tr>
+                <tr>
+                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50 w-1/4">Manufacturer</td>
+                  <td className="border border-gray-300 p-1.5">{moduleInfo.manufacturer}</td>
+                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50 w-1/4">Model Number</td>
+                  <td className="border border-gray-300 p-1.5">{moduleInfo.model}</td>
+                </tr>
+                <tr>
+                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Serial Number</td>
+                  <td className="border border-gray-300 p-1.5">{moduleInfo.serial}</td>
+                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Cell Technology</td>
+                  <td className="border border-gray-300 p-1.5">{moduleInfo.cellType}</td>
+                </tr>
+                <tr className="bg-gray-50"><td colSpan={4} className="border border-gray-300 p-1.5 font-bold text-gray-700 mt-2">Electrical Characteristics at STC (1000 W/m², 25°C, AM 1.5G)</td></tr>
+                <tr>
+                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Rated Power (Pmax)</td>
+                  <td className="border border-gray-300 p-1.5">{moduleInfo.power}</td>
+                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Open Circuit Voltage (Voc)</td>
+                  <td className="border border-gray-300 p-1.5">49.28 V</td>
+                </tr>
+                <tr>
+                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Short Circuit Current (Isc)</td>
+                  <td className="border border-gray-300 p-1.5">10.48 A</td>
+                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Max Power Voltage (Vmp)</td>
+                  <td className="border border-gray-300 p-1.5">40.12 V</td>
+                </tr>
+                <tr>
+                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Max Power Current (Imp)</td>
+                  <td className="border border-gray-300 p-1.5">10.01 A</td>
+                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Fill Factor (FF)</td>
+                  <td className="border border-gray-300 p-1.5">0.782</td>
+                </tr>
+                <tr>
+                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Module Efficiency</td>
+                  <td className="border border-gray-300 p-1.5">21.4%</td>
+                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">NMOT</td>
+                  <td className="border border-gray-300 p-1.5">44.2 ± 1.5°C</td>
+                </tr>
+                <tr className="bg-gray-50"><td colSpan={4} className="border border-gray-300 p-1.5 font-bold text-gray-700">Physical Characteristics</td></tr>
+                <tr>
+                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Dimensions (L×W×D)</td>
+                  <td className="border border-gray-300 p-1.5">{moduleInfo.dims}</td>
+                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Weight</td>
+                  <td className="border border-gray-300 p-1.5">{moduleInfo.weight}</td>
+                </tr>
+                <tr>
+                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Number of Cells</td>
+                  <td className="border border-gray-300 p-1.5">{moduleInfo.cells}</td>
+                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Safety Class (IEC 61730)</td>
+                  <td className="border border-gray-300 p-1.5">{moduleInfo.safetyClass}</td>
+                </tr>
+                <tr>
+                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Max System Voltage</td>
+                  <td className="border border-gray-300 p-1.5">{moduleInfo.maxSysVoltage}</td>
+                  <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">Temperature Coeff. Pmax (γ)</td>
+                  <td className="border border-gray-300 p-1.5">-0.348%/°C</td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* ── SECTION 3: Test Conditions & Equipment ─────────────────────── */}
+            <SecH num="3." title="Test Conditions & Equipment" />
+            <div className="text-xs text-gray-500 mb-2">Standard Test Conditions (STC): Irradiance 1000 W/m², Cell temp. 25°C, AM 1.5G (IEC 60904-3)</div>
+            <table className="w-full border-collapse text-xs mb-4">
+              <thead>
+                <tr className="bg-blue-900 text-white">
+                  {["Equipment", "ID / Model", "Class / Range", "Cal. Date", "Cal. Certificate"].map(h => (
+                    <th key={h} className="border border-blue-800 p-1.5 text-left font-semibold">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {EQUIPMENT_TABLE.map((eq, i) => (
+                  <tr key={i} className={i % 2 === 0 ? "bg-gray-50" : ""}>
+                    <td className="border border-gray-300 p-1.5 font-semibold">{eq.equipment}</td>
+                    <td className="border border-gray-300 p-1.5 font-mono text-gray-600">{eq.id}</td>
+                    <td className="border border-gray-300 p-1.5">{eq.class}</td>
+                    <td className="border border-gray-300 p-1.5 font-mono">{eq.calDate}</td>
+                    <td className="border border-gray-300 p-1.5 font-mono text-gray-500">{eq.cert}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* ── SECTION 4: Test Results Summary ───────────────────────────── */}
+            <SecH num="4." title="Test Results Summary" />
+            {printSummaries.map(({ key, std, title, results, pass, total }) => (
+              <div key={key} className="mb-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-semibold text-xs">{std}</span>
+                  <span className="text-gray-500 text-xs">— {title}</span>
+                  <span className={`ml-auto font-bold text-xs px-2 py-0.5 rounded ${pass === total ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                    {pass === total ? "PASS" : "FAIL"} ({pass}/{total})
+                  </span>
                 </div>
-              ))}
-            </div>
-          </div>
+                <table className="w-full border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      {["#", "Test ID / Clause", "Test Name", "Key Value", "Technician", "Date", "Result"].map(h => (
+                        <th key={h} className="border border-gray-300 p-1 text-left font-semibold">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {results.map((r, idx) => <TrfTableRow key={r.id} idx={idx} r={r} std={key} />)}
+                  </tbody>
+                </table>
+              </div>
+            ))}
 
-          {/* Compliance Summary Table */}
-          <div className="mb-6">
-            <div className="text-sm font-bold border-b border-gray-300 pb-1 mb-2">COMPLIANCE SUMMARY</div>
-            <table className="w-full text-xs border-collapse">
+            {/* ── SECTION 5: Detailed Test Results ──────────────────────────── */}
+            <SecH num="5." title="Detailed Test Results" />
+            {printSummaries.map(({ key, std, results }) => (
+              <div key={key} className="mb-6">
+                <div className="font-bold text-xs text-blue-800 mb-2 mt-3">{std} — Detailed Results</div>
+                {results.map((r, idx) => {
+                  const bg = r.pass ? "#f0fdf4" : "#fef2f2"
+                  const color = r.pass ? "#16a34a" : "#dc2626"
+                  return (
+                    <div key={r.id} className="border rounded mb-2" style={{ borderColor: r.pass ? "#bbf7d0" : "#fecaca", pageBreakInside: "avoid" }}>
+                      <div className="flex items-center justify-between px-2 py-1.5 text-xs" style={{ background: bg }}>
+                        <span className="font-semibold">{idx + 1}. {r.testName}</span>
+                        <span className="font-mono text-gray-400">{r.clause}</span>
+                        <span className="font-bold ml-2" style={{ color }}>{r.pass ? "✓ PASS" : "✗ FAIL"}</span>
+                      </div>
+                      <div className="px-2 py-1.5 grid grid-cols-3 md:grid-cols-5 gap-x-3 gap-y-0.5">
+                        {Object.entries(r.values).map(([k, v]) => (
+                          <div key={k} className="flex flex-col text-xs">
+                            <span className="text-gray-400 capitalize text-xs">{k.replace(/([A-Z])/g, " $1")}</span>
+                            <span className="font-mono font-semibold">{String(v)}</span>
+                          </div>
+                        ))}
+                        <div className="flex flex-col text-xs">
+                          <span className="text-gray-400">Technician</span>
+                          <span className="font-medium">{r.technician}</span>
+                        </div>
+                        <div className="flex flex-col text-xs">
+                          <span className="text-gray-400">Test Date</span>
+                          <span className="font-mono">{r.date}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ))}
+
+            {/* ── SECTION 6: Visual Inspection Records ──────────────────────── */}
+            <SecH num="6." title="Visual Inspection Records" />
+            <table className="w-full border-collapse text-xs mb-4">
               <thead>
                 <tr className="bg-gray-100">
-                  {["Standard", "Title", "Tests", "Pass", "Fail", "Result"].map(h => (
-                    <th key={h} className="border border-gray-300 p-1.5 text-left">{h}</th>
+                  {["Inspection Point", "Initial (Pre-test)", "Post-Stress (Final)", "Observations"].map(h => (
+                    <th key={h} className="border border-gray-300 p-1.5 text-left font-semibold">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {[
-                  { std: "IEC 61215:2021", title: "Design Qualification & Type Approval", key: "61215" },
-                  { std: "IEC 61730:2023", title: "Module Safety Qualification", key: "61730" },
-                  { std: "IEC 61853:2020", title: "Energy Performance & Rating", key: "61853" },
-                  { std: "IEC 61701:2020", title: "Salt Mist Corrosion (Severity 3 – 96h)", key: "61701" },
-                ].map(({ std, title, key }) => {
-                  const s = summaries[key as keyof typeof summaries]
-                  return (
-                    <tr key={std}>
-                      <td className="border border-gray-300 p-1.5 font-semibold">{std}</td>
-                      <td className="border border-gray-300 p-1.5 text-gray-600">{title}</td>
-                      <td className="border border-gray-300 p-1.5 text-center">{s.total}</td>
-                      <td className="border border-gray-300 p-1.5 text-center text-green-700 font-bold">{s.pass}</td>
-                      <td className="border border-gray-300 p-1.5 text-center text-red-700">{s.total - s.pass || "–"}</td>
-                      <td className={`border border-gray-300 p-1.5 text-center font-bold ${s.pass === s.total ? "text-green-700" : "text-red-700"}`}>{s.pass === s.total ? "PASS" : "FAIL"}</td>
-                    </tr>
-                  )
-                })}
+                  ["Front Glass Surface", "Clear, no cracks, no delamination", "Clear, no new defects", "—"],
+                  ["Rear / Backsheet", "White, intact, no discoloration", "Intact, slight UV yellowing at edges", "Within acceptance"],
+                  ["Frame & Edges", "No burrs, all corners sealed", "No corrosion, seals intact", "—"],
+                  ["Junction Box & Connectors", "IP67, sealed, no moisture", "IP67, sealed, no moisture", "—"],
+                  ["Cells & Bus Bars", "No visible cracks, uniform colour", "No new cracks detected (EL confirmed)", "EL imaging performed"],
+                  ["Markings & Labels", "Legible, per IEC 61730 Cl.5", "All labels intact and legible", "—"],
+                ].map(([point, initial, post, obs]) => (
+                  <tr key={point}>
+                    <td className="border border-gray-300 p-1.5 font-semibold bg-gray-50">{point}</td>
+                    <td className="border border-gray-300 p-1.5 text-green-700">{initial}</td>
+                    <td className="border border-gray-300 p-1.5 text-green-700">{post}</td>
+                    <td className="border border-gray-300 p-1.5 text-gray-500 italic">{obs}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
-          </div>
 
-          {/* Detailed results tables per standard */}
-          {[
-            { label: "IEC 61215:2021 – Design Qualification Test Results", results: IEC_61215_RESULTS, color: "text-blue-900 border-blue-400" },
-            { label: "IEC 61730:2023 – Safety Qualification Test Results", results: IEC_61730_RESULTS, color: "text-purple-900 border-purple-400" },
-            { label: "IEC 61853:2020 – Energy Performance Test Results", results: IEC_61853_RESULTS, color: "text-green-900 border-green-400" },
-            { label: "IEC 61701:2020 – Salt Mist Corrosion Test Results", results: IEC_61701_RESULTS, color: "text-orange-900 border-orange-400" },
-          ].map(({ label, results, color }) => (
-            <div key={label} className="mb-6">
-              <div className={`text-sm font-bold border-b-2 pb-1 mb-2 ${color}`}>{label}</div>
-              <table className="w-full text-xs border-collapse">
-                <thead>
-                  <tr className="bg-gray-50">
-                    {["#", "Clause", "Test Name", "Key Values", "Technician", "Date", "Result"].map(h => (
-                      <th key={h} className="border border-gray-300 p-1.5 text-left font-semibold">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {results.map((r, idx) => (
-                    <tr key={r.id} className={r.pass ? "" : "bg-red-50"}>
-                      <td className="border border-gray-300 p-1.5 text-gray-400">{idx + 1}</td>
-                      <td className="border border-gray-300 p-1.5 font-mono text-gray-500 whitespace-nowrap">{r.clause.split(" /")[0]}</td>
-                      <td className="border border-gray-300 p-1.5 font-medium">{r.testName}</td>
-                      <td className="border border-gray-300 p-1.5 text-gray-600">
-                        {Object.entries(r.values).slice(0, 3).map(([k, v]) => `${k}: ${v}`).join("; ")}
-                      </td>
-                      <td className="border border-gray-300 p-1.5 whitespace-nowrap">{r.technician}</td>
-                      <td className="border border-gray-300 p-1.5 font-mono whitespace-nowrap">{r.date}</td>
-                      <td className={`border border-gray-300 p-1.5 text-center font-bold ${r.pass ? "text-green-700" : "text-red-700"}`}>
-                        {r.pass ? "PASS" : "FAIL"}
-                      </td>
+            {/* ── SECTION 7: Performance Data (Charts) ──────────────────────── */}
+            {displayStandards.includes("61215") && (
+              <>
+                <SecH num="7." title="Performance Data" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <div className="text-xs font-semibold mb-1 text-gray-600">Fig. 7.1 — Pmax Degradation Through IEC 61215 Test Sequence</div>
+                    <ComposedChart width={370} height={200} data={degradationData}>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                      <XAxis dataKey="stage" tick={{ fontSize: 8 }} />
+                      <YAxis domain={[370, 410]} tick={{ fontSize: 8 }} label={{ value: "Pmax (W)", angle: -90, position: "insideLeft", fontSize: 8 }} />
+                      <Tooltip />
+                      <ReferenceLine y={401.5 * 0.95} stroke="#ef4444" strokeDasharray="5 3" label={{ value: "5% limit", fill: "#ef4444", fontSize: 7 }} />
+                      <Area type="monotone" dataKey="pmax" stroke="#2563eb" fill="#dbeafe" fillOpacity={0.5} name="Pmax (W)" dot={{ r: 3, fill: "#2563eb" }} strokeWidth={2} />
+                    </ComposedChart>
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold mb-1 text-gray-600">Fig. 7.2 — I-V & P-V Characteristics at STC (Initial)</div>
+                    <ComposedChart width={370} height={200} data={ivCurveData.filter((_, i) => i % 5 === 0)}>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                      <XAxis dataKey="v" tick={{ fontSize: 8 }} label={{ value: "V (V)", position: "insideBottom", offset: -5, fontSize: 8 }} />
+                      <YAxis yAxisId="l" tick={{ fontSize: 8 }} label={{ value: "I (A)", angle: -90, position: "insideLeft", fontSize: 8 }} />
+                      <YAxis yAxisId="r" orientation="right" tick={{ fontSize: 8 }} label={{ value: "P (W)", angle: 90, position: "insideRight", fontSize: 8 }} />
+                      <Tooltip />
+                      <Line yAxisId="l" type="monotone" dataKey="i" stroke="#2563eb" name="I (A)" dot={false} strokeWidth={2} />
+                      <Line yAxisId="r" type="monotone" dataKey="p" stroke="#f97316" name="P (W)" dot={false} strokeWidth={2} />
+                    </ComposedChart>
+                  </div>
+                </div>
+                <table className="w-full border-collapse text-xs mb-4">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      <th className="border border-gray-300 p-1.5 text-left">Test Stage</th>
+                      <th className="border border-gray-300 p-1.5 text-center">Pmax (W)</th>
+                      <th className="border border-gray-300 p-1.5 text-center">Degradation (%)</th>
+                      <th className="border border-gray-300 p-1.5 text-center">Limit</th>
+                      <th className="border border-gray-300 p-1.5 text-center">Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ))}
+                  </thead>
+                  <tbody>
+                    {degradationData.map((d, i) => {
+                      const deg = i === 0 ? 0 : ((d.pmax - 401.5) / 401.5 * 100)
+                      return (
+                        <tr key={d.stage}>
+                          <td className="border border-gray-300 p-1.5 font-medium">{d.stage}</td>
+                          <td className="border border-gray-300 p-1.5 text-center font-mono">{d.pmax}</td>
+                          <td className="border border-gray-300 p-1.5 text-center font-mono">{i === 0 ? "—" : deg.toFixed(2) + "%"}</td>
+                          <td className="border border-gray-300 p-1.5 text-center text-gray-400">≤ 5%</td>
+                          <td className={`border border-gray-300 p-1.5 text-center font-bold ${Math.abs(deg) <= 5 ? "text-green-700" : "text-red-700"}`}>
+                            {i === 0 ? "BASELINE" : Math.abs(deg) <= 5 ? "PASS" : "FAIL"}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </>
+            )}
 
-          {/* Signature Block */}
-          <div className="mt-8 pt-4 border-t-2 border-gray-300">
-            <div className="text-sm font-bold mb-4">AUTHORISATION & SIGNATURES</div>
-            <div className="grid grid-cols-3 gap-6 text-xs">
+            {/* ── SECTION 8: Conclusions & Certification Statement ───────────── */}
+            <SecH num="8." title="Conclusions & Certification Statement" />
+            <div className="border border-gray-300 rounded p-4 mb-4 bg-gray-50 text-xs">
+              <p className="mb-2">
+                The photovoltaic module identified in Section 2 of this report has been tested in accordance with the requirements of{" "}
+                <strong>{templateConfig.title}</strong> at the testing laboratory identified in Section 1.
+              </p>
+              <p className="mb-2">
+                Based on the test results documented in this report, the module under test has{" "}
+                <strong className={overallPass ? "text-green-700" : "text-red-700"}>
+                  {overallPass ? "PASSED" : "FAILED"}
+                </strong>{" "}
+                all applicable test requirements. A total of{" "}
+                <strong>{allResultsForExport.filter(r => r.pass).length}</strong> of{" "}
+                <strong>{allResultsForExport.length}</strong> tests passed.
+              </p>
+              <p className="mb-2">
+                All measurements were performed using calibrated equipment as listed in Section 3 with valid traceability
+                to national/international standards. Measurement uncertainty is evaluated per GUM (ISO/IEC Guide 98-3)
+                and was found to be within acceptable limits for all measurements performed.
+              </p>
+              <p className="text-gray-500 italic">
+                Note: This test report relates only to the sample(s) tested and shall not be construed as certification
+                or approval of production. Results apply exclusively to the item(s) submitted for test.
+              </p>
+            </div>
+
+            {/* ── SECTION 9: Signatories ─────────────────────────────────────── */}
+            <SecH num="9." title="Signatories & Authorisation" />
+            <div className="grid grid-cols-3 gap-4 mb-4">
               {[
-                { role: "Prepared By", name: "Dr. Rajesh Kumar", designation: "Senior Test Engineer" },
-                { role: "Reviewed By", name: "Dr. Priya Sharma", designation: "Technical Manager" },
-                { role: "Approved By", name: "Dr. Arun Patel", designation: "Laboratory Manager" },
-              ].map(({ role, name, designation }) => (
-                <div key={role} className="border rounded p-3">
-                  <div className="font-bold text-gray-600 mb-2">{role}</div>
-                  <div className="h-10 border-b border-gray-300 mb-2" />
-                  <div className="font-medium">{name}</div>
-                  <div className="text-gray-400">{designation}</div>
-                  <div className="text-gray-400 mt-1">Date: {today}</div>
+                { role: "Prepared By", name: "Dr. Rajesh Kumar", designation: "Senior Test Engineer", date: today },
+                { role: "Reviewed By", name: "Dr. Priya Sharma", designation: "Technical Manager", date: today },
+                { role: "Approved By", name: "Dr. Arun Patel", designation: "Laboratory Manager", date: today },
+              ].map(({ role, name, designation, date }) => (
+                <div key={role} className="border border-gray-300 rounded p-3">
+                  <div className="font-bold text-xs text-gray-600 mb-3">{role}</div>
+                  <div className="h-12 border-b border-dashed border-gray-400 mb-2" />
+                  <div className="font-semibold text-xs">{name}</div>
+                  <div className="text-xs text-gray-500">{designation}</div>
+                  <div className="text-xs text-gray-400 mt-1">Date: {date}</div>
                 </div>
               ))}
             </div>
-            <div className="mt-4 p-3 bg-gray-50 rounded text-xs text-gray-500">
-              <strong>DISCLAIMER:</strong> This report is issued under accreditation {lab.accreditationNumber} of {lab.accreditationBody}.
-              Results apply only to the sample(s) tested. Not to be reproduced except in full without laboratory written approval.
-              Testing conducted in accordance with ISO/IEC 17025:2017. Contact: {lab.email}
+
+            {/* Footer disclaimer */}
+            <div className="border-t border-gray-200 pt-3 text-center text-xs text-gray-400">
+              <p>This report is issued under accreditation <strong>{lab.accreditationNumber}</strong> of{" "}
+                <strong>{lab.accreditationBody}</strong>.</p>
+              <p>This report shall not be reproduced except in full without the written permission of the laboratory.</p>
+              <p className="mt-1">ISO/IEC 17025:2017 Compliant Test Report · {lab.labName} · {lab.email}</p>
+              <p className="mt-1 font-mono">{moduleInfo.testRef} · v1.0 · {today}</p>
             </div>
           </div>
         </div>
@@ -460,6 +796,7 @@ export default function IECFullReportView() {
         @media print {
           body > *:not(#iec-print-report) { display: none !important; }
           #iec-print-report { display: block !important; border: none !important; }
+          .page-break { page-break-before: always; }
         }
       `}</style>
     </div>
