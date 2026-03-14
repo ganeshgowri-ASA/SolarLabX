@@ -117,7 +117,7 @@ function SecH({ num, title }: { num: string; title: string }) {
   return (
     <div
       className="font-bold text-blue-900 border-b-2 border-blue-700 pb-1 mb-3 mt-6 uppercase tracking-wide"
-      style={{ fontSize: "14pt", lineHeight: "1.2" }}
+      style={{ fontSize: "14pt", fontFamily: "Arial, Helvetica, sans-serif", lineHeight: "1.4" }}
     >
       {num} {title}
     </div>
@@ -128,7 +128,7 @@ function SubSecH({ label }: { label: string }) {
   return (
     <div
       className="font-bold text-blue-800 border-b border-blue-200 pb-1 mb-2 mt-3"
-      style={{ fontSize: "12pt", lineHeight: "1.2" }}
+      style={{ fontSize: "12pt", fontFamily: "Arial, Helvetica, sans-serif", lineHeight: "1.4" }}
     >
       {label}
     </div>
@@ -476,12 +476,12 @@ export default function IECFullReportView() {
           ref={printRef}
           id="iec-print-report"
           className="mt-6 border-4 border-gray-800 bg-white print:border-0"
-          style={{ fontFamily: "'Times New Roman', Times, serif", fontSize: "0.6875rem", lineHeight: "1.5" }}
+          style={{ fontFamily: "Arial, Helvetica, sans-serif", fontSize: "11pt", lineHeight: "1.4" }}
         >
           {/* ── SCREEN HEADER – visible on screen, hidden in print (replaced by @page margin box) ── */}
           <div
             className="rpt-screen-hdr flex items-center justify-between bg-blue-50 border-b-2 border-blue-900 px-6"
-            style={{ height: "15mm", fontSize: "9pt", borderBottomWidth: "0.5pt", borderBottomColor: "#000" }}
+            style={{ height: "15mm", fontSize: "9pt", fontFamily: "Arial, Helvetica, sans-serif", borderBottomWidth: "0.5pt", borderBottomColor: "#000" }}
           >
             <span className="font-semibold text-blue-900">{lab.labName}</span>
             <span className="text-gray-600">Doc No: {moduleInfo.testRef} | Rev: 00</span>
@@ -498,26 +498,26 @@ export default function IECFullReportView() {
             }}>
               [Lab Logo]
             </div>
-            <div style={{ fontSize: "18pt", fontWeight: "bold", color: "#1e3a5f", marginBottom: "2mm" }}>
+            <div style={{ fontSize: "18pt", fontWeight: "bold", fontFamily: "Arial, Helvetica, sans-serif", color: "#1e3a5f", marginBottom: "2mm" }}>
               {lab.labName}
             </div>
-            <div style={{ fontSize: "10pt", color: "#666", marginBottom: "1mm" }}>{lab.address}</div>
-            <div style={{ fontSize: "9pt", color: "#888", marginBottom: "1mm" }}>
+            <div style={{ fontSize: "11pt", fontFamily: "Arial, Helvetica, sans-serif", color: "#666", marginBottom: "1mm" }}>{lab.address}</div>
+            <div style={{ fontSize: "9pt", fontFamily: "Arial, Helvetica, sans-serif", color: "#888", marginBottom: "1mm" }}>
               Accreditation No: <strong>{lab.accreditationNumber}</strong> · {lab.accreditationBody}
             </div>
             <div style={{ height: "1px", background: "#1e3a5f", margin: "7mm 0" }} />
-            <div style={{ fontSize: "24pt", fontWeight: "bold", letterSpacing: "5px", color: "#1e3a5f", marginBottom: "3mm", lineHeight: "1.2" }}>
+            <div style={{ fontSize: "24pt", fontWeight: "bold", fontFamily: "Arial, Helvetica, sans-serif", letterSpacing: "5px", color: "#1e3a5f", marginBottom: "3mm", lineHeight: "1.4" }}>
               TEST REPORT
             </div>
-            <div style={{ fontSize: "13pt", fontWeight: "600", color: "#444", marginBottom: "4mm" }}>
+            <div style={{ fontSize: "14pt", fontWeight: "bold", fontFamily: "Arial, Helvetica, sans-serif", color: "#444", marginBottom: "4mm" }}>
               PHOTOVOLTAIC MODULE QUALIFICATION
             </div>
-            <div style={{ fontSize: "10pt", color: "#1e3a5f", fontStyle: "italic", marginBottom: "5mm" }}>
+            <div style={{ fontSize: "11pt", fontFamily: "Arial, Helvetica, sans-serif", color: "#1e3a5f", fontStyle: "italic", marginBottom: "5mm" }}>
               {templateConfig.title}
             </div>
             <div style={{ height: "1px", background: "#ddd", margin: "5mm 0" }} />
             {/* Report details table */}
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "10pt", margin: "4mm 0", textAlign: "left" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11pt", fontFamily: "Arial, Helvetica, sans-serif", margin: "4mm 0", textAlign: "left" }}>
               <tbody>
                 {([
                   ["Report Number", moduleInfo.testRef, "Standard(s)", displayStandards.map(k => ({ "61215": "IEC 61215:2021", "61730": "IEC 61730:2023", "61853": "IEC 61853:2020", "61701": "IEC 61701:2020" }[k])).join(" / ")],
@@ -542,7 +542,7 @@ export default function IECFullReportView() {
               </div>
             </div>
             {/* Confidentiality statement */}
-            <div style={{ background: "#fef9c3", border: "1px solid #fbbf24", borderRadius: "4px", padding: "4mm 6mm", marginTop: "7mm", fontSize: "8.5pt", textAlign: "left", lineHeight: "1.6" }}>
+            <div style={{ background: "#fef9c3", border: "1px solid #fbbf24", borderRadius: "4px", padding: "4mm 6mm", marginTop: "7mm", fontSize: "9pt", fontFamily: "Arial, Helvetica, sans-serif", textAlign: "left", lineHeight: "1.4" }}>
               <strong>CONFIDENTIAL</strong> — This report is the confidential property of {lab.labName} and is issued solely
               for the purpose of communicating test results to the named client. This report shall not be reproduced except
               in full without the prior written approval of the issuing laboratory. This report relates only to the items
@@ -552,10 +552,10 @@ export default function IECFullReportView() {
 
           {/* ── TABLE OF CONTENTS (page 2) ───────────────────────────────────── */}
           <div style={{ pageBreakBefore: "always", pageBreakAfter: "always", padding: "15mm 20mm 15mm 20mm" }}>
-            <div style={{ fontSize: "15pt", fontWeight: "bold", color: "#1e3a5f", marginBottom: "6mm", borderBottom: "2px solid #1e3a5f", paddingBottom: "3mm", textTransform: "uppercase", letterSpacing: "1px" }}>
+            <div style={{ fontSize: "14pt", fontWeight: "bold", fontFamily: "Arial, Helvetica, sans-serif", color: "#1e3a5f", marginBottom: "6mm", borderBottom: "2px solid #1e3a5f", paddingBottom: "3mm", textTransform: "uppercase", letterSpacing: "1px" }}>
               Table of Contents
             </div>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "10.5pt" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11pt", fontFamily: "Arial, Helvetica, sans-serif" }}>
               <tbody>
                 {([
                   ["1.", "General Information", "3", false],
@@ -585,7 +585,7 @@ export default function IECFullReportView() {
           </div>
 
           {/* ── REPORT BODY ──────────────────────────────────────────────────── */}
-          <div style={{ padding: "0 20mm 10mm 20mm", fontFamily: "'Times New Roman', Times, serif" }}>
+          <div style={{ padding: "0 20mm 10mm 20mm", fontFamily: "Arial, Helvetica, sans-serif" }}>
 
             {/* ── SECTION 1: General Information ──────────────────────────── */}
             <div style={{ pageBreakBefore: "always" }}>
@@ -987,7 +987,7 @@ export default function IECFullReportView() {
           {/* ── SCREEN FOOTER – visible on screen, hidden in print (replaced by @page margin box) ── */}
           <div
             className="rpt-screen-ftr flex items-center justify-between border-t bg-gray-50 px-6"
-            style={{ height: "12mm", fontSize: "9pt", borderTopWidth: "0.5pt", borderTopColor: "#000" }}
+            style={{ height: "12mm", fontSize: "9pt", fontFamily: "Arial, Helvetica, sans-serif", borderTopWidth: "0.5pt", borderTopColor: "#000" }}
           >
             <span className="text-gray-500">Issue Date: {today}</span>
             <span className="text-gray-400 text-center text-xs" style={{ maxWidth: "60%" }}>
@@ -1008,16 +1008,16 @@ export default function IECFullReportView() {
             @top-left {
               content: "SolarLabX Testing Laboratory";
               font-size: 9pt;
-              font-family: 'Times New Roman', serif;
+              font-family: Arial, Helvetica, sans-serif;
               color: #1e3a5f;
               font-weight: bold;
               border-bottom: 0.5pt solid #000;
               padding-bottom: 2mm;
             }
             @top-center {
-              content: "Doc No: ${moduleInfo.testRef} | Rev: 00";
-              font-size: 9pt;
-              font-family: 'Times New Roman', serif;
+              content: "Doc No: ${moduleInfo.testRef} | ${templateConfig.title.slice(0, 40)}";
+              font-size: 8pt;
+              font-family: Arial, Helvetica, sans-serif;
               color: #333;
               border-bottom: 0.5pt solid #000;
               padding-bottom: 2mm;
@@ -1025,7 +1025,7 @@ export default function IECFullReportView() {
             @top-right {
               content: "Page " counter(page) " of " counter(pages);
               font-size: 9pt;
-              font-family: 'Times New Roman', serif;
+              font-family: Arial, Helvetica, sans-serif;
               color: #333;
               border-bottom: 0.5pt solid #000;
               padding-bottom: 2mm;
@@ -1033,32 +1033,32 @@ export default function IECFullReportView() {
             @bottom-left {
               content: "Issue Date: ${today}";
               font-size: 9pt;
-              font-family: 'Times New Roman', serif;
+              font-family: Arial, Helvetica, sans-serif;
               color: #555;
               border-top: 0.5pt solid #000;
               padding-top: 2mm;
             }
             @bottom-center {
-              content: "This report shall not be reproduced except in full without written approval of SolarLabX Testing Laboratory";
-              font-size: 7pt;
-              font-family: 'Times New Roman', serif;
-              color: #666;
+              content: "CONFIDENTIAL – Not to be reproduced except in full";
+              font-size: 8pt;
+              font-family: Arial, Helvetica, sans-serif;
+              color: #555;
+              font-weight: bold;
               border-top: 0.5pt solid #000;
               padding-top: 2mm;
             }
             @bottom-right {
-              content: "CONFIDENTIAL";
-              font-size: 9pt;
-              font-family: 'Times New Roman', serif;
-              color: #333;
-              font-weight: bold;
+              content: "ISO/IEC 17025:2017 Compliant";
+              font-size: 8pt;
+              font-family: Arial, Helvetica, sans-serif;
+              color: #666;
               border-top: 0.5pt solid #000;
               padding-top: 2mm;
             }
           }
           /* Cover page (first): larger margins, no running header/footer */
           @page :first {
-            margin: 30mm 30mm 30mm 30mm;
+            margin: 30mm 25mm 25mm 25mm;
             @top-left { content: none; } @top-center { content: none; } @top-right { content: none; }
             @bottom-left { content: none; } @bottom-center { content: none; } @bottom-right { content: none; }
           }
@@ -1070,25 +1070,38 @@ export default function IECFullReportView() {
           /* Hide screen header/footer bands in print */
           .rpt-screen-hdr, .rpt-screen-ftr { display: none !important; }
 
-          /* Body font for print */
+          /* Body font for print: Arial 11pt, line-height 1.4 */
           #iec-print-report {
-            font-family: 'Times New Roman', Times, serif !important;
+            font-family: Arial, Helvetica, sans-serif !important;
             font-size: 11pt !important;
-            line-height: 1.5 !important;
+            line-height: 1.4 !important;
             color: #000 !important;
           }
 
-          /* Table text: 10pt */
+          /* Headings: Arial 14pt bold */
+          #iec-print-report h1, #iec-print-report h2,
+          #iec-print-report [style*="font-size: 14pt"], #iec-print-report [style*="fontSize: 14pt"] {
+            font-family: Arial, Helvetica, sans-serif !important;
+            font-size: 14pt !important;
+            font-weight: bold !important;
+            line-height: 1.4 !important;
+          }
+
+          /* Table text: 10pt, constrained to A4 content width (170mm = 210 - 15 - 15 - 10 tolerance) */
           #iec-print-report table {
-            max-width: 170mm;
+            width: 100% !important;
+            max-width: 170mm !important;
+            table-layout: fixed;
             word-break: break-word;
             font-size: 10pt;
+            font-family: Arial, Helvetica, sans-serif !important;
           }
           #iec-print-report td, #iec-print-report th {
             overflow-wrap: break-word;
             word-break: break-word;
-            padding: 8px;
+            padding: 5px 8px;
             border: 0.5pt solid #333;
+            font-family: Arial, Helvetica, sans-serif !important;
           }
           #iec-print-report tr { page-break-inside: avoid; break-inside: avoid; }
           #iec-print-report tr:nth-child(even) { background: #f9f9f9; }
@@ -1096,6 +1109,13 @@ export default function IECFullReportView() {
           /* Remove rounded corners for print */
           #iec-print-report [style*="border-radius"] { border-radius: 0 !important; }
           #iec-print-report .rounded, #iec-print-report .rounded-md, #iec-print-report .rounded-lg { border-radius: 0 !important; }
+
+          /* Grids: convert to block for A4 fit */
+          #iec-print-report .grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+          #iec-print-report .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+          /* Content width safety: prevent overflow */
+          #iec-print-report > div { max-width: 170mm; overflow-x: hidden; }
 
           /* Charts: clamp to column width */
           .print-chart-col { overflow: hidden; max-width: 79mm; }

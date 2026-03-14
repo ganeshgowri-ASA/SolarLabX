@@ -171,7 +171,7 @@ export function ExportToolbar({
     }
   }
 
-  // ── Word Export via docx + file-saver ──────────────────────────────────────
+  // ── Word Export via docx ────────────────────────────────────────────────────
   const exportWord = async () => {
     setLoading("word")
     try {
@@ -180,7 +180,6 @@ export function ExportToolbar({
         TextRun, HeadingLevel, AlignmentType, WidthType, BorderStyle,
         Header, Footer, PageNumber, ShadingType,
       } = await import("docx")
-      const { saveAs } = await import("file-saver")
 
       const LAB_NAME = "SolarLabX Testing Laboratory"
       const today = new Date().toLocaleDateString("en-IN")
@@ -246,14 +245,8 @@ export function ExportToolbar({
             alignment: AlignmentType.CENTER,
             border: { top: { style: BorderStyle.SINGLE, size: 6, color: "000000", space: 4 } },
             children: [
-              new TextRun({ text: "Issue Date: " + today + "   |   ", size: 16, color: "555555" }),
-              new TextRun({
-                text: "This report shall not be reproduced except in full without written approval of SolarLabX Testing Laboratory",
-                size: 14,
-                italics: true,
-                color: "666666",
-              }),
-              new TextRun({ text: "   |   Page ", size: 16, color: "555555" }),
+              new TextRun({ text: "CONFIDENTIAL", bold: true, size: 16, color: "333333" }),
+              new TextRun({ text: "   |   Issue Date: " + today + "   |   Page ", size: 16, color: "555555" }),
               new TextRun({ children: [PageNumber.CURRENT], size: 16 }),
               new TextRun({ text: " of ", size: 16, color: "555555" }),
               new TextRun({ children: [PageNumber.TOTAL_PAGES], size: 16 }),
@@ -754,11 +747,18 @@ export function ExportToolbar({
       })
 
       const blob = await Packer.toBlob(doc)
-      saveAs(blob, `${reportNumber}_TRF.docx`)
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement("a")
+      anchor.href = url
+      anchor.download = `${reportNumber}_TRF.docx`
+      document.body.appendChild(anchor)
+      anchor.click()
+      document.body.removeChild(anchor)
+      URL.revokeObjectURL(url)
     } catch (err) {
       console.error("Word export error:", err)
       const msg = err instanceof Error ? err.message : String(err)
-      alert(`Word export failed: ${msg}\n\nPlease ensure the docx and file-saver packages are installed (npm install docx file-saver).`)
+      alert(`Word export failed: ${msg}`)
     } finally {
       setLoading(null)
     }
