@@ -643,6 +643,596 @@ export const IEC_62716_TESTS: TestDefinition[] = [
 ];
 
 // ---------------------------------------------------------------------------
+// IEC 62804 — PID (Potential Induced Degradation)
+// ---------------------------------------------------------------------------
+export const IEC_62804_TESTS: TestDefinition[] = [
+  {
+    id: "pid-method-a", clause: "Clause 5 (Method A)", testName: "PID Stress Test – Method A (Chamber)",
+    purpose: "Assess PID susceptibility by applying system voltage bias under 85°C / 85% RH for 96 hours.",
+    testConditions: ["85 ± 2 °C", "85 ± 5 % RH", "±Vsys (1000 V or 1500 V) applied", "96 h duration", "Modules shorted, bias between active circuit & frame"],
+    equipmentUsed: ["Environmental chamber", "DC power supply (≥ 1500 V)", "Insulation tester", "I-V tracer", "EL camera"],
+    measurements: ["I-V before & after (STC)", "EL imaging before & after", "Insulation resistance", "Leakage current during stress", "Power degradation"],
+    passCriteria: ["Pmax degradation ≤ 5 %", "No major visual defects", "Insulation ≥ 40 MΩ·m²", "Wet leakage OK"],
+    resultFields: [
+      { label: "Applied Voltage", unit: "V", type: "number" },
+      { label: "Duration", unit: "h", type: "number", defaultValue: "96" },
+      { label: "Pmax Before", unit: "W", type: "number" },
+      { label: "Pmax After", unit: "W", type: "number" },
+      { label: "Degradation", unit: "%", type: "percentage" },
+      { label: "Insulation After", unit: "GΩ", type: "number" },
+    ],
+  },
+  {
+    id: "pid-method-b", clause: "Clause 5 (Method B)", testName: "PID Stress Test – Method B (Outdoor/Surface)",
+    purpose: "Assess PID susceptibility using conductive surface layer at elevated temperature.",
+    testConditions: ["Surface conductive layer (Al foil or conductive paste)", "60 ± 5 °C module temperature", "±Vsys applied", "96 h duration"],
+    equipmentUsed: ["Outdoor / thermal chamber", "DC power supply", "Al foil / conductive paste", "I-V tracer", "EL camera"],
+    measurements: ["I-V before & after", "EL imaging", "Leakage current"],
+    passCriteria: ["Pmax degradation ≤ 5 %", "No visual defects"],
+    resultFields: [
+      { label: "Applied Voltage", unit: "V", type: "number" },
+      { label: "Module Temp", unit: "°C", type: "number", defaultValue: "60" },
+      { label: "Pmax Before", unit: "W", type: "number" },
+      { label: "Pmax After", unit: "W", type: "number" },
+      { label: "Degradation", unit: "%", type: "percentage" },
+    ],
+  },
+  {
+    id: "pid-recovery", clause: "Annex A", testName: "PID Recovery Test",
+    purpose: "Evaluate recovery behaviour of PID-affected modules under reverse bias or thermal annealing.",
+    testConditions: ["Reverse polarity bias at 1000 V", "85 °C / < 40 % RH", "24–96 h recovery period"],
+    equipmentUsed: ["Environmental chamber", "DC power supply", "I-V tracer", "EL camera"],
+    measurements: ["I-V at intervals during recovery", "EL imaging at intervals", "Recovery ratio (%)"],
+    passCriteria: ["Recovery documented (informative)", "Recovery ratio reported"],
+    resultFields: [
+      { label: "Recovery Duration", unit: "h", type: "number" },
+      { label: "Pmax Post-PID", unit: "W", type: "number" },
+      { label: "Pmax After Recovery", unit: "W", type: "number" },
+      { label: "Recovery Ratio", unit: "%", type: "percentage" },
+    ],
+  },
+];
+
+// ---------------------------------------------------------------------------
+// IEC TS 63209 — LeTID (Light & elevated Temperature Induced Degradation)
+// ---------------------------------------------------------------------------
+export const IEC_63209_TESTS: TestDefinition[] = [
+  {
+    id: "letid-light-soak", clause: "Clause 7", testName: "LeTID Light Soaking Test",
+    purpose: "Detect Light and elevated Temperature Induced Degradation in c-Si modules (B-O and Cu-related CID).",
+    testConditions: ["75 ± 5 °C module temperature", "1000 ± 100 W/m² irradiance", "Isc or Imp injection", "≥ 162 kWh/m² cumulative dose (200+ h)", "Monitored at intervals"],
+    equipmentUsed: ["Solar simulator / outdoor exposure", "Temperature controller", "I-V tracer", "EL camera", "Dose integrator"],
+    measurements: ["I-V at regular intervals (every 24–48 h)", "EL imaging pre/post", "Cumulative irradiation dose", "Module temperature log"],
+    passCriteria: ["Pmax degradation ≤ 5 % from stabilized baseline", "No major visual defects"],
+    resultFields: [
+      { label: "Total Dose", unit: "kWh/m²", type: "number" },
+      { label: "Duration", unit: "h", type: "number" },
+      { label: "Module Temp", unit: "°C", type: "number", defaultValue: "75" },
+      { label: "Pmax Stabilized", unit: "W", type: "number" },
+      { label: "Pmax After LeTID", unit: "W", type: "number" },
+      { label: "Degradation", unit: "%", type: "percentage" },
+    ],
+  },
+  {
+    id: "letid-dark-anneal", clause: "Clause 8", testName: "LeTID Dark Annealing (Accelerated)",
+    purpose: "Accelerated LeTID test via dark annealing at elevated temperature to detect degradation potential.",
+    testConditions: ["75 ± 2 °C in dark", "Open-circuit", "≥ 162 h duration", "Monitored at intervals"],
+    equipmentUsed: ["Environmental chamber (dark)", "I-V tracer", "EL camera"],
+    measurements: ["I-V at intervals", "Power trajectory (rise, peak, decline)", "EL comparison"],
+    passCriteria: ["Pmax degradation ≤ 5 % from peak", "Trajectory consistent with LeTID model"],
+    resultFields: [
+      { label: "Duration", unit: "h", type: "number" },
+      { label: "Chamber Temp", unit: "°C", type: "number", defaultValue: "75" },
+      { label: "Pmax Initial", unit: "W", type: "number" },
+      { label: "Pmax Peak", unit: "W", type: "number" },
+      { label: "Pmax Final", unit: "W", type: "number" },
+      { label: "Degradation from Peak", unit: "%", type: "percentage" },
+    ],
+  },
+];
+
+// ---------------------------------------------------------------------------
+// IEC 62788 — Material Testing (Backsheet, Encapsulant, UV)
+// ---------------------------------------------------------------------------
+export const IEC_62788_TESTS: TestDefinition[] = [
+  {
+    id: "mat-backsheet-adhesion", clause: "IEC 62788-1-4", testName: "Backsheet Adhesion Peel Test",
+    purpose: "Measure peel strength of backsheet-to-encapsulant bond to assess delamination risk.",
+    testConditions: ["90° or 180° peel angle", "50 mm/min peel rate", "25 ± 2 °C specimen temperature", "10 mm strip width"],
+    equipmentUsed: ["Universal testing machine (UTM)", "Peel jig", "Sample cutter", "Force recorder"],
+    measurements: ["Peel force (N/mm)", "Failure mode (adhesive, cohesive, mixed)", "Force-displacement curve"],
+    passCriteria: ["Peel strength ≥ 40 N/m (typical threshold)", "No adhesive failure at backsheet-encapsulant interface"],
+    resultFields: [
+      { label: "Peel Strength", unit: "N/m", type: "number" },
+      { label: "Failure Mode", unit: "", type: "text" },
+      { label: "Peel Angle", unit: "°", type: "number" },
+      { label: "Strip Width", unit: "mm", type: "number", defaultValue: "10" },
+    ],
+  },
+  {
+    id: "mat-gel-content", clause: "IEC 62788-1-2", testName: "Encapsulant Gel Content (Cross-linking Degree)",
+    purpose: "Determine degree of cross-linking of EVA/POE encapsulant via solvent extraction.",
+    testConditions: ["Xylene or toluene extraction", "Soxhlet apparatus, reflux 8 h", "Sample mass 0.2–0.5 g", "105 °C drying"],
+    equipmentUsed: ["Soxhlet extractor", "Analytical balance (0.0001 g)", "Drying oven", "Solvent fume hood"],
+    measurements: ["Initial mass (g)", "Post-extraction dry mass (g)", "Gel content (%)"],
+    passCriteria: ["EVA gel content ≥ 70 % (typical)", "POE gel content ≥ 60 %"],
+    resultFields: [
+      { label: "Initial Mass", unit: "g", type: "number" },
+      { label: "Post-Extraction Mass", unit: "g", type: "number" },
+      { label: "Gel Content", unit: "%", type: "percentage" },
+      { label: "Encapsulant Type", unit: "", type: "text" },
+    ],
+  },
+  {
+    id: "mat-uv-cutoff", clause: "IEC 62788-7-2", testName: "UV Cut-off Wavelength Measurement",
+    purpose: "Determine UV transmittance and cut-off wavelength of front encapsulant/glass stack.",
+    testConditions: ["Spectrophotometer 200–800 nm scan", "Integrating sphere", "Sample at room temperature"],
+    equipmentUsed: ["UV-Vis spectrophotometer", "Integrating sphere", "Reference standards", "Sample holder"],
+    measurements: ["Transmittance spectrum (T vs λ)", "UV cut-off wavelength (λ at T = 1%)", "Total UV transmittance (280–400 nm)"],
+    passCriteria: ["UV cut-off ≤ 360 nm for EVA", "Total UV transmittance documented"],
+    resultFields: [
+      { label: "UV Cut-off λ", unit: "nm", type: "number" },
+      { label: "T at 350 nm", unit: "%", type: "percentage" },
+      { label: "T at 380 nm", unit: "%", type: "percentage" },
+      { label: "Total UV T (280-400)", unit: "%", type: "percentage" },
+    ],
+  },
+];
+
+// ---------------------------------------------------------------------------
+// IEC 62938 — Non-Uniform Snow Load
+// ---------------------------------------------------------------------------
+export const IEC_62938_TESTS: TestDefinition[] = [
+  {
+    id: "snow-light", clause: "Clause 7 (Light)", testName: "Non-Uniform Snow Load – Light Severity",
+    purpose: "Assess module resistance to non-uniform snow load at light severity level.",
+    testConditions: ["Non-uniform load profile per Annex A", "Light severity: 1400 Pa non-uniform", "3 cycles", "1 h hold per cycle"],
+    equipmentUsed: ["Mechanical load tester", "Non-uniform loading fixture", "Pressure sensors", "Deflection gauges", "I-V tracer"],
+    measurements: ["Applied pressure profile", "Deflection at centre & edges", "I-V before & after", "Visual & EL before & after"],
+    passCriteria: ["Pmax degradation < 5 %", "No glass breakage", "No frame deformation", "Insulation OK"],
+    resultFields: [
+      { label: "Max Load", unit: "Pa", type: "number", defaultValue: "1400" },
+      { label: "Cycles", unit: "", type: "number", defaultValue: "3" },
+      { label: "Max Deflection", unit: "mm", type: "number" },
+      { label: "Pmax Before", unit: "W", type: "number" },
+      { label: "Pmax After", unit: "W", type: "number" },
+      { label: "Degradation", unit: "%", type: "percentage" },
+    ],
+  },
+  {
+    id: "snow-heavy", clause: "Clause 7 (Heavy)", testName: "Non-Uniform Snow Load – Heavy Severity",
+    purpose: "Assess module resistance to non-uniform snow load at heavy severity level.",
+    testConditions: ["Non-uniform load profile per Annex A", "Heavy severity: 2800 Pa non-uniform", "3 cycles", "1 h hold per cycle"],
+    equipmentUsed: ["Mechanical load tester", "Non-uniform loading fixture", "Pressure sensors", "Deflection gauges", "I-V tracer"],
+    measurements: ["Applied pressure profile", "Deflection at centre & edges", "I-V before & after", "Visual & EL before & after"],
+    passCriteria: ["Pmax degradation < 5 %", "No glass breakage", "No frame deformation", "Insulation OK"],
+    resultFields: [
+      { label: "Max Load", unit: "Pa", type: "number", defaultValue: "2800" },
+      { label: "Cycles", unit: "", type: "number", defaultValue: "3" },
+      { label: "Max Deflection", unit: "mm", type: "number" },
+      { label: "Pmax Before", unit: "W", type: "number" },
+      { label: "Pmax After", unit: "W", type: "number" },
+      { label: "Degradation", unit: "%", type: "percentage" },
+    ],
+  },
+];
+
+// ---------------------------------------------------------------------------
+// IEC 61345 — UV Test for Thin-Film Modules
+// ---------------------------------------------------------------------------
+export const IEC_61345_TESTS: TestDefinition[] = [
+  {
+    id: "uv-thinfilm", clause: "Clause 7", testName: "UV Exposure Test (Thin-Film)",
+    purpose: "Evaluate UV stability of thin-film PV modules (CdTe, CIGS, a-Si) under accelerated UV exposure.",
+    testConditions: ["Module temperature 60 ± 5 °C", "UV irradiance 250–400 nm", "Total dose ≥ 50 kWh/m²", "Short-circuit during exposure"],
+    equipmentUsed: ["UV exposure chamber", "UV radiometer", "Module temperature sensors", "I-V tracer", "EL camera"],
+    measurements: ["Cumulative UV dose", "Module temperature", "I-V before & after", "Visual inspection", "EL imaging"],
+    passCriteria: ["Pmax degradation ≤ 5 %", "No delamination", "No discoloration", "Insulation OK"],
+    resultFields: [
+      { label: "UV Dose", unit: "kWh/m²", type: "number" },
+      { label: "Duration", unit: "h", type: "number" },
+      { label: "Module Temp", unit: "°C", type: "number", defaultValue: "60" },
+      { label: "Pmax Before", unit: "W", type: "number" },
+      { label: "Pmax After", unit: "W", type: "number" },
+      { label: "Degradation", unit: "%", type: "percentage" },
+    ],
+  },
+];
+
+// ---------------------------------------------------------------------------
+// UL 61730 / UL 1703 — North American Safety
+// ---------------------------------------------------------------------------
+export const UL_61730_TESTS: TestDefinition[] = [
+  {
+    id: "ul-visual", clause: "UL 61730 §10.1", testName: "Visual Inspection (UL)",
+    purpose: "Detect visible safety hazards per UL listing requirements.",
+    testConditions: ["Room temperature", "> 1000 lux", "Check UL marking compliance"],
+    equipmentUsed: ["Inspection table", "Magnifying lens", "Camera"],
+    measurements: ["Surface defects", "UL marking verification", "Listing label compliance"],
+    passCriteria: ["UL listing marks correct", "No exposed conductors", "Safety labels per UL 61730"],
+    resultFields: [
+      { label: "UL Marking", unit: "", type: "pass_fail" },
+      { label: "Safety Labels", unit: "", type: "pass_fail" },
+      { label: "Physical Integrity", unit: "", type: "pass_fail" },
+    ],
+  },
+  {
+    id: "ul-ground-continuity", clause: "UL 61730 §10.4", testName: "Ground Continuity (UL)",
+    purpose: "Verify grounding per NEC and UL requirements.",
+    testConditions: ["25 A or 2× rated current", "2 minutes", "Per NEC 690.43"],
+    equipmentUsed: ["Ground bond tester", "4-wire measurement"],
+    measurements: ["Ground resistance", "Test current", "Equipment grounding conductor check"],
+    passCriteria: ["Ground resistance < 0.1 Ω", "EGC bonding verified"],
+    resultFields: [
+      { label: "Ground Resistance", unit: "Ω", type: "number" },
+      { label: "Test Current", unit: "A", type: "number" },
+      { label: "EGC Bond", unit: "", type: "pass_fail" },
+    ],
+  },
+  {
+    id: "ul-fire-rating", clause: "UL 61730 / UL 790", testName: "Fire Classification (UL)",
+    purpose: "Determine fire classification per UL 790 (Class A, B, or C) for rooftop mounting.",
+    testConditions: ["Burning brand test per UL 790", "Spread-of-flame test", "Specified roof deck assembly"],
+    equipmentUsed: ["UL 790 fire test apparatus", "Gas burner", "Thermocouple array", "Video recorder"],
+    measurements: ["Flame spread distance", "Burn-through", "Falling particles", "Classification result"],
+    passCriteria: ["Meets declared fire class (A/B/C)", "No burn-through", "Self-extinguishing"],
+    resultFields: [
+      { label: "Fire Class", unit: "", type: "text" },
+      { label: "Flame Spread", unit: "mm", type: "number" },
+      { label: "Burn-Through", unit: "", type: "pass_fail" },
+      { label: "Self-Extinguish", unit: "", type: "pass_fail" },
+    ],
+  },
+  {
+    id: "ul-hipot", clause: "UL 61730 §10.6", testName: "Dielectric Withstand (UL)",
+    purpose: "Verify insulation integrity per UL requirements.",
+    testConditions: ["1000 V + 2 × Vsys for 1 min (DC) or per UL 1703", "Between outputs & frame"],
+    equipmentUsed: ["Hipot tester", "Leakage current meter"],
+    measurements: ["Applied voltage", "Leakage current", "Breakdown indicator"],
+    passCriteria: ["No breakdown", "Leakage within limits"],
+    resultFields: [
+      { label: "Applied Voltage", unit: "V", type: "number" },
+      { label: "Leakage Current", unit: "mA", type: "number" },
+      { label: "Breakdown", unit: "", type: "pass_fail" },
+    ],
+  },
+];
+
+// ---------------------------------------------------------------------------
+// IS 14286 / BIS — Indian Bureau of Standards
+// ---------------------------------------------------------------------------
+export const IS_14286_TESTS: TestDefinition[] = [
+  {
+    id: "bis-visual", clause: "IS 14286 Clause 7", testName: "Visual Inspection (BIS)",
+    purpose: "Visual inspection per BIS requirements for Indian market certification.",
+    testConditions: ["As per IEC 61215 + BIS additional markings check", "BIS logo verification", "IS marking compliance"],
+    equipmentUsed: ["Inspection table", "Camera", "BIS marking reference"],
+    measurements: ["BIS logo presence", "IS marking compliance", "Standard visual checks"],
+    passCriteria: ["BIS logo correctly applied", "IS marking legible & permanent", "No visual defects"],
+    resultFields: [
+      { label: "BIS Logo", unit: "", type: "pass_fail" },
+      { label: "IS Marking", unit: "", type: "pass_fail" },
+      { label: "Visual Check", unit: "", type: "pass_fail" },
+    ],
+  },
+  {
+    id: "bis-performance", clause: "IS 14286 Clause 8", testName: "Performance Verification (BIS)",
+    purpose: "Verify STC performance per BIS requirements (aligned with IEC 61215 MQT 02).",
+    testConditions: ["STC: 1000 W/m², 25 °C, AM 1.5G", "Per IS 14286 / IEC 61215"],
+    equipmentUsed: ["Solar simulator ≥ A⁺AA", "I-V tracer", "Reference cell"],
+    measurements: ["Pmax, Isc, Voc, Imp, Vmp, FF"],
+    passCriteria: ["Pmax within declared ± tolerance", "Meets BIS declared parameters"],
+    resultFields: [
+      { label: "Pmax", unit: "W", type: "number" },
+      { label: "Isc", unit: "A", type: "number" },
+      { label: "Voc", unit: "V", type: "number" },
+      { label: "FF", unit: "%", type: "percentage" },
+      { label: "BIS Compliance", unit: "", type: "pass_fail" },
+    ],
+  },
+  {
+    id: "bis-safety", clause: "IS 14286 Clause 9", testName: "Safety Tests (BIS)",
+    purpose: "Safety qualification tests per BIS requirements (aligned with IEC 61730).",
+    testConditions: ["Insulation, wet leakage, ground continuity per IS 14286", "Additional tropical climate considerations"],
+    equipmentUsed: ["Hipot tester", "Insulation tester", "Ground bond tester"],
+    measurements: ["Insulation resistance", "Wet leakage current", "Ground continuity"],
+    passCriteria: ["Insulation ≥ 40 MΩ·m²", "Ground resistance < 0.1 Ω", "No breakdown"],
+    resultFields: [
+      { label: "Insulation", unit: "MΩ·m²", type: "number" },
+      { label: "Wet Leakage", unit: "µA/m²", type: "number" },
+      { label: "Ground Resistance", unit: "Ω", type: "number" },
+      { label: "BIS Safety", unit: "", type: "pass_fail" },
+    ],
+  },
+];
+
+// ---------------------------------------------------------------------------
+// IEC 62915 — BoM & Type Test Matrix
+// ---------------------------------------------------------------------------
+export const IEC_62915_TESTS: TestDefinition[] = [
+  {
+    id: "bom-change-assessment", clause: "IEC 62915 Clause 5", testName: "BoM Change Impact Assessment",
+    purpose: "Assess impact of Bill of Materials changes on existing type test certification per IEC 62915.",
+    testConditions: ["Review original type test certification", "Identify changed components", "Risk assessment per Annex A matrix"],
+    equipmentUsed: ["Documentation review", "BoM comparison tools", "Type test matrix spreadsheet"],
+    measurements: ["Changed components list", "Impact classification (critical/major/minor)", "Required re-test scope"],
+    passCriteria: ["All BoM changes classified", "Re-test scope determined", "No unassessed critical changes"],
+    resultFields: [
+      { label: "Components Changed", unit: "", type: "number" },
+      { label: "Critical Changes", unit: "", type: "number" },
+      { label: "Major Changes", unit: "", type: "number" },
+      { label: "Minor Changes", unit: "", type: "number" },
+      { label: "Re-tests Required", unit: "", type: "number" },
+    ],
+  },
+  {
+    id: "bom-retest-matrix", clause: "IEC 62915 Annex A", testName: "Type Test Re-Test Matrix",
+    purpose: "Generate re-test matrix showing which MQTs/MSTs must be repeated for each BoM change category.",
+    testConditions: ["Cross-reference BoM change vs. IEC 61215/61730 test clauses", "Per Annex A Table A.1"],
+    equipmentUsed: ["IEC 62915 Annex A matrix", "Original certification records"],
+    measurements: ["Test matrix (component × test clause)", "Required vs. optional re-tests"],
+    passCriteria: ["Matrix complete for all changed components", "All mandatory re-tests identified"],
+    resultFields: [
+      { label: "Total MQTs Affected", unit: "", type: "number" },
+      { label: "Total MSTs Affected", unit: "", type: "number" },
+      { label: "Mandatory Re-tests", unit: "", type: "number" },
+      { label: "Optional Re-tests", unit: "", type: "number" },
+    ],
+  },
+];
+
+// ---------------------------------------------------------------------------
+// IEC 60904 — PV Device Measurement (expanded tests)
+// ---------------------------------------------------------------------------
+export const IEC_60904_TESTS: TestDefinition[] = [
+  {
+    id: "iv-measurement", clause: "IEC 60904-1", testName: "I-V Characteristics Measurement",
+    purpose: "Determine current-voltage characteristics of PV device under STC.",
+    testConditions: ["Irradiance 1000 ± 20 W/m²", "Cell/module temperature 25 ± 1 °C", "Spectrum AM 1.5G", "4-wire connection"],
+    equipmentUsed: ["Class A⁺AA solar simulator", "I-V curve tracer", "Calibrated reference cell", "Temperature sensors"],
+    measurements: ["Isc, Voc, Pmax, Imp, Vmp", "Full I-V curve (≥ 100 points)", "Fill Factor"],
+    passCriteria: ["Irradiance stability ± 2 %", "Temperature stability ± 1 °C", "Spectral match verified"],
+    resultFields: [
+      { label: "Pmax", unit: "W", type: "number" },
+      { label: "Isc", unit: "A", type: "number" },
+      { label: "Voc", unit: "V", type: "number" },
+      { label: "Imp", unit: "A", type: "number" },
+      { label: "Vmp", unit: "V", type: "number" },
+      { label: "Fill Factor", unit: "%", type: "percentage" },
+    ],
+  },
+  {
+    id: "spectral-response", clause: "IEC 60904-8", testName: "Spectral Response Measurement",
+    purpose: "Measure spectral responsivity of PV device for spectral mismatch correction.",
+    testConditions: ["Monochromatic scan 300–1200 nm", "Bandwidth ≤ 20 nm", "Device at 25 ± 2 °C", "Bias illumination ~1 sun"],
+    equipmentUsed: ["Monochromator system", "Lock-in amplifier", "Calibrated detector", "Bias light source"],
+    measurements: ["Spectral responsivity (A/W) vs wavelength", "External Quantum Efficiency (EQE)", "Integrated Isc check"],
+    passCriteria: ["Coverage 300–1200 nm", "Noise < 1 % of signal", "Integrated Isc within 3 % of measured"],
+    resultFields: [
+      { label: "Peak SR", unit: "A/W", type: "number" },
+      { label: "Peak Wavelength", unit: "nm", type: "number" },
+      { label: "Integrated Isc", unit: "A", type: "number" },
+      { label: "Measured Isc", unit: "A", type: "number" },
+    ],
+  },
+  {
+    id: "ref-device-cal", clause: "IEC 60904-2/4", testName: "Reference Device Calibration",
+    purpose: "Calibrate reference solar cell/device for use in I-V measurements.",
+    testConditions: ["Natural sunlight or primary reference", "Spectral mismatch correction applied", "Temperature 25 ± 1 °C"],
+    equipmentUsed: ["Primary reference cell (WPVS/PTB/NREL traceable)", "Spectroradiometer", "I-V tracer", "Temperature sensors"],
+    measurements: ["Isc at STC", "Spectral mismatch factor M", "Temperature coefficients", "Calibration uncertainty"],
+    passCriteria: ["Uncertainty ≤ 1.5 % (k=2)", "Traceability documented", "Mismatch factor within 2 %"],
+    resultFields: [
+      { label: "Isc (STC)", unit: "A", type: "number" },
+      { label: "Mismatch Factor M", unit: "", type: "number" },
+      { label: "Uncertainty (k=2)", unit: "%", type: "percentage" },
+      { label: "Traceability", unit: "", type: "text" },
+    ],
+  },
+  {
+    id: "linearity", clause: "IEC 60904-10", testName: "Linearity of Isc with Irradiance",
+    purpose: "Verify Isc linearity over irradiance range for accurate low-light corrections.",
+    testConditions: ["Irradiance 100–1100 W/m² in ≥ 5 steps", "Temperature 25 ± 1 °C", "Neutral density filters or variable irradiance"],
+    equipmentUsed: ["Solar simulator with variable irradiance", "ND filter set", "I-V tracer", "Reference cell"],
+    measurements: ["Isc at each irradiance level", "Linearity deviation (%)", "Non-linearity factor"],
+    passCriteria: ["Linearity within ± 2 % (200–1000 W/m²)", "Non-linearity factor documented"],
+    resultFields: [
+      { label: "Max Deviation", unit: "%", type: "percentage" },
+      { label: "Non-linearity Factor", unit: "", type: "number" },
+      { label: "Range Tested", unit: "W/m²", type: "text" },
+      { label: "Points Measured", unit: "", type: "number" },
+    ],
+  },
+  {
+    id: "spectral-mismatch", clause: "IEC 60904-7", testName: "Spectral Mismatch Correction",
+    purpose: "Calculate and apply spectral mismatch correction factor M between test device and reference.",
+    testConditions: ["Spectral data of: simulator, AM1.5G reference, test device SR, reference device SR"],
+    equipmentUsed: ["Spectroradiometer", "Reference SR data", "Test device SR data", "Calculation software"],
+    measurements: ["Simulator spectrum", "Mismatch factor M", "Corrected Isc"],
+    passCriteria: ["M within 0.98–1.02 for Class A⁺ spectral match", "Correction factor applied to results"],
+    resultFields: [
+      { label: "Mismatch Factor M", unit: "", type: "number" },
+      { label: "Uncorrected Isc", unit: "A", type: "number" },
+      { label: "Corrected Isc", unit: "A", type: "number" },
+      { label: "Spectral Class", unit: "", type: "text" },
+    ],
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Calibration Report Tests
+// ---------------------------------------------------------------------------
+export const CALIBRATION_TESTS: TestDefinition[] = [
+  {
+    id: "cal-solar-sim", clause: "Cal-001", testName: "Solar Simulator Calibration",
+    purpose: "Calibrate solar simulator per IEC 60904-9 and verify classification (A⁺/A/B/C).",
+    testConditions: ["Spectral match measurement", "Spatial uniformity scan", "Temporal stability measurement"],
+    equipmentUsed: ["Spectroradiometer", "Reference cell array", "Uniformity scanner", "Oscilloscope"],
+    measurements: ["Spectral match ratio per band", "Spatial non-uniformity (%)", "Temporal instability (%)"],
+    passCriteria: ["Classification meets declared class", "All 3 parameters within class limits"],
+    resultFields: [
+      { label: "Spectral Class", unit: "", type: "text" },
+      { label: "Spatial Class", unit: "", type: "text" },
+      { label: "Temporal Class", unit: "", type: "text" },
+      { label: "Overall Class", unit: "", type: "text" },
+      { label: "Non-uniformity", unit: "%", type: "percentage" },
+      { label: "Instability", unit: "%", type: "percentage" },
+    ],
+  },
+  {
+    id: "cal-chamber", clause: "Cal-002", testName: "Environmental Chamber Calibration",
+    purpose: "Calibrate environmental test chamber temperature and humidity sensors.",
+    testConditions: ["Multi-point T calibration: −40, 0, 25, 50, 85 °C", "Multi-point RH calibration: 30, 50, 85 %"],
+    equipmentUsed: ["NABL-traceable reference thermometer", "Traceable hygrometer", "Data logger"],
+    measurements: ["T deviation at each setpoint", "RH deviation at each setpoint", "Uniformity within chamber"],
+    passCriteria: ["T accuracy ± 2 °C", "RH accuracy ± 5 %", "Uniformity within spec"],
+    resultFields: [
+      { label: "T Accuracy", unit: "°C", type: "number" },
+      { label: "RH Accuracy", unit: "%", type: "number" },
+      { label: "T Uniformity", unit: "°C", type: "number" },
+      { label: "Cal Interval", unit: "months", type: "number" },
+    ],
+  },
+  {
+    id: "cal-ref-cell", clause: "Cal-003", testName: "Reference Cell Calibration",
+    purpose: "Calibrate reference solar cell with traceability to WPVS or national standard.",
+    testConditions: ["Natural sunlight or primary standard", "Temperature 25 ± 0.5 °C", "Spectral mismatch correction"],
+    equipmentUsed: ["Primary reference cell", "Spectroradiometer", "Temperature-controlled stage", "I-V tracer"],
+    measurements: ["Isc at STC", "Spectral mismatch factor", "Uncertainty budget"],
+    passCriteria: ["Uncertainty ≤ 1.5 % (k=2)", "Traceability chain documented"],
+    resultFields: [
+      { label: "Isc (STC)", unit: "A", type: "number" },
+      { label: "Sensitivity", unit: "V/(W/m²)", type: "number" },
+      { label: "Uncertainty (k=2)", unit: "%", type: "percentage" },
+      { label: "Traceability", unit: "", type: "text" },
+    ],
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Measurement Uncertainty Report Tests
+// ---------------------------------------------------------------------------
+export const UNCERTAINTY_TESTS: TestDefinition[] = [
+  {
+    id: "unc-power", clause: "GUM §8", testName: "Power Measurement Uncertainty",
+    purpose: "Calculate combined and expanded uncertainty for Pmax measurement at STC.",
+    testConditions: ["Per GUM (JCGM 100:2008)", "Coverage factor k=2 (95 % confidence)"],
+    equipmentUsed: ["Uncertainty calculation spreadsheet", "Calibration certificates", "Type A data sets"],
+    measurements: ["Type A components (repeatability)", "Type B components (equipment, reference, spectral)", "Combined standard uncertainty", "Expanded uncertainty"],
+    passCriteria: ["Uncertainty budget complete", "All sources identified", "Coverage factor stated"],
+    resultFields: [
+      { label: "Type A Unc", unit: "%", type: "percentage" },
+      { label: "Type B Unc", unit: "%", type: "percentage" },
+      { label: "Combined Unc", unit: "%", type: "percentage" },
+      { label: "Expanded Unc (k=2)", unit: "%", type: "percentage" },
+      { label: "Coverage Factor", unit: "", type: "number", defaultValue: "2" },
+    ],
+  },
+  {
+    id: "unc-temperature", clause: "GUM §8", testName: "Temperature Measurement Uncertainty",
+    purpose: "Calculate uncertainty budget for module temperature measurement.",
+    testConditions: ["Per GUM methodology", "All temperature measurement sources considered"],
+    equipmentUsed: ["Calibration certificates for T sensors", "Data acquisition specs"],
+    measurements: ["Thermocouple calibration unc", "DAQ resolution", "Thermal contact resistance", "Combined temperature uncertainty"],
+    passCriteria: ["Total T uncertainty ≤ ± 1 °C (k=2)"],
+    resultFields: [
+      { label: "Sensor Cal Unc", unit: "°C", type: "number" },
+      { label: "DAQ Resolution", unit: "°C", type: "number" },
+      { label: "Contact Unc", unit: "°C", type: "number" },
+      { label: "Combined (k=2)", unit: "°C", type: "number" },
+    ],
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Incoming Inspection Report Tests
+// ---------------------------------------------------------------------------
+export const INCOMING_INSPECTION_TESTS: TestDefinition[] = [
+  {
+    id: "insp-receiving", clause: "SOP-RCV-001", testName: "Receiving Inspection",
+    purpose: "Inspect incoming PV modules for shipping damage, packaging integrity, and label verification.",
+    testConditions: ["Ambient conditions", "Within 24 h of receipt", "Photography of packaging & module"],
+    equipmentUsed: ["Inspection table", "Camera", "Barcode scanner", "Measuring tape"],
+    measurements: ["Packaging condition", "Module visual condition", "Label verification", "Quantity check"],
+    passCriteria: ["No shipping damage", "Labels match order", "Quantity correct", "Packaging intact"],
+    resultFields: [
+      { label: "Packaging Condition", unit: "", type: "pass_fail" },
+      { label: "Module Condition", unit: "", type: "pass_fail" },
+      { label: "Labels Match", unit: "", type: "pass_fail" },
+      { label: "Quantity Correct", unit: "", type: "pass_fail" },
+    ],
+  },
+  {
+    id: "insp-visual-detailed", clause: "SOP-RCV-002", testName: "Detailed Visual Inspection (Incoming)",
+    purpose: "Detailed visual inspection of module for pre-existing defects before testing.",
+    testConditions: ["Diffused lighting > 1000 lux", "Module at room temperature", "Front & rear surfaces"],
+    equipmentUsed: ["Inspection table", "10× magnifier", "Camera", "Flashlight"],
+    measurements: ["Cell cracks", "Discoloration", "Frame condition", "Glass condition", "J-box & connectors"],
+    passCriteria: ["No pre-existing cracks visible", "No shipping damage", "All connectors intact"],
+    resultFields: [
+      { label: "Front Glass", unit: "", type: "pass_fail" },
+      { label: "Cells (visual)", unit: "", type: "pass_fail" },
+      { label: "Backsheet", unit: "", type: "pass_fail" },
+      { label: "Frame", unit: "", type: "pass_fail" },
+      { label: "J-Box & Connectors", unit: "", type: "pass_fail" },
+    ],
+  },
+  {
+    id: "insp-el-incoming", clause: "SOP-RCV-003", testName: "EL Imaging (Incoming)",
+    purpose: "EL imaging to document cell-level condition of module at receipt.",
+    testConditions: ["Dark room", "Forward bias at Isc", "Exposure: 10–30 s"],
+    equipmentUsed: ["EL camera (Si-CCD or InGaAs)", "DC power supply", "Dark enclosure"],
+    measurements: ["Full-module EL image", "Cell crack detection", "Inactive cell areas"],
+    passCriteria: ["EL baseline documented", "Pre-existing cracks recorded"],
+    resultFields: [
+      { label: "EL Image Captured", unit: "", type: "pass_fail" },
+      { label: "Cracks Detected", unit: "", type: "number" },
+      { label: "Inactive Areas", unit: "", type: "number" },
+      { label: "Overall Quality", unit: "", type: "text" },
+    ],
+  },
+];
+
+// ---------------------------------------------------------------------------
+// IEC 62782 — Sand/Dust Abrasion
+// ---------------------------------------------------------------------------
+export const IEC_62782_TESTS: TestDefinition[] = [
+  {
+    id: "sand-abrasion", clause: "IEC 62782 Clause 7", testName: "Sand/Dust Abrasion Test",
+    purpose: "Evaluate resistance of module front surface to abrasion by wind-blown sand and dust particles.",
+    testConditions: ["Sand particle size 0.1–0.5 mm", "Impact velocity 10–20 m/s", "Controlled angle of impact", "Specified duration / mass of sand"],
+    equipmentUsed: ["Sand blasting chamber", "Air compressor", "Sand hopper", "Glass transmittance meter", "I-V tracer"],
+    measurements: ["Glass transmittance before & after", "Surface roughness", "Haze measurement", "I-V before & after"],
+    passCriteria: ["Transmittance loss < 2 %", "No glass breakage", "No exposed live parts"],
+    resultFields: [
+      { label: "T Before", unit: "%", type: "percentage" },
+      { label: "T After", unit: "%", type: "percentage" },
+      { label: "T Loss", unit: "%", type: "percentage" },
+      { label: "Haze Before", unit: "%", type: "percentage" },
+      { label: "Haze After", unit: "%", type: "percentage" },
+      { label: "Pmax Before", unit: "W", type: "number" },
+      { label: "Pmax After", unit: "W", type: "number" },
+    ],
+  },
+  {
+    id: "dml-sand", clause: "IEC 62782 + 61215-2 MQT16", testName: "Dynamic Mechanical Load + Sand Exposure",
+    purpose: "Combined test: dynamic mechanical load cycling followed by sand abrasion to simulate real-world desert conditions.",
+    testConditions: ["DML: ±1000 Pa, 1000 cycles", "Followed by sand abrasion per IEC 62782", "Module in standard mounting"],
+    equipmentUsed: ["DML test frame", "Sand abrasion chamber", "I-V tracer", "EL camera"],
+    measurements: ["Deflection during DML", "I-V before, after DML, after sand", "EL before & after"],
+    passCriteria: ["Pmax degradation < 5 % (combined)", "No structural failure", "No glass breakage"],
+    resultFields: [
+      { label: "DML Cycles", unit: "", type: "number", defaultValue: "1000" },
+      { label: "DML Pressure", unit: "Pa", type: "number", defaultValue: "1000" },
+      { label: "Pmax Before", unit: "W", type: "number" },
+      { label: "Pmax After DML", unit: "W", type: "number" },
+      { label: "Pmax After Sand", unit: "W", type: "number" },
+      { label: "Total Degradation", unit: "%", type: "percentage" },
+    ],
+  },
+];
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 export function getTestDefinitions(standard: string): TestDefinition[] {
@@ -652,6 +1242,19 @@ export function getTestDefinitions(standard: string): TestDefinition[] {
     case "iec_61853_energy": return IEC_61853_TESTS;
     case "iec_61701_salt": return IEC_61701_TESTS;
     case "iec_62716_ammonia": return IEC_62716_TESTS;
+    case "iec_62804_pid": return IEC_62804_TESTS;
+    case "iec_63209_letid": return IEC_63209_TESTS;
+    case "iec_62788_material": return IEC_62788_TESTS;
+    case "iec_62938_snow": return IEC_62938_TESTS;
+    case "iec_61345_uv_thinfilm": return IEC_61345_TESTS;
+    case "ul_61730_safety": return UL_61730_TESTS;
+    case "is_14286_bis": return IS_14286_TESTS;
+    case "iec_62915_bom": return IEC_62915_TESTS;
+    case "iec_60904_measurement": return IEC_60904_TESTS;
+    case "calibration_report": return CALIBRATION_TESTS;
+    case "uncertainty_report": return UNCERTAINTY_TESTS;
+    case "incoming_inspection": return INCOMING_INSPECTION_TESTS;
+    case "iec_62782_sand": return IEC_62782_TESTS;
     default: return [];
   }
 }
@@ -664,6 +1267,18 @@ export function getStandardLabel(reportType: string): string {
     iec_61701_salt: "IEC 61701:2020",
     iec_62716_ammonia: "IEC 62716:2013",
     iec_60904_measurement: "IEC 60904",
+    iec_62804_pid: "IEC TS 62804:2015",
+    iec_63209_letid: "IEC TS 63209",
+    iec_62788_material: "IEC 62788",
+    iec_62938_snow: "IEC 62938",
+    iec_61345_uv_thinfilm: "IEC 61345",
+    ul_61730_safety: "UL 61730 / UL 1703",
+    is_14286_bis: "IS 14286 (BIS)",
+    iec_62915_bom: "IEC 62915",
+    calibration_report: "ISO/IEC 17025",
+    uncertainty_report: "GUM (JCGM 100)",
+    incoming_inspection: "Internal SOP",
+    iec_62782_sand: "IEC 62782",
     custom: "Custom",
   };
   return labels[reportType] || reportType;
@@ -677,6 +1292,18 @@ export function getStandardTitle(reportType: string): string {
     iec_61701_salt: "Salt Mist Corrosion Test Report",
     iec_62716_ammonia: "Ammonia Corrosion Resistance Test Report",
     iec_60904_measurement: "PV Device Measurement Report",
+    iec_62804_pid: "Potential Induced Degradation (PID) Test Report",
+    iec_63209_letid: "LeTID (Light & Elevated Temperature Induced Degradation) Test Report",
+    iec_62788_material: "Material Testing Report",
+    iec_62938_snow: "Non-Uniform Snow Load Test Report",
+    iec_61345_uv_thinfilm: "UV Test Report (Thin-Film Modules)",
+    ul_61730_safety: "North American Safety Qualification Report (UL Listing)",
+    is_14286_bis: "BIS Certification Test Report",
+    iec_62915_bom: "BoM Change Impact & Type Test Matrix Report",
+    calibration_report: "Equipment Calibration Certificate",
+    uncertainty_report: "Measurement Uncertainty Budget Report",
+    incoming_inspection: "Incoming Module Inspection Report",
+    iec_62782_sand: "Sand/Dust Abrasion Test Report",
     custom: "Custom Test Report",
   };
   return titles[reportType] || "Test Report";
