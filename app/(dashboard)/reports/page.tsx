@@ -28,12 +28,18 @@ export default function ReportsDashboard() {
             Automated ISO 17025 compliant test report generation
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap">
           <Link href="/reports/generate">
             <Button>Generate Report</Button>
           </Link>
           <Link href="/reports/iec-full">
             <Button variant="default" className="bg-blue-600 hover:bg-blue-700">IEC Full Report</Button>
+          </Link>
+          <Link href="/reports/certification-project">
+            <Button variant="default" className="bg-indigo-600 hover:bg-indigo-700">Certification Project</Button>
+          </Link>
+          <Link href="/reports/customer-summary">
+            <Button variant="default" className="bg-emerald-600 hover:bg-emerald-700">Customer Summary</Button>
           </Link>
           <Link href="/reports/templates">
             <Button variant="outline">Templates</Button>
@@ -133,6 +139,16 @@ export default function ReportsDashboard() {
             { href: "/reports/templates/mechanical-load", icon: "🏗", label: "Mechanical Load", std: "MQT 16 · ±5400 Pa", color: "#7c3aed" },
             { href: "/reports/templates/hail", icon: "🧊", label: "Hail Impact Test", std: "MQT 17 · 25mm / 23 m/s", color: "#dc2626" },
             { href: "/reports/templates/uv-preconditioning", icon: "🔆", label: "UV Preconditioning", std: "MQT 10 · 15 kWh/m²", color: "#6d28d9" },
+            { href: "/reports/templates/iec-62788-material", icon: "🧪", label: "Material Testing", std: "IEC 62788 · Backsheet/EVA", color: "#0d9488" },
+            { href: "/reports/templates/iec-62938-snow", icon: "❄", label: "Non-Uniform Snow Load", std: "IEC 62938 · Light/Heavy", color: "#2563eb" },
+            { href: "/reports/templates/iec-61345-uv-thinfilm", icon: "☀", label: "UV Test (Thin-Film)", std: "IEC 61345 · 50 kWh/m²", color: "#7c3aed" },
+            { href: "/reports/templates/ul-61730", icon: "🛡", label: "UL Safety (North Am.)", std: "UL 61730 / UL 1703", color: "#dc2626" },
+            { href: "/reports/templates/is-14286-bis", icon: "🇮🇳", label: "BIS Certification", std: "IS 14286 · ALMM", color: "#ea580c" },
+            { href: "/reports/templates/iec-62915-bom", icon: "📋", label: "BoM & Type Test", std: "IEC 62915 · Change Matrix", color: "#4f46e5" },
+            { href: "/reports/templates/calibration", icon: "🔧", label: "Calibration Certificate", std: "ISO 17025 · NABL", color: "#7e22ce" },
+            { href: "/reports/templates/uncertainty", icon: "📐", label: "Uncertainty Budget", std: "GUM · k=2 Coverage", color: "#0891b2" },
+            { href: "/reports/templates/incoming-inspection", icon: "📦", label: "Incoming Inspection", std: "SOP-RCV · Visual/EL", color: "#059669" },
+            { href: "/reports/templates/iec-62782-sand", icon: "🏜", label: "Sand/Dust Abrasion", std: "IEC 62782 · DML+Sand", color: "#b45309" },
           ].map((tpl) => (
             <Link key={tpl.href} href={tpl.href}>
               <Card className="hover:shadow-md transition-shadow cursor-pointer border-l-4 h-full" style={{ borderLeftColor: tpl.color }}>
