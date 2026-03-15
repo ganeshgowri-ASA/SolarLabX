@@ -1,6 +1,10 @@
 // @ts-nocheck
 "use client";
 
+import { PrePostComparisonChart } from "@/components/reports/charts/PrePostComparisonChart";
+import { ReportUncertaintyBudgetTable } from "@/components/reports/uncertainty/ReportUncertaintyBudgetTable";
+import { TEST_UNCERTAINTY_CONFIGS } from "@/components/reports/uncertainty/testUncertaintyConfigs";
+
 const REPORT_NO = "SLX-RPT-IEC61701-2026-001";
 const ACCENT = "#0e7490";
 
@@ -181,6 +185,31 @@ export default function IEC61701Page() {
               </div>
             ))}
           </div>
+
+          {/* Pre/Post Comparison Chart */}
+          <SH title="PRE/POST POWER COMPARISON" color={ACCENT} />
+          <div style={{ marginBottom: "16px" }}>
+            <PrePostComparisonChart
+              data={SAMPLES.map((s, i) => ({ sampleId: s, preValue: 432.1 - i * 0.1, postValue: 429.1 - i * 0.2 }))}
+              parameter="Pmax" unit="W" threshold={5} thresholdType="max_degradation_pct"
+            />
+          </div>
+
+          {/* Uncertainty Budget */}
+          <SH title="MEASUREMENT UNCERTAINTY BUDGET" color={ACCENT} />
+          <div style={{ fontSize: "7.5pt", color: "#666", marginBottom: "8px" }}>
+            Per GUM JCGM 100:2008 · ISO/IEC 17025:2017 §7.6
+          </div>
+          <ReportUncertaintyBudgetTable
+            rows={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.rows}
+            measurand={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.measurand}
+            measuredValue={432.0}
+            unit={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.unit}
+            combinedUncertainty={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.combinedUncertainty}
+            coverageFactor={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.coverageFactor}
+            expandedUncertainty={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.expandedUncertainty}
+            compact
+          />
 
           <div style={{ marginTop: "16px", background: "#f0fdf4", border: "2px solid #22c55e", borderRadius: "6px", padding: "12px", fontSize: "8.5pt" }}>
             <strong style={{ color: "#15803d", fontSize: "10pt" }}>✓ PASS – IEC 61701:2020 Severity Level S4</strong><br />

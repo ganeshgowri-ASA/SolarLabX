@@ -1,6 +1,8 @@
 // @ts-nocheck
 "use client";
 import { EnvTestReportTemplate } from "@/components/reports/EnvTestReportTemplate";
+import { UncertaintyPieChart, DEFAULT_UNCERTAINTY_PIE_DATA } from "@/components/reports/uncertainty/UncertaintyPieChart";
+import { ReportFishboneDiagram, DEFAULT_PV_FISHBONE_CATEGORIES } from "@/components/reports/uncertainty/ReportFishboneDiagram";
 
 export default function UncertaintyBudgetPage() {
   return (
@@ -97,6 +99,20 @@ export default function UncertaintyBudgetPage() {
           </table>
           <div style={{ fontSize: "7.5pt", color: "#666", padding: "6px 10px", background: "#f0fdfa", border: "1px solid #99f6e4", borderRadius: "4px" }}>
             <strong>Note:</strong> The reported expanded uncertainty U = ±0.87% (k=2) applies to the Pmax measurement at STC. This uncertainty does not include contributions from module-to-module variability or long-term drift. The dominant contributor is spatial non-uniformity of the solar simulator (40.6% of variance).
+          </div>
+
+          <div style={{ fontSize: "11pt", fontWeight: "800", color: "#0891b2", borderBottom: "2.5px solid #0891b2", paddingBottom: "5px", marginBottom: "10px", marginTop: "14px" }}>
+            UNCERTAINTY CONTRIBUTION BREAKDOWN
+          </div>
+          <div style={{ marginBottom: "16px" }}>
+            <UncertaintyPieChart data={DEFAULT_UNCERTAINTY_PIE_DATA} />
+          </div>
+
+          <div style={{ fontSize: "11pt", fontWeight: "800", color: "#0891b2", borderBottom: "2.5px solid #0891b2", paddingBottom: "5px", marginBottom: "10px", marginTop: "14px" }}>
+            CAUSE-AND-EFFECT (FISHBONE) DIAGRAM
+          </div>
+          <div style={{ marginBottom: "16px" }}>
+            <ReportFishboneDiagram categories={DEFAULT_PV_FISHBONE_CATEGORIES} measurand="Pmax" />
           </div>
         </div>
       }

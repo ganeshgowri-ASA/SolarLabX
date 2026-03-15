@@ -1,6 +1,9 @@
 // @ts-nocheck
 "use client";
 import { EnvTestReportTemplate } from "@/components/reports/EnvTestReportTemplate";
+import { PrePostComparisonChart } from "@/components/reports/charts/PrePostComparisonChart";
+import { ReportUncertaintyBudgetTable } from "@/components/reports/uncertainty/ReportUncertaintyBudgetTable";
+import { TEST_UNCERTAINTY_CONFIGS } from "@/components/reports/uncertainty/testUncertaintyConfigs";
 
 export default function IEC62782SandPage() {
   return (
@@ -45,6 +48,35 @@ export default function IEC62782SandPage() {
         "Test Dust: ISO 12103 A4 Coarse (Lot: PTI-2026-C4-0189)",
       ]}
       overallDelta="−0.83%"
+      testSpecificCharts={
+        <>
+          <div style={{ marginBottom: "16px" }}>
+            <PrePostComparisonChart
+              data={[
+                { sampleId: "SLX-M801", preValue: 432.1, postValue: 428.6 },
+                { sampleId: "SLX-M802", preValue: 431.8, postValue: 428.2 },
+                { sampleId: "SLX-M803", preValue: 432.0, postValue: 428.8 },
+              ]}
+              parameter="Pmax"
+              unit="W"
+              threshold={5}
+              thresholdType="max_degradation_pct"
+            />
+          </div>
+        </>
+      }
+      uncertaintySection={
+        <ReportUncertaintyBudgetTable
+          rows={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.rows}
+          measurand={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.measurand}
+          measuredValue={432.0}
+          unit={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.unit}
+          combinedUncertainty={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.combinedUncertainty}
+          coverageFactor={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.coverageFactor}
+          expandedUncertainty={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.expandedUncertainty}
+          compact
+        />
+      }
       extraSections={
         <div style={{ marginBottom: "16px" }}>
           <div style={{ fontSize: "11pt", fontWeight: "800", color: "#b45309", borderBottom: "2.5px solid #b45309", paddingBottom: "5px", marginBottom: "10px", marginTop: "14px" }}>

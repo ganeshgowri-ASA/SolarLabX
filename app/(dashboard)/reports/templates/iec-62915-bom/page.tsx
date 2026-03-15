@@ -1,6 +1,9 @@
 // @ts-nocheck
 "use client";
 import { EnvTestReportTemplate } from "@/components/reports/EnvTestReportTemplate";
+import { PrePostComparisonChart } from "@/components/reports/charts/PrePostComparisonChart";
+import { ReportUncertaintyBudgetTable } from "@/components/reports/uncertainty/ReportUncertaintyBudgetTable";
+import { TEST_UNCERTAINTY_CONFIGS } from "@/components/reports/uncertainty/testUncertaintyConfigs";
 
 export default function IEC62915BoMPage() {
   return (
@@ -40,6 +43,25 @@ export default function IEC62915BoMPage() {
         "BoM Version Control System",
       ]}
       overallDelta="Assessed"
+      testSpecificCharts={
+        <>
+          <div style={{ marginBottom: "16px" }}>
+            <PrePostComparisonChart />
+          </div>
+        </>
+      }
+      uncertaintySection={
+        <ReportUncertaintyBudgetTable
+          rows={TEST_UNCERTAINTY_CONFIGS.flasher_stc.rows}
+          measurand={TEST_UNCERTAINTY_CONFIGS.flasher_stc.measurand}
+          measuredValue={432.0}
+          unit={TEST_UNCERTAINTY_CONFIGS.flasher_stc.unit}
+          combinedUncertainty={TEST_UNCERTAINTY_CONFIGS.flasher_stc.combinedUncertainty}
+          coverageFactor={TEST_UNCERTAINTY_CONFIGS.flasher_stc.coverageFactor}
+          expandedUncertainty={TEST_UNCERTAINTY_CONFIGS.flasher_stc.expandedUncertainty}
+          compact
+        />
+      }
       extraSections={
         <div style={{ marginBottom: "16px" }}>
           <div style={{ fontSize: "11pt", fontWeight: "800", color: "#4f46e5", borderBottom: "2.5px solid #4f46e5", paddingBottom: "5px", marginBottom: "10px", marginTop: "14px" }}>

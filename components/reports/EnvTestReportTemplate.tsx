@@ -21,6 +21,14 @@ export interface EnvTestResult {
   extra?: Record<string, string>;
 }
 
+export interface EquipmentDetail {
+  name: string;
+  id: string;
+  calDate: string;
+  validity: string;
+  nextCalDate: string;
+}
+
 export interface EnvTestReportProps {
   reportNo: string;
   title: string;
@@ -35,8 +43,11 @@ export interface EnvTestReportProps {
   criterion: string;
   purpose: string;
   equipment: string[];
+  equipmentDetails?: EquipmentDetail[];
   overallDelta?: string;
   extraSections?: React.ReactNode;
+  testSpecificCharts?: React.ReactNode;
+  uncertaintySection?: React.ReactNode;
   passedDate?: string;
   preIVParams?: IVParams;
   postIVParams?: IVParams;
@@ -48,6 +59,7 @@ export function EnvTestReportTemplate({
   moduleModel = "AC-430MH/144V", moduleSpecs, testConditions, results,
   criterion, purpose, equipment, overallDelta = "< 5%", extraSections, passedDate = "2026-03-14",
   preIVParams, postIVParams, showSummaryCharts = true,
+  testSpecificCharts, uncertaintySection, equipmentDetails,
 }: EnvTestReportProps) {
 
   const preIV = preIVParams || DEFAULT_PRE_IV_PARAMS;
@@ -246,21 +258,63 @@ export function EnvTestReportTemplate({
             </div>
           )}
 
+          {/* Test-Specific Charts */}
+          {testSpecificCharts && (
+            <div className="page-break">
+              <SH title="TEST-SPECIFIC ANALYSIS CHARTS" color={accent} />
+              {testSpecificCharts}
+            </div>
+          )}
+
+          {/* Uncertainty Budget */}
+          {uncertaintySection && (
+            <div className="page-break">
+              <SH title="MEASUREMENT UNCERTAINTY BUDGET" color={accent} />
+              <div style={{ fontSize: "7.5pt", color: "#666", marginBottom: "8px" }}>
+                Per GUM JCGM 100:2008 · ISO/IEC 17025:2017 §7.6
+              </div>
+              {uncertaintySection}
+            </div>
+          )}
+
           {/* Extra sections */}
           {extraSections}
 
           {/* Equipment */}
           <SH title="EQUIPMENT USED" color={accent} />
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "8.5pt", marginBottom: "16px" }}>
-            <tbody>
-              {equipment.map((e, i) => (
-                <tr key={i} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                  <td style={{ padding: "3px 8px" }}>•</td>
-                  <td style={{ padding: "3px 8px" }}>{e}</td>
+          {equipmentDetails && equipmentDetails.length > 0 ? (
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "8pt", marginBottom: "16px" }}>
+              <thead>
+                <tr style={{ background: "#f3f4f6", borderBottom: "2px solid #ddd" }}>
+                  {["Equipment", "ID", "Cal. Date", "Validity", "Next Cal."].map(h => (
+                    <th key={h} style={{ padding: "5px 8px", textAlign: "left", fontWeight: "600" }}>{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {equipmentDetails.map((eq, i) => (
+                  <tr key={i} style={{ borderBottom: "1px solid #f3f4f6", background: i % 2 === 0 ? "#fafafa" : "white" }}>
+                    <td style={{ padding: "4px 8px", fontWeight: "500" }}>{eq.name}</td>
+                    <td style={{ padding: "4px 8px", fontFamily: "monospace", fontSize: "7.5pt" }}>{eq.id}</td>
+                    <td style={{ padding: "4px 8px" }}>{eq.calDate}</td>
+                    <td style={{ padding: "4px 8px" }}>{eq.validity}</td>
+                    <td style={{ padding: "4px 8px" }}>{eq.nextCalDate}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "8.5pt", marginBottom: "16px" }}>
+              <tbody>
+                {equipment.map((e, i) => (
+                  <tr key={i} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                    <td style={{ padding: "3px 8px" }}>•</td>
+                    <td style={{ padding: "3px 8px" }}>{e}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
 
           {/* Conclusion */}
           <div style={{ background: "#f0fdf4", border: "2px solid #22c55e", borderRadius: "6px", padding: "12px 16px", marginBottom: "20px", fontSize: "8.5pt" }}>

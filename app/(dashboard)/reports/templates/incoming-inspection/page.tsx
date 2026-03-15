@@ -1,6 +1,9 @@
 // @ts-nocheck
 "use client";
 import { EnvTestReportTemplate } from "@/components/reports/EnvTestReportTemplate";
+import { IVCurveChart } from "@/components/reports/charts/IVCurveChart";
+import { ReportUncertaintyBudgetTable } from "@/components/reports/uncertainty/ReportUncertaintyBudgetTable";
+import { TEST_UNCERTAINTY_CONFIGS } from "@/components/reports/uncertainty/testUncertaintyConfigs";
 
 export default function IncomingInspectionPage() {
   return (
@@ -43,6 +46,25 @@ export default function IncomingInspectionPage() {
         "Barcode Scanner: Zebra DS3678-SR (inventory system linked)",
       ]}
       overallDelta="ACCEPTED"
+      testSpecificCharts={
+        <>
+          <div style={{ marginBottom: "16px" }}>
+            <IVCurveChart />
+          </div>
+        </>
+      }
+      uncertaintySection={
+        <ReportUncertaintyBudgetTable
+          rows={TEST_UNCERTAINTY_CONFIGS.flasher_stc.rows}
+          measurand={TEST_UNCERTAINTY_CONFIGS.flasher_stc.measurand}
+          measuredValue={432.0}
+          unit={TEST_UNCERTAINTY_CONFIGS.flasher_stc.unit}
+          combinedUncertainty={TEST_UNCERTAINTY_CONFIGS.flasher_stc.combinedUncertainty}
+          coverageFactor={TEST_UNCERTAINTY_CONFIGS.flasher_stc.coverageFactor}
+          expandedUncertainty={TEST_UNCERTAINTY_CONFIGS.flasher_stc.expandedUncertainty}
+          compact
+        />
+      }
       extraSections={
         <div style={{ marginBottom: "16px" }}>
           <div style={{ fontSize: "11pt", fontWeight: "800", color: "#059669", borderBottom: "2.5px solid #059669", paddingBottom: "5px", marginBottom: "10px", marginTop: "14px" }}>

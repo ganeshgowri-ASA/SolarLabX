@@ -4,6 +4,10 @@
 import { useState } from "react";
 import { IVCurveComparisonChart } from "@/components/reports/IVCurveComparisonChart";
 import { PmaxStabilizationChart } from "@/components/reports/ReportSummaryCharts";
+import { LeTIDAnalysisChart } from "@/components/reports/charts/LeTIDAnalysisChart";
+import { PrePostComparisonChart } from "@/components/reports/charts/PrePostComparisonChart";
+import { ReportUncertaintyBudgetTable } from "@/components/reports/uncertainty/ReportUncertaintyBudgetTable";
+import { TEST_UNCERTAINTY_CONFIGS } from "@/components/reports/uncertainty/testUncertaintyConfigs";
 
 const REPORT_NO = "SLX-RPT-LETID-2026-001";
 
@@ -519,9 +523,42 @@ export default function LeTIDReportPage() {
           </div>
         </div>
 
+        {/* ═══════════════ TEST-SPECIFIC CHARTS ═══════════════ */}
+        <div className="page-break" style={{ padding: "12mm 20mm", fontSize: "9pt" }}>
+          <SectionHeader num="9" title="TEST-SPECIFIC CHARTS" accent="#0f4c81" />
+          <div style={{ marginBottom: "16px" }}>
+            <LeTIDAnalysisChart />
+          </div>
+          <div style={{ marginBottom: "16px" }}>
+            <PrePostComparisonChart
+              data={[
+                { sampleId: "SLX-M101", preValue: 547.8, postValue: 537.1 },
+                { sampleId: "SLX-M102", preValue: 547.2, postValue: 536.7 },
+                { sampleId: "SLX-M103", preValue: 547.5, postValue: 536.9 },
+              ]}
+              parameter="Pmax" unit="W" threshold={5} thresholdType="max_degradation_pct"
+            />
+          </div>
+        </div>
+
+        {/* ═══════════════ UNCERTAINTY BUDGET ═══════════════ */}
+        <div className="page-break" style={{ padding: "12mm 20mm", fontSize: "9pt" }}>
+          <SectionHeader num="10" title="MEASUREMENT UNCERTAINTY" accent="#0f4c81" />
+          <ReportUncertaintyBudgetTable
+            rows={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.rows}
+            measurand={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.measurand}
+            measuredValue={547.8}
+            unit={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.unit}
+            combinedUncertainty={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.combinedUncertainty}
+            coverageFactor={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.coverageFactor}
+            expandedUncertainty={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.expandedUncertainty}
+            compact
+          />
+        </div>
+
         {/* ═══════════════ CONCLUSIONS ═══════════════ */}
         <div className="page-break" style={{ padding: "12mm 20mm", fontSize: "9pt" }}>
-          <SectionHeader num="9" title="CONCLUSIONS" accent="#0f4c81" />
+          <SectionHeader num="11" title="CONCLUSIONS" accent="#0f4c81" />
 
           <div style={{ padding: "12px 16px", background: "#f0fdf4", border: "2px solid #22c55e", borderRadius: "6px", marginBottom: "16px" }}>
             <div style={{ fontSize: "11pt", fontWeight: "700", color: "#15803d", marginBottom: "6px" }}>✓ ALL SAMPLES PASSED – IEC CD 61215:2020 LeTID Protocol</div>

@@ -1,6 +1,10 @@
 // @ts-nocheck
 "use client";
 import { EnvTestReportTemplate } from "@/components/reports/EnvTestReportTemplate";
+import { DMLTCycleChart } from "@/components/reports/charts/DMLTCycleChart";
+import { PrePostComparisonChart } from "@/components/reports/charts/PrePostComparisonChart";
+import { ReportUncertaintyBudgetTable } from "@/components/reports/uncertainty/ReportUncertaintyBudgetTable";
+import { TEST_UNCERTAINTY_CONFIGS } from "@/components/reports/uncertainty/testUncertaintyConfigs";
 
 export default function MechanicalLoadPage() {
   return (
@@ -39,6 +43,35 @@ export default function MechanicalLoadPage() {
         ["Rated Pmax", "430 Wp"], ["Samples", "3 modules"], ["Frame", "Anodized Al – 40mm depth"],
         ["Glass", "3.2mm ARC tempered (front)"], ["Backsheet", "TPT (white)"],
       ]}
+      testSpecificCharts={
+        <>
+          <div style={{ marginBottom: "16px" }}>
+            <DMLTCycleChart />
+          </div>
+          <div style={{ marginBottom: "16px" }}>
+            <PrePostComparisonChart
+              data={[
+                { sampleId: "SLX-M601", preValue: 432.1, postValue: 431.6 },
+                { sampleId: "SLX-M602", preValue: 431.8, postValue: 431.3 },
+                { sampleId: "SLX-M603", preValue: 432.0, postValue: 431.4 },
+              ]}
+              parameter="Pmax" unit="W" threshold={5} thresholdType="max_degradation_pct"
+            />
+          </div>
+        </>
+      }
+      uncertaintySection={
+        <ReportUncertaintyBudgetTable
+          rows={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.rows}
+          measurand={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.measurand}
+          measuredValue={432.0}
+          unit={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.unit}
+          combinedUncertainty={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.combinedUncertainty}
+          coverageFactor={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.coverageFactor}
+          expandedUncertainty={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.expandedUncertainty}
+          compact
+        />
+      }
       extraSections={
         <div style={{ marginBottom: "12px" }}>
           <div style={{ fontWeight: "700", color: "#7c3aed", borderBottom: "2px solid #7c3aed", paddingBottom: "4px", marginBottom: "8px", fontSize: "10pt" }}>

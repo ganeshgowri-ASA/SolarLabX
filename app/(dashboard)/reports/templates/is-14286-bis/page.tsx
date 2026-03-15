@@ -1,6 +1,9 @@
 // @ts-nocheck
 "use client";
 import { EnvTestReportTemplate } from "@/components/reports/EnvTestReportTemplate";
+import { PrePostComparisonChart } from "@/components/reports/charts/PrePostComparisonChart";
+import { ReportUncertaintyBudgetTable } from "@/components/reports/uncertainty/ReportUncertaintyBudgetTable";
+import { TEST_UNCERTAINTY_CONFIGS } from "@/components/reports/uncertainty/testUncertaintyConfigs";
 
 export default function IS14286BISPage() {
   return (
@@ -38,6 +41,25 @@ export default function IS14286BISPage() {
         "Reference Cell: Eppley PSP-5 (Cal. SLX-EQ-003, Valid: 2026-06-30)",
       ]}
       overallDelta="−1.11%"
+      testSpecificCharts={
+        <>
+          <div style={{ marginBottom: "16px" }}>
+            <PrePostComparisonChart />
+          </div>
+        </>
+      }
+      uncertaintySection={
+        <ReportUncertaintyBudgetTable
+          rows={TEST_UNCERTAINTY_CONFIGS.flasher_stc.rows}
+          measurand={TEST_UNCERTAINTY_CONFIGS.flasher_stc.measurand}
+          measuredValue={432.0}
+          unit={TEST_UNCERTAINTY_CONFIGS.flasher_stc.unit}
+          combinedUncertainty={TEST_UNCERTAINTY_CONFIGS.flasher_stc.combinedUncertainty}
+          coverageFactor={TEST_UNCERTAINTY_CONFIGS.flasher_stc.coverageFactor}
+          expandedUncertainty={TEST_UNCERTAINTY_CONFIGS.flasher_stc.expandedUncertainty}
+          compact
+        />
+      }
       extraSections={
         <>
           <div style={{ marginBottom: "12px", fontSize: "8.5pt" }}>

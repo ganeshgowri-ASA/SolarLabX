@@ -1,6 +1,9 @@
 // @ts-nocheck
 "use client";
 import { EnvTestReportTemplate } from "@/components/reports/EnvTestReportTemplate";
+import { IVCurveChart } from "@/components/reports/charts/IVCurveChart";
+import { ReportUncertaintyBudgetTable } from "@/components/reports/uncertainty/ReportUncertaintyBudgetTable";
+import { TEST_UNCERTAINTY_CONFIGS } from "@/components/reports/uncertainty/testUncertaintyConfigs";
 
 export default function CalibrationCertificatePage() {
   return (
@@ -42,6 +45,25 @@ export default function CalibrationCertificatePage() {
         "Barometric Reference: Vaisala PTB330 (Cal. SLX-EQ-048)",
       ]}
       overallDelta="Within Spec"
+      testSpecificCharts={
+        <>
+          <div style={{ marginBottom: "16px" }}>
+            <IVCurveChart />
+          </div>
+        </>
+      }
+      uncertaintySection={
+        <ReportUncertaintyBudgetTable
+          rows={TEST_UNCERTAINTY_CONFIGS.flasher_stc.rows}
+          measurand={TEST_UNCERTAINTY_CONFIGS.flasher_stc.measurand}
+          measuredValue={432.0}
+          unit={TEST_UNCERTAINTY_CONFIGS.flasher_stc.unit}
+          combinedUncertainty={TEST_UNCERTAINTY_CONFIGS.flasher_stc.combinedUncertainty}
+          coverageFactor={TEST_UNCERTAINTY_CONFIGS.flasher_stc.coverageFactor}
+          expandedUncertainty={TEST_UNCERTAINTY_CONFIGS.flasher_stc.expandedUncertainty}
+          compact
+        />
+      }
       extraSections={
         <div style={{ marginBottom: "16px" }}>
           <div style={{ fontSize: "11pt", fontWeight: "800", color: "#7e22ce", borderBottom: "2.5px solid #7e22ce", paddingBottom: "5px", marginBottom: "10px", marginTop: "14px" }}>
