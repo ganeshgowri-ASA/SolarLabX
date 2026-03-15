@@ -166,11 +166,11 @@ export function EnhancedProjectsDashboard() {
           <TabsTrigger value="ai" className="gap-1"><Bot className="h-4 w-4" /> AI Chat</TabsTrigger>
         </TabsList>
 
-        {/* Dashboard Tab - Today's tasks as cards */}
+        {/* Dashboard Tab - Today{"'"}s Tasks as cards */}
         <TabsContent value="dashboard" className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {/* Today's Tasks */}
-            <Card className="lg:col-span-2"><CardHeader className="py-3"><CardTitle className="text-base">Today's Tasks — {new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short", year: "numeric" })}</CardTitle></CardHeader><CardContent>
+            {/* Today{"'"}s Tasks */}
+            <Card className="lg:col-span-2"><CardHeader className="py-3"><CardTitle className="text-base">Today{"'"}s Tasks — {new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short", year: "numeric" })}</CardTitle></CardHeader><CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">{filteredTasks.filter((t) => t.status !== "Completed" && t.status !== "Not Started").map((task) => <TaskCard key={task.id} task={task} onClick={() => setSelectedTask(task)} />)}</div>
               {filteredTasks.filter((t) => t.status !== "Completed" && t.status !== "Not Started").length === 0 && <p className="text-sm text-muted-foreground text-center py-8">No active tasks match filters</p>}
             </CardContent></Card>
