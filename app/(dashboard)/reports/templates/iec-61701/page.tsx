@@ -4,6 +4,7 @@
 import { PrePostComparisonChart } from "@/components/reports/charts/PrePostComparisonChart";
 import { ReportUncertaintyBudgetTable } from "@/components/reports/uncertainty/ReportUncertaintyBudgetTable";
 import { TEST_UNCERTAINTY_CONFIGS } from "@/components/reports/uncertainty/testUncertaintyConfigs";
+import { exportToWord, exportToExcel, type TemplateExportConfig } from "@/components/reports/TemplateExportToolbar";
 
 const REPORT_NO = "SLX-RPT-IEC61701-2026-001";
 const ACCENT = "#0e7490";
@@ -30,6 +31,23 @@ const TEST_SEQUENCE = [
 const SAMPLES = ["SLX-M201", "SLX-M202", "SLX-M203"];
 
 export default function IEC61701Page() {
+  const exportConfig: TemplateExportConfig = {
+    reportNo: REPORT_NO, title: "Salt Mist Corrosion Test", subtitle: "IEC 61701:2020 · Severity Level S4 · 200 Hours · 5% NaCl",
+    standard: "IEC 61701:2020", date: "2026-03-14",
+    moduleSpecs: [["Customer", "Axitec Energy GmbH"], ["Module", "AC-430MH/144V (430 Wp)"], ["Severity Level", "S4 (most stringent)"], ["Duration", "200 hours"]],
+    testConditions: [["Salt Concentration", "5% NaCl (by mass)"], ["Temperature", "35°C ± 2°C"], ["pH", "6.5 – 7.2"]],
+    criterion: "ΔPmax < 5%, RISO·A ≥ 40 MΩ·m², no corrosion on frame, connectors, or junction box.",
+    purpose: "Evaluates the ability of PV modules to withstand corrosive salt mist environments per IEC 61701:2020.",
+    equipment: ["Salt Mist Chamber (NABL Cal.)", "Solar Simulator: Spire 4600SLP AAA+", "Insulation Tester: Fluke 1555C"],
+    overallResult: "All 3 samples passed IEC 61701:2020 Severity Level S4. ΔPmax ≤ 5%, RISO ≥ 40 MΩ·m².",
+    tables: [
+      { title: "Severity Levels Reference", headers: ["Level", "Description", "Duration", "NaCl Conc."], rows: SEVERITY_LEVELS.map(r => [r.level, r.desc, r.duration, r.nacl]) },
+      { title: "Test Sequence & Results", headers: ["Test Step", "Result", "Deviation", "Pass"], rows: TEST_SEQUENCE.map(r => [r.step, r.result, r.deviation, r.pass ? "PASS" : "FAIL"]) },
+      { title: "Per-Sample Electrical Results", headers: ["Sample", "Pmax Before (W)", "Pmax After (W)", "ΔPmax", "Voc Δ", "Isc Δ", "RISO After", "Visual", "Result"],
+        rows: SAMPLES.map((s, i) => [s, `432.${i+1}`, `429.${i+1}`, `−0.7${i}%`, "−0.3%", "−0.2%", `598${i} MΩ·m²`, "Minor deposit", "PASS"]) },
+    ],
+  };
+
   return (
     <>
       <style>{`
@@ -54,11 +72,11 @@ export default function IEC61701Page() {
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
             PDF
           </button>
-          <button onClick={() => { /* word export placeholder */ }} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
+          <button onClick={() => exportToWord(exportConfig)} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
             Word
           </button>
-          <button onClick={() => { /* excel export placeholder */ }} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
+          <button onClick={() => exportToExcel(exportConfig)} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
             Excel
           </button>
