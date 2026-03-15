@@ -20,6 +20,8 @@ import {
   ShieldCheck,
   Camera,
 } from "lucide-react"
+import { IVCurveComparisonChart } from "@/components/reports/IVCurveComparisonChart"
+import { PmaxStabilizationChart, PowerDegradationChart, DEFAULT_STABILIZATION_DATA, DEFAULT_DEGRADATION_DATA, DEFAULT_SAMPLE_IDS } from "@/components/reports/ReportSummaryCharts"
 
 // ---------------------------------------------------------------------------
 // Sample Data – SolarTech ST-500M passing IEC 61215 + 61730 + 61853
@@ -521,7 +523,35 @@ export default function CustomerSummaryReportPage() {
           </CardContent>
         </Card>
 
-        {/* ---- 6. Certification Recommendation ---- */}
+        {/* ---- 6. I-V Curve & Performance Graphs ---- */}
+        <Card className="print-break-before">
+          <CardHeader>
+            <CardTitle>Performance Characterization</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <IVCurveComparisonChart
+              preParams={{ voc: 49.8, isc: 13.25, vmp: 41.7, imp: 12.00, pmax: 502.3, ff: 0.761 }}
+              postParams={{ voc: 49.6, isc: 13.20, vmp: 41.4, imp: 11.90, pmax: 493.3, ff: 0.753 }}
+              title="I-V Curve Comparison (Pre vs Post Full Qualification)"
+              height={280}
+            />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <PmaxStabilizationChart
+                data={DEFAULT_STABILIZATION_DATA}
+                sampleIds={DEFAULT_SAMPLE_IDS}
+                ratedPmax={500}
+                height={220}
+              />
+              <PowerDegradationChart
+                data={DEFAULT_DEGRADATION_DATA}
+                sampleIds={DEFAULT_SAMPLE_IDS}
+                height={220}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ---- 7. Certification Recommendation ---- */}
         <Card className="border-blue-200 bg-blue-50/30">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-blue-800">

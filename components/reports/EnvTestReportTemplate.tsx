@@ -1,6 +1,13 @@
 // @ts-nocheck
 "use client";
 import React from "react";
+import { IVCurveComparisonChart, type IVParams } from "@/components/reports/IVCurveComparisonChart";
+import {
+  PmaxStabilizationChart, InsulationResistanceChart, PowerDegradationChart,
+  DEFAULT_PRE_IV_PARAMS, DEFAULT_POST_IV_PARAMS,
+  DEFAULT_STABILIZATION_DATA, DEFAULT_INSULATION_DATA, DEFAULT_DEGRADATION_DATA,
+  DEFAULT_SAMPLE_IDS,
+} from "@/components/reports/ReportSummaryCharts";
 
 export interface EnvTestResult {
   sample: string;
@@ -31,13 +38,24 @@ export interface EnvTestReportProps {
   overallDelta?: string;
   extraSections?: React.ReactNode;
   passedDate?: string;
+  preIVParams?: IVParams;
+  postIVParams?: IVParams;
+  showSummaryCharts?: boolean;
 }
 
 export function EnvTestReportTemplate({
   reportNo, title, subtitle, accent, standard, customer = "Axitec Energy GmbH",
   moduleModel = "AC-430MH/144V", moduleSpecs, testConditions, results,
   criterion, purpose, equipment, overallDelta = "< 5%", extraSections, passedDate = "2026-03-14",
+  preIVParams, postIVParams, showSummaryCharts = true,
 }: EnvTestReportProps) {
+
+  const preIV = preIVParams || DEFAULT_PRE_IV_PARAMS;
+  const postIV = postIVParams || {
+    ...DEFAULT_POST_IV_PARAMS,
+    pmax: results.length > 0 ? parseFloat(results[0].pmaxAfter) || DEFAULT_POST_IV_PARAMS.pmax : DEFAULT_POST_IV_PARAMS.pmax,
+  };
+  const sampleIds = results.map(r => r.sample);
 
   const defaultSpecs: [string, string][] = moduleSpecs || [
     ["Manufacturer", customer], ["Model", moduleModel], ["Technology", "Mono-PERC"],
@@ -57,15 +75,20 @@ export function EnvTestReportTemplate({
         }
       `}</style>
 
-      <div className="no-print flex items-center justify-between mb-4 p-4 bg-gray-50 rounded-lg border">
+      <div className="no-print sticky top-0 z-50 flex items-center justify-between mb-4 p-4 bg-gray-50 rounded-lg border shadow-sm">
         <div>
           <h1 className="text-xl font-bold">{title}</h1>
           <p className="text-sm text-gray-500">{subtitle}</p>
         </div>
         <div className="flex gap-2">
           <a href="/reports/templates" className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100">← Back</a>
-          <button onClick={() => window.print()} className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
-            🖨 Print / Save PDF
+          <button onClick={() => { const fmt = "pdf"; if (fmt === "pdf") window.print(); }} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+            PDF
+          </button>
+          <button onClick={() => window.print()} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+            Print
           </button>
         </div>
       </div>
@@ -184,6 +207,44 @@ export function EnvTestReportTemplate({
               </div>
             ))}
           </div>
+
+          {/* I-V Curve Comparison */}
+          <div className="page-break">
+            <SH title="I-V & P-V CURVE COMPARISON (PRE / POST TEST)" color={accent} />
+            <IVCurveComparisonChart
+              preParams={preIV}
+              postParams={postIV}
+              title={`${title} – I-V Curve Overlay`}
+              height={300}
+            />
+          </div>
+
+          {/* Summary Charts */}
+          {showSummaryCharts && (
+            <div className="page-break">
+              <SH title="SUMMARY ANALYSIS CHARTS" color={accent} />
+              <div style={{ marginBottom: "12px" }}>
+                <PmaxStabilizationChart
+                  data={DEFAULT_STABILIZATION_DATA}
+                  sampleIds={sampleIds.length > 0 ? sampleIds : DEFAULT_SAMPLE_IDS}
+                  ratedPmax={parseFloat(results[0]?.pmaxBefore || "430")}
+                  height={250}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4" style={{ marginBottom: "12px" }}>
+                <InsulationResistanceChart
+                  data={DEFAULT_INSULATION_DATA}
+                  sampleIds={sampleIds.length > 0 ? sampleIds : DEFAULT_SAMPLE_IDS}
+                  height={220}
+                />
+                <PowerDegradationChart
+                  data={DEFAULT_DEGRADATION_DATA}
+                  sampleIds={sampleIds.length > 0 ? sampleIds : DEFAULT_SAMPLE_IDS}
+                  height={220}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Extra sections */}
           {extraSections}
