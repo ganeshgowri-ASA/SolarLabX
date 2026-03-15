@@ -1230,12 +1230,16 @@ export function ExportToolbar({
         ],
       })
 
-      await Packer.toBlob(doc).then((blob) => {
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement("a")
-        a.href = url
-        a.download = `${reportNumber}_TRF.docx`
-        a.click()
+      const blob = await Packer.toBlob(doc)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `${reportNumber}_TRF.docx`
+      a.style.display = "none"
+      document.body.appendChild(a)
+      a.click()
+      // Delay revocation so the browser has time to start the download
+      setTimeout(() => {
         URL.revokeObjectURL(url)
       })
       toast.success("Word document exported with charts, traceability, and image placeholders")
