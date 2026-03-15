@@ -9,6 +9,12 @@ import {
 import {
   Tabs, TabsContent, TabsList, TabsTrigger,
 } from "@/components/ui/tabs";
+import { IVCurveComparisonChart } from "@/components/reports/IVCurveComparisonChart";
+import { PmaxStabilizationChart, InsulationResistanceChart } from "@/components/reports/ReportSummaryCharts";
+import { InsulationWetLeakageChart } from "@/components/reports/charts/InsulationWetLeakageChart";
+import { PrePostComparisonChart } from "@/components/reports/charts/PrePostComparisonChart";
+import { ReportUncertaintyBudgetTable } from "@/components/reports/uncertainty/ReportUncertaintyBudgetTable";
+import { TEST_UNCERTAINTY_CONFIGS } from "@/components/reports/uncertainty/testUncertaintyConfigs";
 
 const ACCENT = "#7c2d12";
 
@@ -380,7 +386,7 @@ export default function IEC61730ReportPage() {
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
       {/* Page Header */}
-      <div className="px-6 pt-6 pb-2 flex items-center justify-between">
+      <div className="no-print sticky top-0 z-50 px-6 pt-6 pb-2 flex items-center justify-between bg-gray-50 border-b">
         <div>
           <h1 className="text-2xl font-bold" style={{ color: ACCENT }}>
             IEC 61730:2016 – Safety Qualification Test Report
@@ -389,13 +395,25 @@ export default function IEC61730ReportPage() {
             Report No.: {moduleInfo.reportNo} &nbsp;|&nbsp; Date: {moduleInfo.date} &nbsp;|&nbsp; Lab: SolarLabX (NABL TC-8192)
           </p>
         </div>
-        <button
-          onClick={() => window.print()}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white shadow"
-          style={{ background: ACCENT }}
-        >
-          Print / Export PDF
-        </button>
+        <div className="flex gap-2">
+          <a href="/reports/templates" className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100">← Back</a>
+          <button onClick={() => window.print()} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+            PDF
+          </button>
+          <button onClick={() => { /* word export placeholder */ }} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            Word
+          </button>
+          <button onClick={() => { /* excel export placeholder */ }} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+            Excel
+          </button>
+          <button onClick={() => window.print()} className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+            Print
+          </button>
+        </div>
       </div>
 
       <div className="px-6 pb-10">
@@ -849,6 +867,34 @@ export default function IEC61730ReportPage() {
                 </div>
               </div>
 
+              {/* I-V Curve Comparison */}
+              <div className="page-break" style={{ marginBottom: "24px" }}>
+                <h3 className="text-sm font-bold uppercase tracking-wider mb-3" style={{ color: ACCENT, borderBottom: `2px solid ${ACCENT}`, paddingBottom: "4px" }}>
+                  I-V Curve Comparison (Pre vs Post Safety Tests)
+                </h3>
+                <IVCurveComparisonChart
+                  preParams={{ voc: 43.24, isc: 12.85, vmp: 35.31, imp: 12.20, pmax: 430.8, ff: 0.7786 }}
+                  postParams={{ voc: 43.15, isc: 12.82, vmp: 35.20, imp: 12.16, pmax: 426.1, ff: 0.7695 }}
+                  title="IEC 61730 Safety Tests – I-V Curve Overlay"
+                  height={280}
+                />
+              </div>
+
+              {/* Insulation Resistance Trend */}
+              <div style={{ marginBottom: "24px" }}>
+                <InsulationResistanceChart
+                  data={[
+                    { stage: "Initial", "SM-007": 6500, "SM-008": 6480 },
+                    { stage: "Post-Impulse", "SM-007": 6350, "SM-008": 6320 },
+                    { stage: "Post-Dielectric", "SM-007": 6200, "SM-008": 6180 },
+                    { stage: "Post-TC200", "SM-007": 5980, "SM-008": 5950 },
+                    { stage: "Final", "SM-007": 5820, "SM-008": 5800 },
+                  ]}
+                  sampleIds={["SM-007", "SM-008"]}
+                  height={220}
+                />
+              </div>
+
               {/* Overall result banner */}
               <div
                 className="rounded-2xl px-8 py-6 flex items-center justify-between"
@@ -915,6 +961,44 @@ export default function IEC61730ReportPage() {
                     </tbody>
                   </table>
                 </div>
+              </div>
+
+              {/* Test-Specific Charts */}
+              <div className="bg-white rounded-2xl shadow-sm border p-7">
+                <h3 className="text-lg font-bold mb-4" style={{ color: ACCENT }}>Test-Specific Analysis Charts</h3>
+                <div style={{ marginBottom: "16px" }}>
+                  <InsulationWetLeakageChart />
+                </div>
+                <div style={{ marginBottom: "16px" }}>
+                  <PrePostComparisonChart
+                    data={[
+                      { sampleId: "SM-007", preValue: 430.8, postValue: 426.1 },
+                      { sampleId: "SM-008", preValue: 430.5, postValue: 425.8 },
+                    ]}
+                    parameter="Pmax"
+                    unit="W"
+                    threshold={5}
+                    thresholdType="max_degradation_pct"
+                  />
+                </div>
+              </div>
+
+              {/* Measurement Uncertainty Budget */}
+              <div className="bg-white rounded-2xl shadow-sm border p-7">
+                <h3 className="text-lg font-bold mb-4" style={{ color: ACCENT }}>Measurement Uncertainty Budget</h3>
+                <div style={{ fontSize: "8pt", color: "#666", marginBottom: "10px" }}>
+                  Per GUM JCGM 100:2008 · ISO/IEC 17025:2017 §7.6
+                </div>
+                <ReportUncertaintyBudgetTable
+                  rows={TEST_UNCERTAINTY_CONFIGS.insulation_test.rows}
+                  measurand={TEST_UNCERTAINTY_CONFIGS.insulation_test.measurand}
+                  measuredValue={432.0}
+                  unit={TEST_UNCERTAINTY_CONFIGS.insulation_test.unit}
+                  combinedUncertainty={TEST_UNCERTAINTY_CONFIGS.insulation_test.combinedUncertainty}
+                  coverageFactor={TEST_UNCERTAINTY_CONFIGS.insulation_test.coverageFactor}
+                  expandedUncertainty={TEST_UNCERTAINTY_CONFIGS.insulation_test.expandedUncertainty}
+                  compact
+                />
               </div>
 
               {/* Conclusion */}
@@ -1053,6 +1137,28 @@ export default function IEC61730ReportPage() {
                     </tbody>
                   </table>
                 </div>
+              </div>
+
+              {/* Test-Specific Charts */}
+              <div className="bg-white rounded-2xl shadow-sm border p-7">
+                <h3 className="text-lg font-bold mb-3" style={{ color: ACCENT }}>Insulation & Wet Leakage Analysis</h3>
+                <InsulationWetLeakageChart />
+              </div>
+
+              {/* Uncertainty Budget */}
+              <div className="bg-white rounded-2xl shadow-sm border p-7">
+                <h3 className="text-lg font-bold mb-3" style={{ color: ACCENT }}>Measurement Uncertainty Budget</h3>
+                <div className="text-xs text-gray-500 mb-3">Per GUM JCGM 100:2008 · ISO/IEC 17025:2017 §7.6</div>
+                <ReportUncertaintyBudgetTable
+                  rows={TEST_UNCERTAINTY_CONFIGS.insulation_test.rows}
+                  measurand={TEST_UNCERTAINTY_CONFIGS.insulation_test.measurand}
+                  measuredValue={6200}
+                  unit={TEST_UNCERTAINTY_CONFIGS.insulation_test.unit}
+                  combinedUncertainty={TEST_UNCERTAINTY_CONFIGS.insulation_test.combinedUncertainty}
+                  coverageFactor={TEST_UNCERTAINTY_CONFIGS.insulation_test.coverageFactor}
+                  expandedUncertainty={TEST_UNCERTAINTY_CONFIGS.insulation_test.expandedUncertainty}
+                  compact
+                />
               </div>
 
               {/* Annexure C – Calibration Traceability */}

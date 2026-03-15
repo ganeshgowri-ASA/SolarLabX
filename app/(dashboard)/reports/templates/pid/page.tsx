@@ -2,6 +2,12 @@
 "use client";
 
 import { useState } from "react";
+import { IVCurveComparisonChart } from "@/components/reports/IVCurveComparisonChart";
+import { PmaxStabilizationChart, InsulationResistanceChart, PowerDegradationChart } from "@/components/reports/ReportSummaryCharts";
+import { ChamberCycleChart } from "@/components/reports/charts/ChamberCycleChart";
+import { PrePostComparisonChart } from "@/components/reports/charts/PrePostComparisonChart";
+import { ReportUncertaintyBudgetTable } from "@/components/reports/uncertainty/ReportUncertaintyBudgetTable";
+import { TEST_UNCERTAINTY_CONFIGS } from "@/components/reports/uncertainty/testUncertaintyConfigs";
 
 const REPORT_NO = "SLX-RPT-PID-2026-001";
 
@@ -58,15 +64,28 @@ export default function PIDReportPage() {
       `}</style>
 
       {/* Toolbar */}
-      <div className="no-print flex items-center justify-between mb-4 p-4 bg-gray-50 rounded-lg border">
+      <div className="no-print sticky top-0 z-50 flex items-center justify-between mb-4 p-4 bg-gray-50 rounded-lg border">
         <div>
           <h1 className="text-xl font-bold text-gray-800">PID Test Report – IEC TS 62804-1:2015</h1>
           <p className="text-sm text-gray-500">Edit fields below · Click Print / Save as PDF when ready</p>
         </div>
         <div className="flex gap-2">
           <a href="/reports/templates" className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100">← Back</a>
-          <button onClick={() => window.print()} className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1">
-            🖨 Print / Save PDF
+          <button onClick={() => window.print()} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+            PDF
+          </button>
+          <button onClick={() => { /* word export placeholder */ }} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            Word
+          </button>
+          <button onClick={() => { /* excel export placeholder */ }} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+            Excel
+          </button>
+          <button onClick={() => window.print()} className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+            Print
           </button>
         </div>
       </div>
@@ -692,9 +711,69 @@ export default function PIDReportPage() {
           </table>
         </div>
 
+        {/* ═══════════════ I-V CURVE & SUMMARY CHARTS ═══════════════ */}
+        <div className="page-break" style={{ padding: "12mm 20mm", fontSize: "9pt" }}>
+          <SectionHeader num="11" title="I-V CURVE COMPARISON & SUMMARY ANALYSIS" />
+          <IVCurveComparisonChart
+            preParams={{ voc: 43.24, isc: 12.85, vmp: 35.92, imp: 12.03, pmax: 432.1, ff: 0.7791 }}
+            postParams={{ voc: 43.18, isc: 12.84, vmp: 35.88, imp: 12.02, pmax: 431.8, ff: 0.7789 }}
+            title="PID Test – I-V Curve Overlay (Pre vs Post)"
+            height={280}
+          />
+          <div style={{ marginTop: "16px" }}>
+            <PmaxStabilizationChart
+              data={[
+                { stage: "Initial", "SLX-M001": 432.1, "SLX-M002": 431.9, "SLX-M003": 432.0, "SLX-M004": 431.8 },
+                { stage: "Pre-PID", "SLX-M001": 432.0, "SLX-M002": 431.8, "SLX-M003": 431.9, "SLX-M004": 431.7 },
+                { stage: "PID -V", "SLX-M001": 431.8, "SLX-M002": 431.6, "SLX-M003": 431.7, "SLX-M004": 431.5 },
+                { stage: "Recovery", "SLX-M001": 431.9, "SLX-M002": 431.7, "SLX-M003": 431.8, "SLX-M004": 431.6 },
+                { stage: "PID +V", "SLX-M001": 431.8, "SLX-M002": 431.6, "SLX-M003": 431.7, "SLX-M004": 431.5 },
+                { stage: "Final", "SLX-M001": 431.8, "SLX-M002": 431.6, "SLX-M003": 431.7, "SLX-M004": 431.5 },
+              ]}
+              sampleIds={["SLX-M001", "SLX-M002", "SLX-M003", "SLX-M004"]}
+              ratedPmax={430}
+              height={230}
+            />
+          </div>
+        </div>
+
+        {/* ═══════════════ TEST-SPECIFIC CHARTS ═══════════════ */}
+        <div className="page-break" style={{ padding: "12mm 20mm", fontSize: "9pt" }}>
+          <SectionHeader num="12" title="TEST-SPECIFIC CHARTS" />
+          <div style={{ marginBottom: "16px" }}>
+            <ChamberCycleChart showPIDOverlay={true} pidVoltage={1500} />
+          </div>
+          <div style={{ marginBottom: "16px" }}>
+            <PrePostComparisonChart
+              data={[
+                { sampleId: "SLX-M001", preValue: 432.1, postValue: 431.8 },
+                { sampleId: "SLX-M002", preValue: 431.9, postValue: 431.6 },
+                { sampleId: "SLX-M003", preValue: 432.0, postValue: 431.7 },
+                { sampleId: "SLX-M004", preValue: 431.8, postValue: 431.5 },
+              ]}
+              parameter="Pmax" unit="W" threshold={5} thresholdType="max_degradation_pct"
+            />
+          </div>
+        </div>
+
+        {/* ═══════════════ UNCERTAINTY BUDGET ═══════════════ */}
+        <div className="page-break" style={{ padding: "12mm 20mm", fontSize: "9pt" }}>
+          <SectionHeader num="13" title="MEASUREMENT UNCERTAINTY" />
+          <ReportUncertaintyBudgetTable
+            rows={TEST_UNCERTAINTY_CONFIGS.pid.rows}
+            measurand={TEST_UNCERTAINTY_CONFIGS.pid.measurand}
+            measuredValue={432.0}
+            unit={TEST_UNCERTAINTY_CONFIGS.pid.unit}
+            combinedUncertainty={TEST_UNCERTAINTY_CONFIGS.pid.combinedUncertainty}
+            coverageFactor={TEST_UNCERTAINTY_CONFIGS.pid.coverageFactor}
+            expandedUncertainty={TEST_UNCERTAINTY_CONFIGS.pid.expandedUncertainty}
+            compact
+          />
+        </div>
+
         {/* ═══════════════ CONCLUSIONS ═══════════════ */}
         <div className="page-break" style={{ padding: "12mm 20mm", fontSize: "9pt" }}>
-          <SectionHeader num="11" title="CONCLUSIONS" />
+          <SectionHeader num="14" title="CONCLUSIONS" />
           <div style={{ padding: "12px 16px", background: "#f0fdf4", border: "2px solid #22c55e", borderRadius: "6px", marginBottom: "16px" }}>
             <div style={{ fontSize: "11pt", fontWeight: "700", color: "#15803d", marginBottom: "6px" }}>✓ ALL SAMPLES PASSED – IEC TS 62804-1:2015 Method A</div>
             <p style={{ fontSize: "8.5pt", color: "#166534" }}>

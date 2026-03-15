@@ -2,6 +2,12 @@
 "use client";
 
 import { useState } from "react";
+import { IVCurveComparisonChart } from "@/components/reports/IVCurveComparisonChart";
+import { PmaxStabilizationChart } from "@/components/reports/ReportSummaryCharts";
+import { LeTIDAnalysisChart } from "@/components/reports/charts/LeTIDAnalysisChart";
+import { PrePostComparisonChart } from "@/components/reports/charts/PrePostComparisonChart";
+import { ReportUncertaintyBudgetTable } from "@/components/reports/uncertainty/ReportUncertaintyBudgetTable";
+import { TEST_UNCERTAINTY_CONFIGS } from "@/components/reports/uncertainty/testUncertaintyConfigs";
 
 const REPORT_NO = "SLX-RPT-LETID-2026-001";
 
@@ -52,15 +58,28 @@ export default function LeTIDReportPage() {
       `}</style>
 
       {/* Toolbar */}
-      <div className="no-print flex items-center justify-between mb-4 p-4 bg-gray-50 rounded-lg border">
+      <div className="no-print sticky top-0 z-50 flex items-center justify-between mb-4 p-4 bg-gray-50 rounded-lg border">
         <div>
           <h1 className="text-xl font-bold text-gray-800">LeTID Test Report – IEC CD 61215:2020</h1>
           <p className="text-sm text-gray-500">Light and elevated Temperature Induced Degradation · Bifacial Modules</p>
         </div>
         <div className="flex gap-2">
           <a href="/reports/templates" className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100">← Back</a>
-          <button onClick={() => window.print()} className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
-            🖨 Print / Save PDF
+          <button onClick={() => window.print()} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+            PDF
+          </button>
+          <button onClick={() => { /* word export placeholder */ }} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            Word
+          </button>
+          <button onClick={() => { /* excel export placeholder */ }} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+            Excel
+          </button>
+          <button onClick={() => window.print()} className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+            Print
           </button>
         </div>
       </div>
@@ -479,9 +498,67 @@ export default function LeTIDReportPage() {
           </table>
         </div>
 
+        {/* ═══════════════ I-V CURVE & SUMMARY CHARTS ═══════════════ */}
+        <div className="page-break" style={{ padding: "12mm 20mm", fontSize: "9pt" }}>
+          <SectionHeader num="8" title="I-V CURVE COMPARISON & STABILIZATION" accent="#0f4c81" />
+          <IVCurveComparisonChart
+            preParams={{ voc: 49.98, isc: 13.87, vmp: 42.01, imp: 13.04, pmax: 547.8, ff: 0.7901 }}
+            postParams={{ voc: 49.91, isc: 13.83, vmp: 41.48, imp: 12.95, pmax: 537.1, ff: 0.7831 }}
+            title="LeTID Test – I-V Curve Overlay (Initial vs Post-LeTID)"
+            height={280}
+          />
+          <div style={{ marginTop: "16px" }}>
+            <PmaxStabilizationChart
+              data={[
+                { stage: "Initial (A)", "SLX-M101": 547.8, "SLX-M102": 547.2, "SLX-M103": 547.5 },
+                { stage: "Post B-O (B)", "SLX-M101": 534.2, "SLX-M102": 533.8, "SLX-M103": 534.0 },
+                { stage: "LeTID 162h", "SLX-M101": 531.5, "SLX-M102": 531.1, "SLX-M103": 531.3 },
+                { stage: "LeTID 324h", "SLX-M101": 533.8, "SLX-M102": 533.4, "SLX-M103": 533.6 },
+                { stage: "Post-LeTID (C)", "SLX-M101": 537.1, "SLX-M102": 536.7, "SLX-M103": 536.9 },
+              ]}
+              sampleIds={["SLX-M101", "SLX-M102", "SLX-M103"]}
+              ratedPmax={545}
+              height={230}
+            />
+          </div>
+        </div>
+
+        {/* ═══════════════ TEST-SPECIFIC CHARTS ═══════════════ */}
+        <div className="page-break" style={{ padding: "12mm 20mm", fontSize: "9pt" }}>
+          <SectionHeader num="9" title="TEST-SPECIFIC CHARTS" accent="#0f4c81" />
+          <div style={{ marginBottom: "16px" }}>
+            <LeTIDAnalysisChart />
+          </div>
+          <div style={{ marginBottom: "16px" }}>
+            <PrePostComparisonChart
+              data={[
+                { sampleId: "SLX-M101", preValue: 547.8, postValue: 537.1 },
+                { sampleId: "SLX-M102", preValue: 547.2, postValue: 536.7 },
+                { sampleId: "SLX-M103", preValue: 547.5, postValue: 536.9 },
+              ]}
+              parameter="Pmax" unit="W" threshold={5} thresholdType="max_degradation_pct"
+            />
+          </div>
+        </div>
+
+        {/* ═══════════════ UNCERTAINTY BUDGET ═══════════════ */}
+        <div className="page-break" style={{ padding: "12mm 20mm", fontSize: "9pt" }}>
+          <SectionHeader num="10" title="MEASUREMENT UNCERTAINTY" accent="#0f4c81" />
+          <ReportUncertaintyBudgetTable
+            rows={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.rows}
+            measurand={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.measurand}
+            measuredValue={547.8}
+            unit={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.unit}
+            combinedUncertainty={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.combinedUncertainty}
+            coverageFactor={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.coverageFactor}
+            expandedUncertainty={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.expandedUncertainty}
+            compact
+          />
+        </div>
+
         {/* ═══════════════ CONCLUSIONS ═══════════════ */}
         <div className="page-break" style={{ padding: "12mm 20mm", fontSize: "9pt" }}>
-          <SectionHeader num="8" title="CONCLUSIONS" accent="#0f4c81" />
+          <SectionHeader num="11" title="CONCLUSIONS" accent="#0f4c81" />
 
           <div style={{ padding: "12px 16px", background: "#f0fdf4", border: "2px solid #22c55e", borderRadius: "6px", marginBottom: "16px" }}>
             <div style={{ fontSize: "11pt", fontWeight: "700", color: "#15803d", marginBottom: "6px" }}>✓ ALL SAMPLES PASSED – IEC CD 61215:2020 LeTID Protocol</div>

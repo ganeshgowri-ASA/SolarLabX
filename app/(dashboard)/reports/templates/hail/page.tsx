@@ -1,6 +1,9 @@
 // @ts-nocheck
 "use client";
 import { EnvTestReportTemplate } from "@/components/reports/EnvTestReportTemplate";
+import { PrePostComparisonChart } from "@/components/reports/charts/PrePostComparisonChart";
+import { ReportUncertaintyBudgetTable } from "@/components/reports/uncertainty/ReportUncertaintyBudgetTable";
+import { TEST_UNCERTAINTY_CONFIGS } from "@/components/reports/uncertainty/testUncertaintyConfigs";
 
 const HAIL_IMPACTS = [
   { pos: "A1 (Centre)", x: 50, y: 50 },
@@ -48,6 +51,32 @@ export default function HailPage() {
         "EL Camera: Xenics Bobcat-1.7 (Cal. SLX-EQ-022)",
       ]}
       overallDelta="−0.02%"
+      testSpecificCharts={
+        <>
+          <div style={{ marginBottom: "16px" }}>
+            <PrePostComparisonChart
+              data={[
+                { sampleId: "SLX-M701", preValue: 432.1, postValue: 432.0 },
+                { sampleId: "SLX-M702", preValue: 431.8, postValue: 431.8 },
+                { sampleId: "SLX-M703", preValue: 432.0, postValue: 431.9 },
+              ]}
+              parameter="Pmax" unit="W" threshold={5} thresholdType="max_degradation_pct"
+            />
+          </div>
+        </>
+      }
+      uncertaintySection={
+        <ReportUncertaintyBudgetTable
+          rows={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.rows}
+          measurand={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.measurand}
+          measuredValue={432.0}
+          unit={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.unit}
+          combinedUncertainty={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.combinedUncertainty}
+          coverageFactor={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.coverageFactor}
+          expandedUncertainty={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.expandedUncertainty}
+          compact
+        />
+      }
       extraSections={
         <div style={{ marginBottom: "16px" }}>
           <div style={{ fontWeight: "700", color: "#dc2626", borderBottom: "2px solid #dc2626", paddingBottom: "4px", marginBottom: "10px", fontSize: "10pt" }}>

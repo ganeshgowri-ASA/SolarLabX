@@ -177,6 +177,18 @@ export const REPORT_TYPES = [
   { id: "iec_60904_measurement", label: "IEC 60904 Measurement", standard: "IEC 60904" },
   { id: "iec_61701_salt", label: "IEC 61701 Salt Mist Corrosion", standard: "IEC 61701" },
   { id: "iec_62716_ammonia", label: "IEC 62716 Ammonia Corrosion", standard: "IEC 62716" },
+  { id: "iec_62804_pid", label: "IEC 62804 PID Test", standard: "IEC 62804" },
+  { id: "iec_63209_letid", label: "IEC TS 63209 LeTID", standard: "IEC 63209" },
+  { id: "iec_62788_material", label: "IEC 62788 Material Testing", standard: "IEC 62788" },
+  { id: "iec_62938_snow", label: "IEC 62938 Non-Uniform Snow Load", standard: "IEC 62938" },
+  { id: "iec_61345_uv_thinfilm", label: "IEC 61345 UV Test (Thin-Film)", standard: "IEC 61345" },
+  { id: "ul_61730_safety", label: "UL 61730 / UL 1703 Safety", standard: "UL 61730" },
+  { id: "is_14286_bis", label: "IS 14286 BIS Certification", standard: "IS 14286" },
+  { id: "iec_62915_bom", label: "IEC 62915 BoM & Type Test Matrix", standard: "IEC 62915" },
+  { id: "calibration_report", label: "Calibration Report (ISO 17025)", standard: "ISO 17025" },
+  { id: "uncertainty_report", label: "Measurement Uncertainty Report", standard: "GUM" },
+  { id: "incoming_inspection", label: "Incoming Inspection Report", standard: "Internal" },
+  { id: "iec_62782_sand", label: "IEC 62782 Sand/Dust Abrasion", standard: "IEC 62782" },
   { id: "custom", label: "Custom Report", standard: "Custom" },
 ] as const;
 

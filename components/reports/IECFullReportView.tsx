@@ -18,6 +18,8 @@ import {
 import { CheckCircle, XCircle, Printer, FileText, Sun, Zap, Droplets, TrendingUp, ChevronDown, ChevronUp } from "lucide-react"
 import { DEFAULT_LAB_DETAILS } from "@/lib/report-test-definitions"
 import { ExportToolbar } from "@/components/reports/ExportToolbar"
+import { IVCurveComparisonChart } from "@/components/reports/IVCurveComparisonChart"
+import { PmaxStabilizationChart, InsulationResistanceChart, PowerDegradationChart, DEFAULT_STABILIZATION_DATA, DEFAULT_INSULATION_DATA, DEFAULT_DEGRADATION_DATA, DEFAULT_SAMPLE_IDS } from "@/components/reports/ReportSummaryCharts"
 
 // ─── Test Results Data ────────────────────────────────────────────────────────
 
@@ -102,14 +104,87 @@ const powerMatrixData = [100, 200, 400, 600, 800, 1000, 1100].map(G => ({
 // ─── Equipment data for Section 3 ────────────────────────────────────────────
 
 const EQUIPMENT_TABLE = [
-  { equipment: "Solar Simulator", id: "SS-001 (Sinton 1000)", class: "Class A+A+A (IEC 60904-9 Ed.3)", calDate: "2026-01-10", cert: "CAL-SS-2026-01" },
-  { equipment: "Reference Cell", id: "RC-WPVS-01 (c-Si)", class: "Spec: 10×10 mm", calDate: "2026-01-05", cert: "CAL-RC-2026-01" },
-  { equipment: "TC Chamber", id: "ESPEC TSE-11-A", class: "-70°C to +180°C, ±1°C", calDate: "2026-01-08", cert: "CAL-CH-2026-02" },
-  { equipment: "HF/DH Chamber", id: "Memmert HCP 1080", class: "10–95°C, 10–98%RH, ±1°C/±2%", calDate: "2026-01-08", cert: "CAL-CH-2026-03" },
-  { equipment: "EL Camera", id: "Xenics Xeva-FPA-2.5-320", class: "320×256 px, InGaAs", calDate: "2026-01-12", cert: "CAL-EL-2026-01" },
-  { equipment: "Insulation Tester", id: "Fluke 1550C MegOhm Meter", class: "1000 V DC, 1 GΩ max", calDate: "2026-01-06", cert: "CAL-IT-2026-01" },
-  { equipment: "Hi-Pot Tester", id: "Chroma 19053", class: "0–6 kV DC/AC, 0–10 mA", calDate: "2026-01-06", cert: "CAL-HP-2026-01" },
+  { equipment: "Solar Simulator", id: "SS-001 (Sinton 1000)", class: "Class A+A+A (IEC 60904-9 Ed.3)", calDate: "2026-01-10", cert: "CAL-SS-2026-01", calDue: "2027-01-10", calLab: "PTB Germany / NABL-TC-1234" },
+  { equipment: "Reference Cell", id: "RC-WPVS-01 (c-Si)", class: "Spec: 10×10 mm", calDate: "2026-01-05", cert: "CAL-RC-2026-01", calDue: "2027-01-05", calLab: "Fraunhofer ISE / NABL-TC-1234" },
+  { equipment: "TC Chamber", id: "ESPEC TSE-11-A", class: "-70°C to +180°C, ±1°C", calDate: "2026-01-08", cert: "CAL-CH-2026-02", calDue: "2027-01-08", calLab: "NABL-TC-1234" },
+  { equipment: "HF/DH Chamber", id: "Memmert HCP 1080", class: "10–95°C, 10–98%RH, ±1°C/±2%", calDate: "2026-01-08", cert: "CAL-CH-2026-03", calDue: "2027-01-08", calLab: "NABL-TC-1234" },
+  { equipment: "EL Camera", id: "Xenics Xeva-FPA-2.5-320", class: "320×256 px, InGaAs", calDate: "2026-01-12", cert: "CAL-EL-2026-01", calDue: "2027-01-12", calLab: "NABL-TC-1234" },
+  { equipment: "Insulation Tester", id: "Fluke 1550C MegOhm Meter", class: "1000 V DC, 1 GΩ max", calDate: "2026-01-06", cert: "CAL-IT-2026-01", calDue: "2027-01-06", calLab: "NABL-TC-1234" },
+  { equipment: "Hi-Pot Tester", id: "Chroma 19053", class: "0–6 kV DC/AC, 0–10 mA", calDate: "2026-01-06", cert: "CAL-HP-2026-01", calDue: "2027-01-06", calLab: "NABL-TC-1234" },
 ]
+
+// ── Traceability data (ISO 17025) ─────────────────────────────────────────────
+
+const TRACEABILITY_INFO = {
+  serviceRequestNo: "SR-2026-00341",
+  projectReference: "PRJ-2026-PV-0089",
+  testProtocolRef: { docFormatNo: "TP-IEC61215-v3.2", recordNo: "REC-2026-0341" },
+  masterIndexRef: "MI-2026-SLX-0089",
+  environmentalConditions: {
+    chamberId: "ESPEC TSE-11-A / Memmert HCP 1080",
+    ambientTemp: "23.0 ± 1.0 °C",
+    ambientRH: "45 ± 5 %RH",
+  },
+  operators: [
+    { name: "Dr. Rajesh Kumar", qualification: "Ph.D. PV Technology, NABL Certified", authId: "AUTH-RK-2024-01" },
+    { name: "Dr. Priya Sharma", qualification: "M.Tech EE, IEC/TC 82 Expert", authId: "AUTH-PS-2024-02" },
+    { name: "Dr. Arun Patel", qualification: "Ph.D. Materials Science", authId: "AUTH-AP-2024-03" },
+    { name: "Deepa Nair", qualification: "M.Sc. Physics, NABL Assessor", authId: "AUTH-DN-2024-04" },
+    { name: "Vikram Singh", qualification: "B.Tech EE, ISO 17025 Trained", authId: "AUTH-VS-2024-05" },
+  ],
+  standardReference: "IEC 61215:2021 Ed.2, IEC 61730:2023 Ed.2, IEC 61853:2020 Ed.1, IEC 61701:2020 Ed.3",
+  dataSource: "SolarLabX LIMS — Data Analysis Module (DA-IEC61215-2026-0089)",
+}
+
+function getTestTraceability(testName: string, technician: string, date: string, clause: string) {
+  const equipMap: Record<string, typeof EQUIPMENT_TABLE[0]> = {
+    "Maximum Power": EQUIPMENT_TABLE[0],
+    "Insulation": EQUIPMENT_TABLE[5],
+    "Temperature Coefficients": EQUIPMENT_TABLE[0],
+    "NMOT": EQUIPMENT_TABLE[1],
+    "Low Irradiance": EQUIPMENT_TABLE[0],
+    "EL Imaging": EQUIPMENT_TABLE[4],
+    "UV Preconditioning": EQUIPMENT_TABLE[2],
+    "Thermal Cycling": EQUIPMENT_TABLE[2],
+    "Humidity-Freeze": EQUIPMENT_TABLE[3],
+    "Damp Heat": EQUIPMENT_TABLE[3],
+    "Wet Leakage": EQUIPMENT_TABLE[5],
+    "Static Mechanical": EQUIPMENT_TABLE[0],
+    "Hail": EQUIPMENT_TABLE[0],
+    "Bypass Diode": EQUIPMENT_TABLE[0],
+    "Visual Inspection": EQUIPMENT_TABLE[0],
+    "Impulse Voltage": EQUIPMENT_TABLE[6],
+    "Dielectric": EQUIPMENT_TABLE[6],
+    "Hi-Pot": EQUIPMENT_TABLE[6],
+    "Ground Continuity": EQUIPMENT_TABLE[5],
+    "Cut Susceptibility": EQUIPMENT_TABLE[5],
+    "Salt Mist": EQUIPMENT_TABLE[3],
+    "Power & Energy Rating": EQUIPMENT_TABLE[0],
+    "Angular Response": EQUIPMENT_TABLE[0],
+    "Spectral Response": EQUIPMENT_TABLE[0],
+    "Annual Energy": EQUIPMENT_TABLE[0],
+    "Robustness": EQUIPMENT_TABLE[0],
+    "Reverse Current": EQUIPMENT_TABLE[0],
+    "Accessibility": EQUIPMENT_TABLE[5],
+    "Module Breakage": EQUIPMENT_TABLE[0],
+    "Temperature Test": EQUIPMENT_TABLE[0],
+  }
+  const matched = Object.entries(equipMap).find(([key]) => testName.includes(key))
+  const equip = matched ? matched[1] : EQUIPMENT_TABLE[0]
+  const op = TRACEABILITY_INFO.operators.find(o => o.name.includes(technician.split(" ")[0])) || TRACEABILITY_INFO.operators[0]
+
+  return {
+    equipmentId: equip.id,
+    calCertNo: equip.cert,
+    calStatus: "Valid",
+    calDue: equip.calDue,
+    calLab: equip.calLab,
+    operator: op.name,
+    authId: op.authId,
+    rawDataRef: `RD-${date.replace(/-/g, "")}-${clause.split(" /")[0]?.replace(/\s/g, "") || "TEST"}`,
+    dataSource: TRACEABILITY_INFO.dataSource,
+  }
+}
 
 // ─── Section heading helper ───────────────────────────────────────────────────
 
@@ -388,22 +463,35 @@ export default function IECFullReportView() {
               </CardContent>
             </Card>
             <Card>
-              <CardHeader className="pb-1"><CardTitle className="text-xs">I-V & P-V Curve at STC (Initial)</CardTitle></CardHeader>
+              <CardHeader className="pb-1"><CardTitle className="text-xs">I-V & P-V Curve Comparison (Pre vs Post)</CardTitle></CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={200}>
-                  <ComposedChart data={ivCurveData}>
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                    <XAxis dataKey="v" tick={{ fontSize: 9 }} label={{ value: "Voltage (V)", position: "insideBottom", offset: -5, fontSize: 9 }} />
-                    <YAxis yAxisId="l" tick={{ fontSize: 9 }} label={{ value: "I (A)", angle: -90, position: "insideLeft", fontSize: 9 }} />
-                    <YAxis yAxisId="r" orientation="right" tick={{ fontSize: 9 }} label={{ value: "P (W)", angle: 90, position: "insideRight", fontSize: 9 }} />
-                    <Tooltip />
-                    <Legend wrapperStyle={{ fontSize: 10 }} />
-                    <Line yAxisId="l" type="monotone" dataKey="i" stroke="#2563eb" name="I (A)" dot={false} strokeWidth={2} />
-                    <Line yAxisId="r" type="monotone" dataKey="p" stroke="#f97316" name="P (W)" dot={false} strokeWidth={2} />
-                  </ComposedChart>
-                </ResponsiveContainer>
+                <IVCurveComparisonChart
+                  preParams={{ voc: 49.28, isc: 10.48, vmp: 40.12, imp: 10.01, pmax: 401.5, ff: 0.782 }}
+                  postParams={{ voc: 48.91, isc: 10.31, vmp: 39.80, imp: 9.90, pmax: 378.3, ff: 0.750 }}
+                  title="Pre vs Post Full Test Sequence"
+                  height={200}
+                />
               </CardContent>
             </Card>
+          </div>
+          {/* Summary Charts */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
+            <PmaxStabilizationChart
+              data={DEFAULT_STABILIZATION_DATA}
+              sampleIds={DEFAULT_SAMPLE_IDS}
+              ratedPmax={430}
+              height={200}
+            />
+            <InsulationResistanceChart
+              data={DEFAULT_INSULATION_DATA}
+              sampleIds={DEFAULT_SAMPLE_IDS}
+              height={200}
+            />
+            <PowerDegradationChart
+              data={DEFAULT_DEGRADATION_DATA}
+              sampleIds={DEFAULT_SAMPLE_IDS}
+              height={200}
+            />
           </div>
           {IEC_61215_RESULTS.map((r, i) => <TestRow key={r.id} r={r} idx={i} />)}
         </TabsContent>
@@ -570,9 +658,14 @@ export default function IECFullReportView() {
                   ["", "6.4  IEC 61701:2020 — Salt Mist Corrosion (Severity 3)", "15", true],
                   ["", "6.5  Visual Inspection Records", "17", true],
                   ["7.", "Performance Data & Charts", "18", false],
-                  ["8.", "Conclusions & Certification Statement", "19", false],
-                  ["9.", "Signatories & Authorisation", "20", false],
-                  ["", "Annexures", "21", false],
+                  ["8.", "Data Traceability (ISO 17025)", "19", false],
+                  ["", "8.1  Traceability Information", "19", true],
+                  ["", "8.2  Operator Details", "19", true],
+                  ["", "8.3  Equipment Traceability", "20", true],
+                  ["", "8.4  Traceability Matrix", "20", true],
+                  ["9.", "Conclusions & Certification Statement", "21", false],
+                  ["10.", "Signatories & Authorisation", "22", false],
+                  ["", "Annexures", "23", false],
                 ] as [string,string,string,boolean][]).map(([num, title, page, isSub], i) => (
                   <tr key={i} style={{ borderBottom: "1px dotted #ddd" }}>
                     <td style={{ padding: "1.5mm 2mm", width: "10mm", fontWeight: "600", color: "#1e3a5f", verticalAlign: "top" }}>{num}</td>
@@ -784,6 +877,7 @@ export default function IECFullReportView() {
                   {results.map((r, idx) => {
                     const bg = r.pass ? "#f0fdf4" : "#fef2f2"
                     const color = r.pass ? "#16a34a" : "#dc2626"
+                    const trace = getTestTraceability(r.testName, r.technician, r.date, r.clause)
                     return (
                       <div
                         key={r.id}
@@ -816,6 +910,25 @@ export default function IECFullReportView() {
                           <div className="flex flex-col" style={{ padding: "2px 4px" }}>
                             <span className="font-bold text-gray-600">Test Date</span>
                             <span className="font-mono">{r.date}</span>
+                          </div>
+                        </div>
+                        {/* Traceability metadata per test */}
+                        <div className="grid grid-cols-4 gap-x-2 border-t border-gray-200" style={{ padding: "4px 8px", fontSize: "8pt", background: "#f5f7ff" }}>
+                          <div className="flex flex-col">
+                            <span className="font-bold text-blue-800">Equipment ID</span>
+                            <span className="font-mono text-gray-600">{trace.equipmentId}</span>
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="font-bold text-blue-800">Cal. Status</span>
+                            <span className="font-mono text-green-700">{trace.calStatus} (Due: {trace.calDue})</span>
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="font-bold text-blue-800">Operator Auth ID</span>
+                            <span className="font-mono text-gray-600">{trace.authId}</span>
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="font-bold text-blue-800">Raw Data Ref</span>
+                            <span className="font-mono text-gray-600">{trace.rawDataRef}</span>
                           </div>
                         </div>
                       </div>
@@ -925,9 +1038,159 @@ export default function IECFullReportView() {
               </div>
             )}
 
-            {/* ── SECTION 8: Conclusions & Certification Statement ─────────── */}
+            {/* ── EL / VI Image Placeholders (after charts) ─────────────── */}
+            {displayStandards.includes("61215") && (
+              <div style={{ pageBreakBefore: "always" }}>
+                <SubSecH label="7.3  EL Imaging Records" />
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  {[["EL Image — Initial (Pre-Stress)", "MQT 07 / Cl.4.7"], ["EL Image — Post-Stress (Final)", "Post TC200+DH1000"]].map(([label, ref]) => (
+                    <div key={label} className="border border-gray-300 rounded p-2">
+                      <div className="text-xs font-semibold text-gray-600 mb-1">{label}</div>
+                      <div className="text-xs text-gray-400 mb-2">Ref: {ref}</div>
+                      <div style={{
+                        width: "100%", height: "50mm", border: "2px dashed #ccc",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        color: "#aaa", fontSize: "10px", background: "#f9f9f9",
+                      }}>
+                        [ Attach EL Image Here ]
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <SubSecH label="7.4  Visual Inspection Photographs" />
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  {["Front Glass Surface", "Rear / Backsheet", "Junction Box & Connectors"].map(label => (
+                    <div key={label} className="border border-gray-300 rounded p-2">
+                      <div className="text-xs font-semibold text-gray-600 mb-1">{label}</div>
+                      <div style={{
+                        width: "100%", height: "40mm", border: "2px dashed #ccc",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        color: "#aaa", fontSize: "10px", background: "#f9f9f9",
+                      }}>
+                        [ Attach VI Photo Here ]
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ── SECTION 8: Data Traceability (ISO 17025) ─────────────────── */}
             <div style={{ pageBreakBefore: "always" }}>
-              <SecH num="8." title="Conclusions & Certification Statement" />
+              <SecH num="8." title="Data Traceability (ISO/IEC 17025)" />
+              <div className="text-xs text-gray-500 mb-3">
+                Complete data traceability chain from service request through to reported results, per ISO/IEC 17025:2017 Clause 7.5.
+              </div>
+
+              {/* 8.1 Traceability Information */}
+              <SubSecH label="8.1  Traceability Information" />
+              <table className="w-full border-collapse text-xs mb-4">
+                <tbody>
+                  {([
+                    ["Service Request No.", TRACEABILITY_INFO.serviceRequestNo, "Linked to LIMS"],
+                    ["Project Reference", TRACEABILITY_INFO.projectReference, "Linked to Project Management"],
+                    ["Test Protocol (Doc Format No.)", TRACEABILITY_INFO.testProtocolRef.docFormatNo, "Linked to Test Protocols"],
+                    ["Test Protocol (Record No.)", TRACEABILITY_INFO.testProtocolRef.recordNo, "Linked to Test Protocols"],
+                    ["Master Index Reference", TRACEABILITY_INFO.masterIndexRef, "Unique identifier linking all records"],
+                    ["Environmental Conditions — Chamber", TRACEABILITY_INFO.environmentalConditions.chamberId, "Chamber ID"],
+                    ["Ambient Temperature", TRACEABILITY_INFO.environmentalConditions.ambientTemp, "During testing"],
+                    ["Ambient Humidity", TRACEABILITY_INFO.environmentalConditions.ambientRH, "During testing"],
+                    ["Standard Reference", TRACEABILITY_INFO.standardReference, "Edition & clause numbers"],
+                    ["Data Source", TRACEABILITY_INFO.dataSource, "Linked to Data Analysis tab"],
+                  ] as [string, string, string][]).map(([label, value, note], i) => (
+                    <tr key={label} className={i % 2 === 0 ? "bg-gray-50" : ""}>
+                      <td className="border border-gray-300 p-1.5 font-semibold text-blue-900 w-1/3">{label}</td>
+                      <td className="border border-gray-300 p-1.5 font-mono">{value}</td>
+                      <td className="border border-gray-300 p-1.5 text-gray-400 italic text-xs">{note}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* 8.2 Operator Details */}
+              <SubSecH label="8.2  Operator Details" />
+              <table className="w-full border-collapse text-xs mb-4">
+                <thead>
+                  <tr className="bg-blue-900 text-white">
+                    {["Name", "Qualification", "Authorization ID"].map(h => (
+                      <th key={h} className="border border-blue-800 p-1.5 text-left font-semibold">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {TRACEABILITY_INFO.operators.map((op, i) => (
+                    <tr key={op.authId} className={i % 2 === 0 ? "bg-gray-50" : ""}>
+                      <td className="border border-gray-300 p-1.5 font-semibold">{op.name}</td>
+                      <td className="border border-gray-300 p-1.5">{op.qualification}</td>
+                      <td className="border border-gray-300 p-1.5 font-mono text-gray-600">{op.authId}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* 8.3 Equipment Traceability */}
+              <div style={{ pageBreakBefore: "always" }}>
+                <SubSecH label="8.3  Equipment Traceability" />
+                <table className="w-full border-collapse text-xs mb-4">
+                  <thead>
+                    <tr className="bg-blue-900 text-white">
+                      {["Equipment ID", "Equipment", "Cal. Certificate", "Cal. Due Date", "Cal. Lab"].map(h => (
+                        <th key={h} className="border border-blue-800 p-1.5 text-left font-semibold">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {EQUIPMENT_TABLE.map((eq, i) => (
+                      <tr key={eq.id} className={i % 2 === 0 ? "bg-gray-50" : ""}>
+                        <td className="border border-gray-300 p-1.5 font-mono font-semibold">{eq.id}</td>
+                        <td className="border border-gray-300 p-1.5">{eq.equipment}</td>
+                        <td className="border border-gray-300 p-1.5 font-mono text-gray-600">{eq.cert}</td>
+                        <td className="border border-gray-300 p-1.5 font-mono">{eq.calDue}</td>
+                        <td className="border border-gray-300 p-1.5 text-gray-500">{eq.calLab}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* 8.4 Traceability Matrix */}
+              <div style={{ pageBreakBefore: "always" }}>
+                <SubSecH label="8.4  Traceability Matrix" />
+                <div className="text-xs text-gray-400 mb-2 italic">
+                  Full chain: Test Protocol → Execution → Data → Report for each test.
+                </div>
+                <table className="w-full border-collapse text-xs mb-4">
+                  <thead>
+                    <tr className="bg-blue-900 text-white">
+                      {["Test ID", "Protocol Ref", "Equipment", "Cal Status", "Operator", "Data Source", "Raw Data Ref"].map(h => (
+                        <th key={h} className="border border-blue-800 p-1 text-left font-semibold" style={{ fontSize: "8pt" }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allResultsForExport.map((r, i) => {
+                      const t = getTestTraceability(r.testName, r.technician, r.date, r.clause)
+                      return (
+                        <tr key={`trace-${i}`} className={i % 2 === 0 ? "bg-gray-50" : ""} style={{ fontSize: "8pt" }}>
+                          <td className="border border-gray-300 p-1 font-mono">{r.clause.split(" /")[0]}</td>
+                          <td className="border border-gray-300 p-1 font-mono text-gray-500">{TRACEABILITY_INFO.testProtocolRef.docFormatNo}</td>
+                          <td className="border border-gray-300 p-1 font-mono">{t.equipmentId}</td>
+                          <td className="border border-gray-300 p-1 font-bold text-green-700">{t.calStatus}</td>
+                          <td className="border border-gray-300 p-1">{t.operator.split(" ").slice(-1)[0]}</td>
+                          <td className="border border-gray-300 p-1 text-gray-500" style={{ fontSize: "7pt" }}>{t.dataSource.split(" — ")[1]}</td>
+                          <td className="border border-gray-300 p-1 font-mono text-gray-500">{t.rawDataRef}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* ── SECTION 9: Conclusions & Certification Statement ─────────── */}
+            <div style={{ pageBreakBefore: "always" }}>
+              <SecH num="9." title="Conclusions & Certification Statement" />
               <div className="border border-gray-300 rounded p-4 mb-4 bg-gray-50 text-xs">
                 <p className="mb-2">
                   The photovoltaic module identified in Section 3 of this report has been tested in accordance with the requirements of{" "}
@@ -943,7 +1206,7 @@ export default function IECFullReportView() {
                   <strong>{allResultsForExport.length}</strong> tests passed.
                 </p>
                 <p className="mb-2">
-                  All measurements were performed using calibrated equipment as listed in Section 4 with valid traceability
+                  All measurements were performed using calibrated equipment as listed in Sections 4 and 8 with valid traceability
                   to national/international standards. Measurement uncertainty is evaluated per GUM (ISO/IEC Guide 98-3)
                   and was found to be within acceptable limits for all measurements performed.
                 </p>
@@ -954,9 +1217,9 @@ export default function IECFullReportView() {
               </div>
             </div>
 
-            {/* ── SECTION 9: Signatories ───────────────────────────────────── */}
+            {/* ── SECTION 10: Signatories ──────────────────────────────────── */}
             <div style={{ pageBreakBefore: "always" }}>
-              <SecH num="9." title="Signatories & Authorisation" />
+              <SecH num="10." title="Signatories & Authorisation" />
               <div className="grid grid-cols-3 gap-4 mb-4">
                 {[
                   { role: "Prepared By", name: "Dr. Rajesh Kumar", designation: "Senior Test Engineer", date: today },

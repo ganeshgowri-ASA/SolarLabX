@@ -9,6 +9,11 @@ import {
 import {
   Tabs, TabsContent, TabsList, TabsTrigger,
 } from "@/components/ui/tabs";
+import { IVCurveComparisonChart } from "@/components/reports/IVCurveComparisonChart";
+import { PmaxStabilizationChart, InsulationResistanceChart, PowerDegradationChart, DEFAULT_STABILIZATION_DATA, DEFAULT_INSULATION_DATA, DEFAULT_DEGRADATION_DATA, DEFAULT_SAMPLE_IDS } from "@/components/reports/ReportSummaryCharts";
+import { PrePostComparisonChart } from "@/components/reports/charts/PrePostComparisonChart";
+import { ReportUncertaintyBudgetTable } from "@/components/reports/uncertainty/ReportUncertaintyBudgetTable";
+import { TEST_UNCERTAINTY_CONFIGS } from "@/components/reports/uncertainty/testUncertaintyConfigs";
 
 const REPORT_NO = "SLX-RPT-IEC61215-2026-001";
 const ACCENT = "#1e3a5f";
@@ -329,17 +334,30 @@ export default function IEC61215Page() {
       `}</style>
 
       {/* Top Bar */}
-      <div className="no-print flex items-center justify-between mb-3 p-3 bg-slate-50 rounded-lg border">
+      <div className="no-print sticky top-0 z-50 flex items-center justify-between mb-3 p-3 bg-slate-50 rounded-lg border shadow-sm">
         <div>
           <h1 className="text-lg font-bold text-slate-800">IEC 61215:2021 Design Qualification Test Report</h1>
           <p className="text-xs text-slate-500">Axitec AC-430MH/144V · All 22 MQTs · SolarLabX NABL TC-8192</p>
         </div>
-        <button
-          onClick={() => window.print()}
-          className="px-4 py-2 text-sm bg-[#1e3a5f] text-white rounded hover:bg-[#162d4a] font-medium"
-        >
-          Print / Save PDF
-        </button>
+        <div className="flex gap-2">
+          <a href="/reports/templates" className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100">← Back</a>
+          <button onClick={() => window.print()} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+            PDF
+          </button>
+          <button onClick={() => {}} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            Word
+          </button>
+          <button onClick={() => {}} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+            Excel
+          </button>
+          <button onClick={() => window.print()} className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+            Print
+          </button>
+        </div>
       </div>
 
       <div className="report-container max-w-6xl mx-auto bg-white shadow-xl rounded-lg overflow-hidden">
@@ -791,6 +809,42 @@ export default function IEC61215Page() {
                 </tbody>
               </table>
 
+              {/* I-V Curve Comparison */}
+              <div className="page-break">
+                <SH title="I-V CURVE COMPARISON (PRE vs POST TEST SEQUENCE)" accent={ACCENT} />
+                <IVCurveComparisonChart
+                  preParams={{ voc: 43.24, isc: 12.85, vmp: 35.31, imp: 12.20, pmax: 430.8, ff: 0.7786 }}
+                  postParams={{ voc: 43.10, isc: 12.80, vmp: 35.15, imp: 12.15, pmax: 429.2, ff: 0.7770 }}
+                  title="IEC 61215 Full Sequence – I-V Curve Overlay"
+                  height={300}
+                />
+              </div>
+
+              {/* Summary Charts */}
+              <div className="page-break">
+                <SH title="SUMMARY ANALYSIS CHARTS" accent={ACCENT} />
+                <div style={{ marginBottom: "16px" }}>
+                  <PmaxStabilizationChart
+                    data={DEFAULT_STABILIZATION_DATA}
+                    sampleIds={DEFAULT_SAMPLE_IDS}
+                    ratedPmax={430}
+                    height={250}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4" style={{ marginBottom: "16px" }}>
+                  <InsulationResistanceChart
+                    data={DEFAULT_INSULATION_DATA}
+                    sampleIds={DEFAULT_SAMPLE_IDS}
+                    height={220}
+                  />
+                  <PowerDegradationChart
+                    data={DEFAULT_DEGRADATION_DATA}
+                    sampleIds={DEFAULT_SAMPLE_IDS}
+                    height={220}
+                  />
+                </div>
+              </div>
+
               {/* Conclusion */}
               <SH title="CONCLUSION & CERTIFICATION STATEMENT" accent={ACCENT} />
               <div style={{ border: `2px solid ${overallPass ? "#16a34a" : "#dc2626"}`, borderRadius: "6px", padding: "14px 16px", background: overallPass ? "#f0fdf4" : "#fef2f2", marginBottom: "16px" }}>
@@ -804,6 +858,42 @@ export default function IEC61215Page() {
                   This qualification report confirms that the module design meets the requirements for terrestrial photovoltaic operation as specified in IEC 61215:2021. The report is issued under NABL accreditation scope TC-8192.
                 </p>
               </div>
+              {/* Test-Specific Charts */}
+              <div className="page-break">
+                <SH title="TEST-SPECIFIC ANALYSIS CHARTS" accent={ACCENT} />
+                <div style={{ marginBottom: "16px" }}>
+                  <PrePostComparisonChart
+                    data={prePostData.map((d) => ({
+                      sampleId: d.test,
+                      preValue: prePostData[0].pmax,
+                      postValue: d.pmax,
+                    }))}
+                    parameter="Pmax"
+                    unit="W"
+                    threshold={5}
+                    thresholdType="max_degradation_pct"
+                  />
+                </div>
+              </div>
+
+              {/* Measurement Uncertainty Budget */}
+              <div className="page-break">
+                <SH title="MEASUREMENT UNCERTAINTY BUDGET" accent={ACCENT} />
+                <div style={{ fontSize: "8pt", color: "#666", marginBottom: "10px" }}>
+                  Per GUM JCGM 100:2008 · ISO/IEC 17025:2017 §7.6
+                </div>
+                <ReportUncertaintyBudgetTable
+                  rows={TEST_UNCERTAINTY_CONFIGS.flasher_stc.rows}
+                  measurand={TEST_UNCERTAINTY_CONFIGS.flasher_stc.measurand}
+                  measuredValue={432.0}
+                  unit={TEST_UNCERTAINTY_CONFIGS.flasher_stc.unit}
+                  combinedUncertainty={TEST_UNCERTAINTY_CONFIGS.flasher_stc.combinedUncertainty}
+                  coverageFactor={TEST_UNCERTAINTY_CONFIGS.flasher_stc.coverageFactor}
+                  expandedUncertainty={TEST_UNCERTAINTY_CONFIGS.flasher_stc.expandedUncertainty}
+                  compact
+                />
+              </div>
+
               <UncertaintySection accent={ACCENT} />
               <SignatureBlock accent={ACCENT} reportNo={REPORT_NO} />
             </div>
