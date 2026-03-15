@@ -76,36 +76,26 @@ export async function exportToWord(config: TemplateExportConfig) {
       new Table({
         width: { size: 100, type: WidthType.PERCENTAGE },
         rows: [
+          // Header row with white text on dark blue background
           new TableRow({
             children: tbl.headers.map(h =>
-              cell(h, { bold: true, shading: "1e3a5f" })
+              new TableCell({
+                children: [new Paragraph({
+                  children: [new TextRun({ text: h, bold: true, size: 18, font: "Calibri", color: "ffffff" })],
+                  alignment: AlignmentType.CENTER,
+                  spacing: { before: 40, after: 40 },
+                })],
+                shading: { type: ShadingType.SOLID, color: "1e3a5f" },
+                borders: {
+                  top: { style: BorderStyle.SINGLE, size: 1, color: "cccccc" },
+                  bottom: { style: BorderStyle.SINGLE, size: 1, color: "cccccc" },
+                  left: { style: BorderStyle.SINGLE, size: 1, color: "cccccc" },
+                  right: { style: BorderStyle.SINGLE, size: 1, color: "cccccc" },
+                },
+              })
             ),
             tableHeader: true,
           }),
-          // Fix header text color
-          ...(() => {
-            // Re-create header with white text
-            const headerRow = new TableRow({
-              children: tbl.headers.map(h =>
-                new TableCell({
-                  children: [new Paragraph({
-                    children: [new TextRun({ text: h, bold: true, size: 18, font: "Calibri", color: "ffffff" })],
-                    alignment: AlignmentType.CENTER,
-                    spacing: { before: 40, after: 40 },
-                  })],
-                  shading: { type: ShadingType.SOLID, color: "1e3a5f" },
-                  borders: {
-                    top: { style: BorderStyle.SINGLE, size: 1, color: "cccccc" },
-                    bottom: { style: BorderStyle.SINGLE, size: 1, color: "cccccc" },
-                    left: { style: BorderStyle.SINGLE, size: 1, color: "cccccc" },
-                    right: { style: BorderStyle.SINGLE, size: 1, color: "cccccc" },
-                  },
-                })
-              ),
-              tableHeader: true,
-            });
-            return [];
-          })(),
           ...tbl.rows.map((row, ri) =>
             new TableRow({
               children: row.map(val =>
@@ -356,9 +346,9 @@ export async function exportToWord(config: TemplateExportConfig) {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     toast.success("Word document exported successfully");
-  } catch (err) {
+  } catch (err: any) {
     console.error("Word export failed:", err);
-    toast.error("Word export failed. Check console for details.");
+    toast.error(`Word export failed: ${err?.message || "Unknown error"}`);
   }
 }
 
@@ -422,8 +412,8 @@ export async function exportToExcel(config: TemplateExportConfig) {
       const sheetData: (string | number | boolean)[][] = [tbl.headers, ...tbl.rows];
       const ws = XLSX.utils.aoa_to_sheet(sheetData);
       ws["!cols"] = tbl.headers.map(() => ({ wch: 18 }));
-      // Truncate sheet name to 31 chars (Excel limit)
-      const sheetName = tbl.title.length > 31 ? tbl.title.slice(0, 31) : tbl.title;
+      // Sanitize sheet name: remove invalid chars and truncate to 31 chars (Excel limit)
+      const sheetName = tbl.title.replace(/[[\]:*?/\\]/g, "").slice(0, 31) || "Sheet";
       XLSX.utils.book_append_sheet(wb, ws, sheetName);
     }
 
@@ -438,9 +428,9 @@ export async function exportToExcel(config: TemplateExportConfig) {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     toast.success("Excel file exported successfully");
-  } catch (err) {
+  } catch (err: any) {
     console.error("Excel export failed:", err);
-    toast.error("Excel export failed. Check console for details.");
+    toast.error(`Excel export failed: ${err?.message || "Unknown error"}`);
   }
 }
 
