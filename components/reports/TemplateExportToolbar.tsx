@@ -29,12 +29,17 @@ export interface TemplateExportConfig {
 /* ── Word Export ──────────────────────────────────────────────────────────────── */
 
 export async function exportToWord(config: TemplateExportConfig) {
+  window.alert('exportToWord called');
+  console.error('[DEBUG exportToWord] Function called with config:', config?.reportNo);
   try {
+   try {
+    console.error('[DEBUG exportToWord] About to dynamically import docx...');
     const {
       Document, Packer, Paragraph, Table, TableRow, TableCell,
       TextRun, HeadingLevel, AlignmentType, WidthType,
       BorderStyle, ShadingType, Header, Footer, PageNumber,
     } = await import("docx");
+    console.error('[DEBUG exportToWord] docx imported successfully. ShadingType:', typeof ShadingType, ShadingType);
 
     const accent = "#0f4c81";
     const date = config.date || new Date().toISOString().slice(0, 10);
@@ -336,7 +341,9 @@ export async function exportToWord(config: TemplateExportConfig) {
       }],
     });
 
+    console.error('[DEBUG exportToWord] About to call Packer.toBlob...');
     const blob = await Packer.toBlob(doc);
+    console.error('[DEBUG exportToWord] Blob created, size:', blob.size);
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -345,18 +352,28 @@ export async function exportToWord(config: TemplateExportConfig) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    console.error('[DEBUG exportToWord] Download triggered successfully');
     toast.success("Word document exported successfully");
-  } catch (err: any) {
-    console.error("Word export failed:", err);
+   } catch (err: any) {
+    console.error("[DEBUG exportToWord] INNER error:", err);
     toast.error(`Word export failed: ${err?.message || "Unknown error"}`);
+   }
+  } catch (e: any) {
+    window.alert('ERROR: ' + e.message);
+    console.error("[DEBUG exportToWord] OUTER error:", e);
   }
 }
 
 /* ── Excel Export ─────────────────────────────────────────────────────────────── */
 
 export async function exportToExcel(config: TemplateExportConfig) {
+  window.alert('exportToExcel called');
+  console.error('[DEBUG exportToExcel] Function called with config:', config?.reportNo);
   try {
+   try {
+    console.error('[DEBUG exportToExcel] About to dynamically import xlsx...');
     const XLSX = await import("xlsx");
+    console.error('[DEBUG exportToExcel] xlsx imported successfully. utils:', typeof XLSX.utils);
 
     const wb = XLSX.utils.book_new();
 
@@ -417,8 +434,11 @@ export async function exportToExcel(config: TemplateExportConfig) {
       XLSX.utils.book_append_sheet(wb, ws, sheetName);
     }
 
+    console.error('[DEBUG exportToExcel] About to write workbook...');
     const wbOut = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    console.error('[DEBUG exportToExcel] Workbook written, creating blob...');
     const blob = new Blob([wbOut], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    console.error('[DEBUG exportToExcel] Blob created, size:', blob.size);
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -427,10 +447,15 @@ export async function exportToExcel(config: TemplateExportConfig) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    console.error('[DEBUG exportToExcel] Download triggered successfully');
     toast.success("Excel file exported successfully");
-  } catch (err: any) {
-    console.error("Excel export failed:", err);
+   } catch (err: any) {
+    console.error("[DEBUG exportToExcel] INNER error:", err);
     toast.error(`Excel export failed: ${err?.message || "Unknown error"}`);
+   }
+  } catch (e: any) {
+    window.alert('ERROR: ' + e.message);
+    console.error("[DEBUG exportToExcel] OUTER error:", e);
   }
 }
 
