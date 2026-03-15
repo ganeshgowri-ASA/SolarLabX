@@ -5,6 +5,7 @@ import { IVCurveChart } from "@/components/reports/charts/IVCurveChart";
 import { TemperatureCoefficientChart } from "@/components/reports/charts/TemperatureCoefficientChart";
 import { ReportUncertaintyBudgetTable } from "@/components/reports/uncertainty/ReportUncertaintyBudgetTable";
 import { TEST_UNCERTAINTY_CONFIGS } from "@/components/reports/uncertainty/testUncertaintyConfigs";
+import { exportToWord, exportToExcel, type TemplateExportConfig } from "@/components/reports/TemplateExportToolbar";
 
 const REPORT_NO = "SLX-RPT-STC-2026-001";
 
@@ -56,6 +57,22 @@ const PARAMS: { key: keyof Meas; label: string; unit: string }[] = [
 ];
 
 export default function STCFlashPage() {
+  const exportConfig: TemplateExportConfig = {
+    reportNo: REPORT_NO, title: "STC Flash Test Analysis", subtitle: "IEC 60904-1 / IEC 61215-2 MQT06 · Multi-stage measurement comparison",
+    standard: "IEC 60904-1 / IEC 61215-2", date: "2026-03-14",
+    moduleSpecs: MODULES.map(m => [m.id, `${m.make} ${m.model} (${m.np.pmax} Wp)`] as [string, string]),
+    testConditions: [["Irradiance", "1000 W/m² ± 2%"], ["Cell Temperature", "25°C ± 1°C"], ["Spectrum", "AM1.5G (IEC 60904-3)"]],
+    purpose: "Multi-stage STC flash testing to compare electrical performance across initial, post-preconditioning, and post-test stages.",
+    tables: MODULES.map((mod, mi) => ({
+      title: `${mod.id} – ${mod.make} ${mod.model}`,
+      headers: ["Parameter", "Nameplate", "Initial (A)", "Post-Precond (B)", "Post-Test (C)", "Δ A/NP", "Δ C/A"],
+      rows: PARAMS.map(p => [
+        `${p.label} (${p.unit})`, String(mod.np[p.key]), String(measA[mi][p.key]), String(measB[mi][p.key]), String(measC[mi][p.key]),
+        `${dev(mod.np[p.key], measA[mi][p.key])}%`, `${dev(measA[mi][p.key], measC[mi][p.key])}%`,
+      ]),
+    })),
+  };
+
   return (
     <>
       <style>{`
@@ -81,11 +98,11 @@ export default function STCFlashPage() {
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
             PDF
           </button>
-          <button onClick={() => { /* word export placeholder */ }} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
+          <button onClick={() => exportToWord(exportConfig)} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
             Word
           </button>
-          <button onClick={() => { /* excel export placeholder */ }} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
+          <button onClick={() => exportToExcel(exportConfig)} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
             Excel
           </button>

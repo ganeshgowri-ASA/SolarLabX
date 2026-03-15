@@ -7,6 +7,7 @@ import { UNCERTAINTY_TEMPLATES } from "@/lib/uncertainty";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { exportToWord, exportToExcel } from "@/components/reports/TemplateExportToolbar";
 
 const CATEGORY_COLORS: Record<string, string> = {
   "I-V Measurement": "bg-blue-100 text-blue-800",
@@ -29,9 +30,36 @@ export default function TemplatesPage() {
             Select a template to start a new budget with pre-configured components.
           </p>
         </div>
-        <Link href="/uncertainty">
-          <Button variant="outline">Back to Dashboard</Button>
-        </Link>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => exportToWord({
+            reportNo: "SLX-UNC-TEMPLATES-2026", title: "Uncertainty Budget Templates", subtitle: "Pre-built templates for solar PV measurements",
+            standard: "GUM JCGM 100:2008 / ISO/IEC 17025:2017", date: new Date().toISOString().slice(0, 10),
+            purpose: "Pre-built uncertainty budget templates for common solar PV measurement parameters per GUM methodology.",
+            tables: UNCERTAINTY_TEMPLATES.map(t => ({
+              title: `${t.name} (${t.category})`,
+              headers: ["Component", "Type", "Distribution", "Default Uncertainty", "Sensitivity Coeff."],
+              rows: t.components.map(c => [c.name, c.type, c.distribution, String(c.defaultUncertainty), String(c.sensitivityCoefficient)]),
+            })),
+          })}>
+            <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            Word
+          </Button>
+          <Button variant="outline" onClick={() => exportToExcel({
+            reportNo: "SLX-UNC-TEMPLATES-2026", title: "Uncertainty Budget Templates", subtitle: "Pre-built templates for solar PV measurements",
+            standard: "GUM JCGM 100:2008", date: new Date().toISOString().slice(0, 10),
+            tables: UNCERTAINTY_TEMPLATES.map(t => ({
+              title: t.name.length > 31 ? t.name.slice(0, 31) : t.name,
+              headers: ["Component", "Type", "Distribution", "Default Uncertainty", "Sensitivity Coeff.", "Category"],
+              rows: t.components.map(c => [c.name, c.type, c.distribution, String(c.defaultUncertainty), String(c.sensitivityCoefficient), c.category || ""]),
+            })),
+          })}>
+            <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+            Excel
+          </Button>
+          <Link href="/uncertainty">
+            <Button variant="outline">Back to Dashboard</Button>
+          </Link>
+        </div>
       </div>
 
       {/* Templates grouped by category */}

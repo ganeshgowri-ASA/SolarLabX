@@ -5,6 +5,7 @@ import { useState } from "react";
 import { PrePostComparisonChart } from "@/components/reports/charts/PrePostComparisonChart";
 import { ReportUncertaintyBudgetTable } from "@/components/reports/uncertainty/ReportUncertaintyBudgetTable";
 import { TEST_UNCERTAINTY_CONFIGS } from "@/components/reports/uncertainty/testUncertaintyConfigs";
+import { exportToWord, exportToExcel, type TemplateExportConfig } from "@/components/reports/TemplateExportToolbar";
 
 const REPORT_NO = "SLX-RPT-CLEAN-2026-001";
 
@@ -58,31 +59,50 @@ export default function CleaningRobotReportPage() {
       `}</style>
 
       {/* Toolbar */}
-      <div className="no-print sticky top-0 z-50 flex items-center justify-between mb-4 p-4 bg-gray-50 rounded-lg border">
-        <div>
-          <h1 className="text-xl font-bold text-gray-800">Robotic Cleaning Evaluation Report</h1>
-          <p className="text-sm text-gray-500">Project/Custom Report Format · 8000 Cleaning Cycle Simulation</p>
-        </div>
-        <div className="flex gap-2">
-          <a href="/reports/templates" className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100">← Back</a>
-          <button onClick={() => window.print()} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
-            PDF
-          </button>
-          <button onClick={() => { /* word export placeholder */ }} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-            Word
-          </button>
-          <button onClick={() => { /* excel export placeholder */ }} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-            Excel
-          </button>
-          <button onClick={() => window.print()} className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1">
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-            Print
-          </button>
-        </div>
-      </div>
+      {(() => {
+        const exportConfig: TemplateExportConfig = {
+          reportNo, title: "Robotic PV Module Cleaning System Evaluation", subtitle: "Project/Custom Report Format · 8000 Cleaning Cycle Simulation",
+          standard: "Custom / Project Spec", date: issueDate,
+          moduleSpecs: MODULE_SPECIMENS.map(m => [m.id, `${m.make} ${m.model} (${m.tech}, ${m.power})`] as [string, string]),
+          testConditions: [["Robot Model", robotModel], ["Customer", customer], ["Total Cycles", "8000"], ["Sand Type", "ISO 12103-1 A4 (coarse)"]],
+          purpose: "Evaluate the effect of robotic cleaning on PV module performance and surface integrity over 8000 simulated cleaning cycles.",
+          tables: [
+            { title: "Sand Spraying Schedule", headers: ["Cycles", "Regular Soiling", "Storm Simulation", "Notes"],
+              rows: SAND_SCHEDULE.map(s => [s.cycles, s.regular, s.storm, s.notes]) },
+            { title: "Classification System", headers: ["Class", "Description", "ΔPmax", "ΔIsc", "Reflectance"],
+              rows: CLASS_SYSTEM.map(c => [c.cls, c.desc, c.pmax, c.isc, c.ref]) },
+            { title: "Results Matrix", headers: ["Sample", "Make", "Tech", "ΔPmax@1000", "ΔPmax@2000", "ΔPmax@8000", "ΔIsc@8000", "Ref@8000", "Visual", "Overall"],
+              rows: RESULTS_MATRIX.map(r => [r.sample, r.make, r.tech, r.pmax1000, r.pmax2000, r.pmax8000, r.isc8000, r.ref8000, r.visual, r.overallClass]) },
+          ],
+        };
+        return (
+          <div className="no-print sticky top-0 z-50 flex items-center justify-between mb-4 p-4 bg-gray-50 rounded-lg border">
+            <div>
+              <h1 className="text-xl font-bold text-gray-800">Robotic Cleaning Evaluation Report</h1>
+              <p className="text-sm text-gray-500">Project/Custom Report Format · 8000 Cleaning Cycle Simulation</p>
+            </div>
+            <div className="flex gap-2">
+              <a href="/reports/templates" className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100">← Back</a>
+              <button onClick={() => window.print()} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                PDF
+              </button>
+              <button onClick={() => exportToWord(exportConfig)} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                Word
+              </button>
+              <button onClick={() => exportToExcel(exportConfig)} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                Excel
+              </button>
+              <button onClick={() => window.print()} className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                Print
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="report-container max-w-5xl mx-auto bg-white shadow-lg print:shadow-none" style={{ fontFamily: "'Calibri','Arial',sans-serif", fontSize: "10pt", color: "#1a1a1a" }}>
 

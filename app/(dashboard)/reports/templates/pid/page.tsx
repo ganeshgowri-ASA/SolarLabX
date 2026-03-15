@@ -8,6 +8,7 @@ import { ChamberCycleChart } from "@/components/reports/charts/ChamberCycleChart
 import { PrePostComparisonChart } from "@/components/reports/charts/PrePostComparisonChart";
 import { ReportUncertaintyBudgetTable } from "@/components/reports/uncertainty/ReportUncertaintyBudgetTable";
 import { TEST_UNCERTAINTY_CONFIGS } from "@/components/reports/uncertainty/testUncertaintyConfigs";
+import { exportToWord, exportToExcel, type TemplateExportConfig } from "@/components/reports/TemplateExportToolbar";
 
 const REPORT_NO = "SLX-RPT-PID-2026-001";
 
@@ -64,31 +65,48 @@ export default function PIDReportPage() {
       `}</style>
 
       {/* Toolbar */}
-      <div className="no-print sticky top-0 z-50 flex items-center justify-between mb-4 p-4 bg-gray-50 rounded-lg border">
-        <div>
-          <h1 className="text-xl font-bold text-gray-800">PID Test Report – IEC TS 62804-1:2015</h1>
-          <p className="text-sm text-gray-500">Edit fields below · Click Print / Save as PDF when ready</p>
-        </div>
-        <div className="flex gap-2">
-          <a href="/reports/templates" className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100">← Back</a>
-          <button onClick={() => window.print()} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
-            PDF
-          </button>
-          <button onClick={() => { /* word export placeholder */ }} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-            Word
-          </button>
-          <button onClick={() => { /* excel export placeholder */ }} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-            Excel
-          </button>
-          <button onClick={() => window.print()} className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1">
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-            Print
-          </button>
-        </div>
-      </div>
+      {(() => {
+        const exportConfig: TemplateExportConfig = {
+          reportNo, title: "Potential Induced Degradation (PID) Test", subtitle: "IEC TS 62804-1:2015 Method A",
+          standard: "IEC TS 62804-1:2015", date: issueDate,
+          moduleSpecs: MODULES.map(m => [m.id, `${m.manufacturer} ${m.type} (${m.cell})`] as [string, string]),
+          testConditions: [["Method", "Method A (System Voltage)"], ["Voltage", "−1000 V DC"], ["Duration", "96 hours"], ["Temperature", "60°C ± 2°C"], ["Humidity", "85% RH ± 5%"]],
+          criterion: "ΔPmax < 5% after 96h at −1000V, 60°C, 85%RH. RISO ≥ 40 MΩ·m².",
+          purpose: "Evaluate module resistance to Potential Induced Degradation under high system voltage stress per IEC TS 62804-1:2015.",
+          equipment: ["PID Test System (1000V DC)", "Solar Simulator: Spire 4600SLP AAA+", "EL Camera: Xenics Bobcat-1.7", "Insulation Tester: Fluke 1555C"],
+          tables: [{
+            title: "STC Electrical Results", headers: ["Parameter", "Nameplate", "Initial (A)", "After PID (B)", "Δ A/NP", "Δ B/A", "Pass"],
+            rows: STC_DATA.map(r => [r.param, r.nameplate, r.initialA, r.afterB, r.devA, r.devB, r.pass ? "PASS" : "FAIL"]),
+          }],
+        };
+        return (
+          <div className="no-print sticky top-0 z-50 flex items-center justify-between mb-4 p-4 bg-gray-50 rounded-lg border">
+            <div>
+              <h1 className="text-xl font-bold text-gray-800">PID Test Report – IEC TS 62804-1:2015</h1>
+              <p className="text-sm text-gray-500">Edit fields below · Click Print / Save as PDF when ready</p>
+            </div>
+            <div className="flex gap-2">
+              <a href="/reports/templates" className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100">← Back</a>
+              <button onClick={() => window.print()} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                PDF
+              </button>
+              <button onClick={() => exportToWord(exportConfig)} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                Word
+              </button>
+              <button onClick={() => exportToExcel(exportConfig)} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                Excel
+              </button>
+              <button onClick={() => window.print()} className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                Print
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="report-container max-w-5xl mx-auto bg-white shadow-lg print:shadow-none" style={{ fontFamily: "'Calibri', 'Arial', sans-serif", fontSize: "10pt", color: "#1a1a1a" }}>
 

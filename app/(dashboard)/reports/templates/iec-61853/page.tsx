@@ -5,6 +5,7 @@ import { EnergyRatingChart } from "@/components/reports/charts/EnergyRatingChart
 import { TemperatureCoefficientChart } from "@/components/reports/charts/TemperatureCoefficientChart";
 import { ReportUncertaintyBudgetTable } from "@/components/reports/uncertainty/ReportUncertaintyBudgetTable";
 import { TEST_UNCERTAINTY_CONFIGS } from "@/components/reports/uncertainty/testUncertaintyConfigs";
+import { exportToWord, exportToExcel, type TemplateExportConfig } from "@/components/reports/TemplateExportToolbar";
 
 const REPORT_NO = "SLX-RPT-IEC61853-2026-001";
 const ACCENT = "#5b21b6";
@@ -39,6 +40,20 @@ const ENERGY_RATING = [
 ];
 
 export default function IEC61853Page() {
+  const exportConfig: TemplateExportConfig = {
+    reportNo: REPORT_NO, title: "PV Module Energy Rating", subtitle: "IEC 61853-1/2/3/4 · Power Matrix · Climate-Specific Energy Output",
+    standard: "IEC 61853", date: "2026-03-14",
+    moduleSpecs: [["Manufacturer", "Axitec Energy GmbH"], ["Model", "AC-430MH/144V"], ["Technology", "Mono-PERC"], ["Rated Pmax", "430 Wp"]],
+    testConditions: [["Irradiance Range", "100 – 1100 W/m²"], ["Temperature Range", "15 – 75 °C"], ["Standard", "IEC 61853-1:2011"]],
+    purpose: "Determine the power matrix and energy rating of the PV module across multiple irradiance and temperature conditions per IEC 61853.",
+    tables: [
+      { title: "Power Matrix (W)", headers: ["Irrad (W/m²)", ...TEMPS.map(t => `${t}°C`)],
+        rows: IRRAD.map((ir, i) => [String(ir), ...PMATRIX[i].map(v => String(v))]) },
+      { title: "Energy Rating by Climate", headers: ["Climate", "Location", "YE Peak (W)", "YE (kWh/kWp)", "Reference"],
+        rows: ENERGY_RATING.map(r => [r.climate, r.location, r.YEPEAK, r.YE, r.ref]) },
+    ],
+  };
+
   return (
     <>
       <style>{`
@@ -63,11 +78,11 @@ export default function IEC61853Page() {
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
             PDF
           </button>
-          <button onClick={() => { /* word export placeholder */ }} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
+          <button onClick={() => exportToWord(exportConfig)} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
             Word
           </button>
-          <button onClick={() => { /* excel export placeholder */ }} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
+          <button onClick={() => exportToExcel(exportConfig)} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
             Excel
           </button>
