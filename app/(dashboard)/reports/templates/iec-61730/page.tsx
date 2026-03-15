@@ -15,7 +15,7 @@ import { InsulationWetLeakageChart } from "@/components/reports/charts/Insulatio
 import { PrePostComparisonChart } from "@/components/reports/charts/PrePostComparisonChart";
 import { ReportUncertaintyBudgetTable } from "@/components/reports/uncertainty/ReportUncertaintyBudgetTable";
 import { TEST_UNCERTAINTY_CONFIGS } from "@/components/reports/uncertainty/testUncertaintyConfigs";
-import { exportToWord, exportToExcel, type TemplateExportConfig } from "@/components/reports/TemplateExportToolbar";
+import { useTemplateExport, type TemplateExportConfig } from "@/lib/useTemplateExport";
 
 const ACCENT = "#7c2d12";
 
@@ -362,6 +362,7 @@ function MSTCard({ mst, onEdit }: { mst: typeof initialMSTs[0]; onEdit: (id: str
 }
 
 export default function IEC61730ReportPage() {
+  const { handleExportWord, handleExportExcel, exportingWord, exportingExcel } = useTemplateExport();
   const [msts, setMsts] = useState(initialMSTs);
 
   const handleEdit = (id: string, val: string) => {
@@ -402,7 +403,7 @@ export default function IEC61730ReportPage() {
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
             PDF
           </button>
-          <button onClick={() => exportToWord({
+          <button onClick={() => handleExportWord({
             reportNo: moduleInfo.reportNo, title: "PV Module Safety Qualification Test", subtitle: "IEC 61730-1 and IEC 61730-2 · Module Safety Class Assessment",
             standard: "IEC 61730", date: moduleInfo.date,
             moduleSpecs: [["Manufacturer", moduleInfo.manufacturer], ["Model", moduleInfo.model], ["Type", moduleInfo.type], ["Pmax", moduleInfo.pmax], ["Application Class", moduleInfo.applicationClass], ["Max System Voltage", moduleInfo.maxSystemVoltage], ["Fire Class", moduleInfo.fireClass]],
@@ -410,19 +411,19 @@ export default function IEC61730ReportPage() {
             purpose: "Safety qualification testing of PV modules per IEC 61730-1 (requirements) and IEC 61730-2 (test methods).",
             tables: [{ title: "Module Safety Tests (MST)", headers: ["ID", "Name", "Clause", "Safety Aspect", "Result"],
               rows: initialMSTs.map(t => [t.id, t.name, t.clause, t.safety_aspect, t.result]) }],
-          })} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
+          })} disabled={exportingWord} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1 disabled:opacity-50">
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-            Word
+            {exportingWord ? "Exporting..." : "Word"}
           </button>
-          <button onClick={() => exportToExcel({
+          <button onClick={() => handleExportExcel({
             reportNo: moduleInfo.reportNo, title: "PV Module Safety Qualification Test", subtitle: "IEC 61730-1 and IEC 61730-2",
             standard: "IEC 61730", date: moduleInfo.date,
             moduleSpecs: [["Manufacturer", moduleInfo.manufacturer], ["Model", moduleInfo.model], ["Type", moduleInfo.type], ["Pmax", moduleInfo.pmax], ["Application Class", moduleInfo.applicationClass]],
             tables: [{ title: "Module Safety Tests (MST)", headers: ["ID", "Name", "Clause", "Safety Aspect", "Result"],
               rows: initialMSTs.map(t => [t.id, t.name, t.clause, t.safety_aspect, t.result]) }],
-          })} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1">
+          })} disabled={exportingExcel} className="px-3 py-1.5 text-sm border rounded bg-white hover:bg-gray-100 flex items-center gap-1 disabled:opacity-50">
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-            Excel
+            {exportingExcel ? "Exporting..." : "Excel"}
           </button>
           <button onClick={() => window.print()} className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1">
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
