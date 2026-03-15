@@ -1,6 +1,9 @@
 // @ts-nocheck
 "use client";
 import { EnvTestReportTemplate } from "@/components/reports/EnvTestReportTemplate";
+import { PrePostComparisonChart } from "@/components/reports/charts/PrePostComparisonChart";
+import { ReportUncertaintyBudgetTable } from "@/components/reports/uncertainty/ReportUncertaintyBudgetTable";
+import { TEST_UNCERTAINTY_CONFIGS } from "@/components/reports/uncertainty/testUncertaintyConfigs";
 
 export default function IEC62938SnowPage() {
   return (
@@ -36,6 +39,25 @@ export default function IEC62938SnowPage() {
         "Climate Chamber: Weiss WKL-1000 for −10°C conditioning (Cal. SLX-EQ-034, Valid: 2026-12-31)",
       ]}
       overallDelta="−0.44%"
+      testSpecificCharts={
+        <>
+          <div style={{ marginBottom: "16px" }}>
+            <PrePostComparisonChart />
+          </div>
+        </>
+      }
+      uncertaintySection={
+        <ReportUncertaintyBudgetTable
+          rows={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.rows}
+          measurand={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.measurand}
+          measuredValue={432.0}
+          unit={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.unit}
+          combinedUncertainty={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.combinedUncertainty}
+          coverageFactor={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.coverageFactor}
+          expandedUncertainty={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.expandedUncertainty}
+          compact
+        />
+      }
       extraSections={
         <>
           <div style={{ marginBottom: "12px", fontSize: "8.5pt" }}>

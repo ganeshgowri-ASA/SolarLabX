@@ -1,6 +1,10 @@
 // @ts-nocheck
 "use client";
 import { EnvTestReportTemplate } from "@/components/reports/EnvTestReportTemplate";
+import { StabilizationDosageChart } from "@/components/reports/charts/StabilizationDosageChart";
+import { PrePostComparisonChart } from "@/components/reports/charts/PrePostComparisonChart";
+import { ReportUncertaintyBudgetTable } from "@/components/reports/uncertainty/ReportUncertaintyBudgetTable";
+import { TEST_UNCERTAINTY_CONFIGS } from "@/components/reports/uncertainty/testUncertaintyConfigs";
 
 export default function IEC61345UVThinFilmPage() {
   return (
@@ -47,6 +51,38 @@ export default function IEC61345UVThinFilmPage() {
         "Module Temp. Sensors: T-type TC ×6 (Cal. SLX-EQ-054, Valid: 2026-09-30)",
       ]}
       overallDelta="−1.31%"
+      testSpecificCharts={
+        <>
+          <div style={{ marginBottom: "16px" }}>
+            <StabilizationDosageChart targetDose={50} />
+          </div>
+          <div style={{ marginBottom: "16px" }}>
+            <PrePostComparisonChart
+              data={[
+                { sampleId: "SLX-TF301", preValue: 451.2, postValue: 445.6 },
+                { sampleId: "SLX-TF302", preValue: 450.8, postValue: 444.9 },
+                { sampleId: "SLX-TF303", preValue: 451.0, postValue: 445.8 },
+              ]}
+              parameter="Pmax"
+              unit="W"
+              threshold={5}
+              thresholdType="max_degradation_pct"
+            />
+          </div>
+        </>
+      }
+      uncertaintySection={
+        <ReportUncertaintyBudgetTable
+          rows={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.rows}
+          measurand={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.measurand}
+          measuredValue={432.0}
+          unit={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.unit}
+          combinedUncertainty={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.combinedUncertainty}
+          coverageFactor={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.coverageFactor}
+          expandedUncertainty={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.expandedUncertainty}
+          compact
+        />
+      }
       extraSections={
         <div style={{ marginBottom: "12px", padding: "10px 14px", background: "#f5f3ff", border: "1px solid #c4b5fd", borderRadius: "4px", fontSize: "8.5pt" }}>
           <strong>CdTe-Specific Observation:</strong> All three CdTe thin-film samples demonstrated excellent UV stability with maximum power degradation of 1.31%. No delamination, discoloration, or edge seal deterioration was observed. The CdTe absorber layer and TCO front contact showed no measurable spectral response shift. Light soaking stabilisation was performed per IEC 61215-1 Annex A prior to initial measurement to account for metastability effects inherent to CdTe technology.

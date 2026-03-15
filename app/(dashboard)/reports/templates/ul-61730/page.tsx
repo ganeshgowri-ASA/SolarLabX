@@ -1,6 +1,10 @@
 // @ts-nocheck
 "use client";
 import { EnvTestReportTemplate } from "@/components/reports/EnvTestReportTemplate";
+import { InsulationWetLeakageChart } from "@/components/reports/charts/InsulationWetLeakageChart";
+import { PrePostComparisonChart } from "@/components/reports/charts/PrePostComparisonChart";
+import { ReportUncertaintyBudgetTable } from "@/components/reports/uncertainty/ReportUncertaintyBudgetTable";
+import { TEST_UNCERTAINTY_CONFIGS } from "@/components/reports/uncertainty/testUncertaintyConfigs";
 
 export default function UL61730Page() {
   return (
@@ -37,6 +41,28 @@ export default function UL61730Page() {
         "EL Camera: Xenics Bobcat-1.7 (Cal. SLX-EQ-022, Valid: 2027-01-31)",
       ]}
       overallDelta="−0.07%"
+      testSpecificCharts={
+        <>
+          <div style={{ marginBottom: "16px" }}>
+            <InsulationWetLeakageChart />
+          </div>
+          <div style={{ marginBottom: "16px" }}>
+            <PrePostComparisonChart />
+          </div>
+        </>
+      }
+      uncertaintySection={
+        <ReportUncertaintyBudgetTable
+          rows={TEST_UNCERTAINTY_CONFIGS.insulation_test.rows}
+          measurand={TEST_UNCERTAINTY_CONFIGS.insulation_test.measurand}
+          measuredValue={432.0}
+          unit={TEST_UNCERTAINTY_CONFIGS.insulation_test.unit}
+          combinedUncertainty={TEST_UNCERTAINTY_CONFIGS.insulation_test.combinedUncertainty}
+          coverageFactor={TEST_UNCERTAINTY_CONFIGS.insulation_test.coverageFactor}
+          expandedUncertainty={TEST_UNCERTAINTY_CONFIGS.insulation_test.expandedUncertainty}
+          compact
+        />
+      }
       extraSections={
         <>
           <div style={{ marginBottom: "12px", fontSize: "8.5pt" }}>

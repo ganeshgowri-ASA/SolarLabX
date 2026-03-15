@@ -11,6 +11,10 @@ import {
 } from "@/components/ui/tabs";
 import { IVCurveComparisonChart } from "@/components/reports/IVCurveComparisonChart";
 import { PmaxStabilizationChart, InsulationResistanceChart } from "@/components/reports/ReportSummaryCharts";
+import { InsulationWetLeakageChart } from "@/components/reports/charts/InsulationWetLeakageChart";
+import { PrePostComparisonChart } from "@/components/reports/charts/PrePostComparisonChart";
+import { ReportUncertaintyBudgetTable } from "@/components/reports/uncertainty/ReportUncertaintyBudgetTable";
+import { TEST_UNCERTAINTY_CONFIGS } from "@/components/reports/uncertainty/testUncertaintyConfigs";
 
 const ACCENT = "#7c2d12";
 
@@ -959,6 +963,44 @@ export default function IEC61730ReportPage() {
                 </div>
               </div>
 
+              {/* Test-Specific Charts */}
+              <div className="bg-white rounded-2xl shadow-sm border p-7">
+                <h3 className="text-lg font-bold mb-4" style={{ color: ACCENT }}>Test-Specific Analysis Charts</h3>
+                <div style={{ marginBottom: "16px" }}>
+                  <InsulationWetLeakageChart />
+                </div>
+                <div style={{ marginBottom: "16px" }}>
+                  <PrePostComparisonChart
+                    data={[
+                      { sampleId: "SM-007", preValue: 430.8, postValue: 426.1 },
+                      { sampleId: "SM-008", preValue: 430.5, postValue: 425.8 },
+                    ]}
+                    parameter="Pmax"
+                    unit="W"
+                    threshold={5}
+                    thresholdType="max_degradation_pct"
+                  />
+                </div>
+              </div>
+
+              {/* Measurement Uncertainty Budget */}
+              <div className="bg-white rounded-2xl shadow-sm border p-7">
+                <h3 className="text-lg font-bold mb-4" style={{ color: ACCENT }}>Measurement Uncertainty Budget</h3>
+                <div style={{ fontSize: "8pt", color: "#666", marginBottom: "10px" }}>
+                  Per GUM JCGM 100:2008 · ISO/IEC 17025:2017 §7.6
+                </div>
+                <ReportUncertaintyBudgetTable
+                  rows={TEST_UNCERTAINTY_CONFIGS.insulation_test.rows}
+                  measurand={TEST_UNCERTAINTY_CONFIGS.insulation_test.measurand}
+                  measuredValue={432.0}
+                  unit={TEST_UNCERTAINTY_CONFIGS.insulation_test.unit}
+                  combinedUncertainty={TEST_UNCERTAINTY_CONFIGS.insulation_test.combinedUncertainty}
+                  coverageFactor={TEST_UNCERTAINTY_CONFIGS.insulation_test.coverageFactor}
+                  expandedUncertainty={TEST_UNCERTAINTY_CONFIGS.insulation_test.expandedUncertainty}
+                  compact
+                />
+              </div>
+
               {/* Conclusion */}
               <div className="bg-white rounded-2xl shadow-sm border p-7">
                 <h3 className="text-lg font-bold mb-4" style={{ color: ACCENT }}>Conclusion</h3>
@@ -1095,6 +1137,28 @@ export default function IEC61730ReportPage() {
                     </tbody>
                   </table>
                 </div>
+              </div>
+
+              {/* Test-Specific Charts */}
+              <div className="bg-white rounded-2xl shadow-sm border p-7">
+                <h3 className="text-lg font-bold mb-3" style={{ color: ACCENT }}>Insulation & Wet Leakage Analysis</h3>
+                <InsulationWetLeakageChart />
+              </div>
+
+              {/* Uncertainty Budget */}
+              <div className="bg-white rounded-2xl shadow-sm border p-7">
+                <h3 className="text-lg font-bold mb-3" style={{ color: ACCENT }}>Measurement Uncertainty Budget</h3>
+                <div className="text-xs text-gray-500 mb-3">Per GUM JCGM 100:2008 · ISO/IEC 17025:2017 §7.6</div>
+                <ReportUncertaintyBudgetTable
+                  rows={TEST_UNCERTAINTY_CONFIGS.insulation_test.rows}
+                  measurand={TEST_UNCERTAINTY_CONFIGS.insulation_test.measurand}
+                  measuredValue={6200}
+                  unit={TEST_UNCERTAINTY_CONFIGS.insulation_test.unit}
+                  combinedUncertainty={TEST_UNCERTAINTY_CONFIGS.insulation_test.combinedUncertainty}
+                  coverageFactor={TEST_UNCERTAINTY_CONFIGS.insulation_test.coverageFactor}
+                  expandedUncertainty={TEST_UNCERTAINTY_CONFIGS.insulation_test.expandedUncertainty}
+                  compact
+                />
               </div>
 
               {/* Annexure C – Calibration Traceability */}

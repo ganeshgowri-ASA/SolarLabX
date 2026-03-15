@@ -11,6 +11,9 @@ import {
 } from "@/components/ui/tabs";
 import { IVCurveComparisonChart } from "@/components/reports/IVCurveComparisonChart";
 import { PmaxStabilizationChart, InsulationResistanceChart, PowerDegradationChart, DEFAULT_STABILIZATION_DATA, DEFAULT_INSULATION_DATA, DEFAULT_DEGRADATION_DATA, DEFAULT_SAMPLE_IDS } from "@/components/reports/ReportSummaryCharts";
+import { PrePostComparisonChart } from "@/components/reports/charts/PrePostComparisonChart";
+import { ReportUncertaintyBudgetTable } from "@/components/reports/uncertainty/ReportUncertaintyBudgetTable";
+import { TEST_UNCERTAINTY_CONFIGS } from "@/components/reports/uncertainty/testUncertaintyConfigs";
 
 const REPORT_NO = "SLX-RPT-IEC61215-2026-001";
 const ACCENT = "#1e3a5f";
@@ -855,6 +858,42 @@ export default function IEC61215Page() {
                   This qualification report confirms that the module design meets the requirements for terrestrial photovoltaic operation as specified in IEC 61215:2021. The report is issued under NABL accreditation scope TC-8192.
                 </p>
               </div>
+              {/* Test-Specific Charts */}
+              <div className="page-break">
+                <SH title="TEST-SPECIFIC ANALYSIS CHARTS" accent={ACCENT} />
+                <div style={{ marginBottom: "16px" }}>
+                  <PrePostComparisonChart
+                    data={prePostData.map((d) => ({
+                      sampleId: d.test,
+                      preValue: prePostData[0].pmax,
+                      postValue: d.pmax,
+                    }))}
+                    parameter="Pmax"
+                    unit="W"
+                    threshold={5}
+                    thresholdType="max_degradation_pct"
+                  />
+                </div>
+              </div>
+
+              {/* Measurement Uncertainty Budget */}
+              <div className="page-break">
+                <SH title="MEASUREMENT UNCERTAINTY BUDGET" accent={ACCENT} />
+                <div style={{ fontSize: "8pt", color: "#666", marginBottom: "10px" }}>
+                  Per GUM JCGM 100:2008 · ISO/IEC 17025:2017 §7.6
+                </div>
+                <ReportUncertaintyBudgetTable
+                  rows={TEST_UNCERTAINTY_CONFIGS.flasher_stc.rows}
+                  measurand={TEST_UNCERTAINTY_CONFIGS.flasher_stc.measurand}
+                  measuredValue={432.0}
+                  unit={TEST_UNCERTAINTY_CONFIGS.flasher_stc.unit}
+                  combinedUncertainty={TEST_UNCERTAINTY_CONFIGS.flasher_stc.combinedUncertainty}
+                  coverageFactor={TEST_UNCERTAINTY_CONFIGS.flasher_stc.coverageFactor}
+                  expandedUncertainty={TEST_UNCERTAINTY_CONFIGS.flasher_stc.expandedUncertainty}
+                  compact
+                />
+              </div>
+
               <UncertaintySection accent={ACCENT} />
               <SignatureBlock accent={ACCENT} reportNo={REPORT_NO} />
             </div>

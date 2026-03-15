@@ -2,6 +2,9 @@
 "use client";
 
 import { useState } from "react";
+import { PrePostComparisonChart } from "@/components/reports/charts/PrePostComparisonChart";
+import { ReportUncertaintyBudgetTable } from "@/components/reports/uncertainty/ReportUncertaintyBudgetTable";
+import { TEST_UNCERTAINTY_CONFIGS } from "@/components/reports/uncertainty/testUncertaintyConfigs";
 
 const REPORT_NO = "SLX-RPT-CLEAN-2026-001";
 
@@ -433,6 +436,26 @@ export default function CleaningRobotReportPage() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* ═══ TEST-SPECIFIC CHARTS & UNCERTAINTY ═══ */}
+        <div className="page-break" style={{ padding: "12mm 20mm", fontSize: "9pt" }}>
+          <SH num="5.5" title="PRE/POST COMPARISON CHART" color="#065f46" />
+          <div style={{ marginBottom: "16px" }}>
+            <PrePostComparisonChart />
+          </div>
+
+          <SH num="5.6" title="MEASUREMENT UNCERTAINTY BUDGET" color="#065f46" />
+          <ReportUncertaintyBudgetTable
+            rows={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.rows}
+            measurand={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.measurand}
+            measuredValue={432.0}
+            unit={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.unit}
+            combinedUncertainty={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.combinedUncertainty}
+            coverageFactor={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.coverageFactor}
+            expandedUncertainty={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.expandedUncertainty}
+            compact
+          />
         </div>
 
         {/* ═══ CLASSIFICATION & CONCLUSIONS ═══ */}

@@ -1,6 +1,10 @@
 // @ts-nocheck
 "use client";
 import { EnvTestReportTemplate } from "@/components/reports/EnvTestReportTemplate";
+import { PrePostComparisonChart } from "@/components/reports/charts/PrePostComparisonChart";
+import { InsulationWetLeakageChart } from "@/components/reports/charts/InsulationWetLeakageChart";
+import { ReportUncertaintyBudgetTable } from "@/components/reports/uncertainty/ReportUncertaintyBudgetTable";
+import { TEST_UNCERTAINTY_CONFIGS } from "@/components/reports/uncertainty/testUncertaintyConfigs";
 
 export default function DampHeatPage() {
   return (
@@ -33,6 +37,35 @@ export default function DampHeatPage() {
         "Reference Cell: Eppley PSP-5 (Cal. SLX-EQ-003, Valid: 2026-06-30)",
       ]}
       overallDelta="−1.13%"
+      testSpecificCharts={
+        <>
+          <div style={{ marginBottom: "16px" }}>
+            <PrePostComparisonChart
+              data={[
+                { sampleId: "SLX-M501", preValue: 432.1, postValue: 427.2 },
+                { sampleId: "SLX-M502", preValue: 431.8, postValue: 427.0 },
+                { sampleId: "SLX-M503", preValue: 432.0, postValue: 427.3 },
+              ]}
+              parameter="Pmax" unit="W" threshold={5} thresholdType="max_degradation_pct"
+            />
+          </div>
+          <div style={{ marginBottom: "16px" }}>
+            <InsulationWetLeakageChart />
+          </div>
+        </>
+      }
+      uncertaintySection={
+        <ReportUncertaintyBudgetTable
+          rows={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.rows}
+          measurand={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.measurand}
+          measuredValue={432.0}
+          unit={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.unit}
+          combinedUncertainty={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.combinedUncertainty}
+          coverageFactor={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.coverageFactor}
+          expandedUncertainty={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.expandedUncertainty}
+          compact
+        />
+      }
       extraSections={
         <div style={{ marginBottom: "12px", padding: "10px 14px", background: "#ecfdf5", border: "1px solid #a7f3d0", borderRadius: "4px", fontSize: "8.5pt" }}>
           <strong>Note on Discolouration:</strong> Minor yellowing observed on encapsulant edges (all 3 samples) consistent with typical EVA thermal degradation. Discolouration is considered cosmetic and does not affect safety or electrical performance. Power degradation of ~1.1% is within normal range for DH1000 for Mono-PERC technology.

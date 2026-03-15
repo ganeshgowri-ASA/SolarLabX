@@ -1,6 +1,11 @@
 // @ts-nocheck
 "use client";
 
+import { EnergyRatingChart } from "@/components/reports/charts/EnergyRatingChart";
+import { TemperatureCoefficientChart } from "@/components/reports/charts/TemperatureCoefficientChart";
+import { ReportUncertaintyBudgetTable } from "@/components/reports/uncertainty/ReportUncertaintyBudgetTable";
+import { TEST_UNCERTAINTY_CONFIGS } from "@/components/reports/uncertainty/testUncertaintyConfigs";
+
 const REPORT_NO = "SLX-RPT-IEC61853-2026-001";
 const ACCENT = "#5b21b6";
 
@@ -207,6 +212,31 @@ export default function IEC61853Page() {
               ))}
             </div>
           </div>
+
+          {/* Energy Rating Charts */}
+          <SH title="ENERGY RATING ANALYSIS" color={ACCENT} />
+          <div style={{ marginBottom: "16px" }}>
+            <EnergyRatingChart />
+          </div>
+          <div style={{ marginBottom: "16px" }}>
+            <TemperatureCoefficientChart />
+          </div>
+
+          {/* Uncertainty Budget */}
+          <SH title="MEASUREMENT UNCERTAINTY BUDGET" color={ACCENT} />
+          <div style={{ fontSize: "7.5pt", color: "#666", marginBottom: "8px" }}>
+            Per GUM JCGM 100:2008 · ISO/IEC 17025:2017 §7.6
+          </div>
+          <ReportUncertaintyBudgetTable
+            rows={TEST_UNCERTAINTY_CONFIGS.energy_rating.rows}
+            measurand={TEST_UNCERTAINTY_CONFIGS.energy_rating.measurand}
+            measuredValue={1892}
+            unit={TEST_UNCERTAINTY_CONFIGS.energy_rating.unit}
+            combinedUncertainty={TEST_UNCERTAINTY_CONFIGS.energy_rating.combinedUncertainty}
+            coverageFactor={TEST_UNCERTAINTY_CONFIGS.energy_rating.coverageFactor}
+            expandedUncertainty={TEST_UNCERTAINTY_CONFIGS.energy_rating.expandedUncertainty}
+            compact
+          />
 
           <SignBlock accent={ACCENT} reportNo={REPORT_NO} />
         </div>

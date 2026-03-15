@@ -1,6 +1,11 @@
 // @ts-nocheck
 "use client";
 
+import { IVCurveChart } from "@/components/reports/charts/IVCurveChart";
+import { TemperatureCoefficientChart } from "@/components/reports/charts/TemperatureCoefficientChart";
+import { ReportUncertaintyBudgetTable } from "@/components/reports/uncertainty/ReportUncertaintyBudgetTable";
+import { TEST_UNCERTAINTY_CONFIGS } from "@/components/reports/uncertainty/testUncertaintyConfigs";
+
 const REPORT_NO = "SLX-RPT-STC-2026-001";
 
 const MODULES = [
@@ -210,6 +215,39 @@ export default function STCFlashPage() {
               </div>
             );
           })}
+
+          {/* Test-Specific Charts */}
+          <div className="page-break" style={{ marginTop: "20px" }}>
+            <div style={{ fontSize: "11pt", fontWeight: "800", color: "#1e3a5f", borderBottom: "2.5px solid #1e3a5f", paddingBottom: "5px", marginBottom: "12px" }}>
+              TEST-SPECIFIC ANALYSIS CHARTS
+            </div>
+            <div style={{ marginBottom: "16px" }}>
+              <IVCurveChart />
+            </div>
+            <div style={{ marginBottom: "16px" }}>
+              <TemperatureCoefficientChart />
+            </div>
+          </div>
+
+          {/* Measurement Uncertainty Budget */}
+          <div className="page-break" style={{ marginTop: "20px" }}>
+            <div style={{ fontSize: "11pt", fontWeight: "800", color: "#1e3a5f", borderBottom: "2.5px solid #1e3a5f", paddingBottom: "5px", marginBottom: "12px" }}>
+              MEASUREMENT UNCERTAINTY BUDGET
+            </div>
+            <div style={{ fontSize: "8pt", color: "#666", marginBottom: "10px" }}>
+              Per GUM JCGM 100:2008 · ISO/IEC 17025:2017 §7.6
+            </div>
+            <ReportUncertaintyBudgetTable
+              rows={TEST_UNCERTAINTY_CONFIGS.flasher_stc.rows}
+              measurand={TEST_UNCERTAINTY_CONFIGS.flasher_stc.measurand}
+              measuredValue={432.0}
+              unit={TEST_UNCERTAINTY_CONFIGS.flasher_stc.unit}
+              combinedUncertainty={TEST_UNCERTAINTY_CONFIGS.flasher_stc.combinedUncertainty}
+              coverageFactor={TEST_UNCERTAINTY_CONFIGS.flasher_stc.coverageFactor}
+              expandedUncertainty={TEST_UNCERTAINTY_CONFIGS.flasher_stc.expandedUncertainty}
+              compact
+            />
+          </div>
 
           {/* Summary Comparison */}
           <div className="page-break" style={{ marginTop: "20px" }}>

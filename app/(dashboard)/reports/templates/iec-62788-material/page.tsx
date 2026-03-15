@@ -1,6 +1,9 @@
 // @ts-nocheck
 "use client";
 import { EnvTestReportTemplate } from "@/components/reports/EnvTestReportTemplate";
+import { PeelTestChart } from "@/components/reports/charts/PeelTestChart";
+import { ReportUncertaintyBudgetTable } from "@/components/reports/uncertainty/ReportUncertaintyBudgetTable";
+import { TEST_UNCERTAINTY_CONFIGS } from "@/components/reports/uncertainty/testUncertaintyConfigs";
 
 export default function IEC62788MaterialPage() {
   return (
@@ -35,6 +38,25 @@ export default function IEC62788MaterialPage() {
         "Precision Cutter: CEAST SmartCut for specimen preparation (Cal. SLX-EQ-045, Valid: 2026-08-31)",
       ]}
       overallDelta="N/A"
+      testSpecificCharts={
+        <>
+          <div style={{ marginBottom: "16px" }}>
+            <PeelTestChart />
+          </div>
+        </>
+      }
+      uncertaintySection={
+        <ReportUncertaintyBudgetTable
+          rows={TEST_UNCERTAINTY_CONFIGS.peel_test.rows}
+          measurand={TEST_UNCERTAINTY_CONFIGS.peel_test.measurand}
+          measuredValue={432.0}
+          unit={TEST_UNCERTAINTY_CONFIGS.peel_test.unit}
+          combinedUncertainty={TEST_UNCERTAINTY_CONFIGS.peel_test.combinedUncertainty}
+          coverageFactor={TEST_UNCERTAINTY_CONFIGS.peel_test.coverageFactor}
+          expandedUncertainty={TEST_UNCERTAINTY_CONFIGS.peel_test.expandedUncertainty}
+          compact
+        />
+      }
       extraSections={
         <>
           <div style={{ marginBottom: "12px", fontSize: "8.5pt" }}>

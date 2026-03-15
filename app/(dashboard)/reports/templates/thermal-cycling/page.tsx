@@ -1,6 +1,11 @@
 // @ts-nocheck
 "use client";
 import { EnvTestReportTemplate } from "@/components/reports/EnvTestReportTemplate";
+import { ChamberCycleChart } from "@/components/reports/charts/ChamberCycleChart";
+import { PrePostComparisonChart } from "@/components/reports/charts/PrePostComparisonChart";
+import { ReportUncertaintyBudgetTable } from "@/components/reports/uncertainty/ReportUncertaintyBudgetTable";
+import { UncertaintyPieChart } from "@/components/reports/uncertainty/UncertaintyPieChart";
+import { TEST_UNCERTAINTY_CONFIGS } from "@/components/reports/uncertainty/testUncertaintyConfigs";
 
 export default function ThermalCyclingPage() {
   return <EnvTestReportTemplate
@@ -25,5 +30,34 @@ export default function ThermalCyclingPage() {
     criterion="ΔPmax < 5%, RISO·A ≥ 40 MΩ·m², no major visual defects"
     purpose="Determines the ability of the module to withstand thermal mismatch, fatigue and other stresses caused by repeated changes in temperature."
     equipment={["Thermal Cycling Chamber: Weiss WT-600/70 (Cal. SLX-EQ-020)", "Solar Simulator: Spire 4600SLP AAA+ (Cal. SLX-EQ-001)", "EL Camera: Xenics Bobcat-1.7 (Cal. SLX-EQ-022)"]}
+    testSpecificCharts={
+      <>
+        <div style={{ marginBottom: "16px" }}>
+          <ChamberCycleChart cycleCount={200} tempMin={-40} tempMax={85} />
+        </div>
+        <div style={{ marginBottom: "16px" }}>
+          <PrePostComparisonChart
+            data={[
+              { sampleId: "SLX-M301", preValue: 432.1, postValue: 430.4 },
+              { sampleId: "SLX-M302", preValue: 431.8, postValue: 430.2 },
+              { sampleId: "SLX-M303", preValue: 431.9, postValue: 430.1 },
+            ]}
+            parameter="Pmax" unit="W" threshold={5} thresholdType="max_degradation_pct"
+          />
+        </div>
+      </>
+    }
+    uncertaintySection={
+      <ReportUncertaintyBudgetTable
+        rows={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.rows}
+        measurand={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.measurand}
+        measuredValue={432.0}
+        unit={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.unit}
+        combinedUncertainty={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.combinedUncertainty}
+        coverageFactor={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.coverageFactor}
+        expandedUncertainty={TEST_UNCERTAINTY_CONFIGS.tc_dh_hf.expandedUncertainty}
+        compact
+      />
+    }
   />;
 }

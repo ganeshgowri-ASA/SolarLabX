@@ -4,6 +4,10 @@
 import { useState } from "react";
 import { IVCurveComparisonChart } from "@/components/reports/IVCurveComparisonChart";
 import { PmaxStabilizationChart, InsulationResistanceChart, PowerDegradationChart } from "@/components/reports/ReportSummaryCharts";
+import { ChamberCycleChart } from "@/components/reports/charts/ChamberCycleChart";
+import { PrePostComparisonChart } from "@/components/reports/charts/PrePostComparisonChart";
+import { ReportUncertaintyBudgetTable } from "@/components/reports/uncertainty/ReportUncertaintyBudgetTable";
+import { TEST_UNCERTAINTY_CONFIGS } from "@/components/reports/uncertainty/testUncertaintyConfigs";
 
 const REPORT_NO = "SLX-RPT-PID-2026-001";
 
@@ -733,9 +737,43 @@ export default function PIDReportPage() {
           </div>
         </div>
 
+        {/* ═══════════════ TEST-SPECIFIC CHARTS ═══════════════ */}
+        <div className="page-break" style={{ padding: "12mm 20mm", fontSize: "9pt" }}>
+          <SectionHeader num="12" title="TEST-SPECIFIC CHARTS" />
+          <div style={{ marginBottom: "16px" }}>
+            <ChamberCycleChart showPIDOverlay={true} pidVoltage={1500} />
+          </div>
+          <div style={{ marginBottom: "16px" }}>
+            <PrePostComparisonChart
+              data={[
+                { sampleId: "SLX-M001", preValue: 432.1, postValue: 431.8 },
+                { sampleId: "SLX-M002", preValue: 431.9, postValue: 431.6 },
+                { sampleId: "SLX-M003", preValue: 432.0, postValue: 431.7 },
+                { sampleId: "SLX-M004", preValue: 431.8, postValue: 431.5 },
+              ]}
+              parameter="Pmax" unit="W" threshold={5} thresholdType="max_degradation_pct"
+            />
+          </div>
+        </div>
+
+        {/* ═══════════════ UNCERTAINTY BUDGET ═══════════════ */}
+        <div className="page-break" style={{ padding: "12mm 20mm", fontSize: "9pt" }}>
+          <SectionHeader num="13" title="MEASUREMENT UNCERTAINTY" />
+          <ReportUncertaintyBudgetTable
+            rows={TEST_UNCERTAINTY_CONFIGS.pid.rows}
+            measurand={TEST_UNCERTAINTY_CONFIGS.pid.measurand}
+            measuredValue={432.0}
+            unit={TEST_UNCERTAINTY_CONFIGS.pid.unit}
+            combinedUncertainty={TEST_UNCERTAINTY_CONFIGS.pid.combinedUncertainty}
+            coverageFactor={TEST_UNCERTAINTY_CONFIGS.pid.coverageFactor}
+            expandedUncertainty={TEST_UNCERTAINTY_CONFIGS.pid.expandedUncertainty}
+            compact
+          />
+        </div>
+
         {/* ═══════════════ CONCLUSIONS ═══════════════ */}
         <div className="page-break" style={{ padding: "12mm 20mm", fontSize: "9pt" }}>
-          <SectionHeader num="12" title="CONCLUSIONS" />
+          <SectionHeader num="14" title="CONCLUSIONS" />
           <div style={{ padding: "12px 16px", background: "#f0fdf4", border: "2px solid #22c55e", borderRadius: "6px", marginBottom: "16px" }}>
             <div style={{ fontSize: "11pt", fontWeight: "700", color: "#15803d", marginBottom: "6px" }}>✓ ALL SAMPLES PASSED – IEC TS 62804-1:2015 Method A</div>
             <p style={{ fontSize: "8.5pt", color: "#166534" }}>
