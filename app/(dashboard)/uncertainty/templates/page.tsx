@@ -1,13 +1,16 @@
 // @ts-nocheck
 "use client";
-
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { UNCERTAINTY_TEMPLATES } from "@/lib/uncertainty";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { exportToWord, exportToExcel } from "@/components/reports/TemplateExportToolbar";
+import { SixBoundDiagram } from "@/components/uncertainty/SixBoundDiagram";
+import { UNCERTAINTY_6BOUND_CONFIGS, STANDARD_COVERAGE_FACTORS, getConfigByTemplateId } from "@/lib/data/uncertainty-6bound-data";
+import { BarChart3 } from "lucide-react";
 
 const CATEGORY_COLORS: Record<string, string> = {
   "I-V Measurement": "bg-blue-100 text-blue-800",
@@ -18,6 +21,16 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 export default function TemplatesPage() {
   const categories = Array.from(new Set(UNCERTAINTY_TEMPLATES.map((t) => t.category)));
+  const [sixBoundOpen, setSixBoundOpen] = useState(false);
+  const [selectedConfig, setSelectedConfig] = useState<any>(null);
+
+  const openSixBound = (templateId: string) => {
+    const config = getConfigByTemplateId(templateId);
+    if (config) {
+      setSelectedConfig(config);
+      setSixBoundOpen(true);
+    }
+  };
 
   return (
     <div className="p-8 space-y-8">
@@ -40,10 +53,7 @@ export default function TemplatesPage() {
               headers: ["Component", "Type", "Distribution", "Default Uncertainty", "Sensitivity Coeff."],
               rows: t.components.map(c => [c.name, c.type, c.distribution, String(c.defaultUncertainty), String(c.sensitivityCoefficient)]),
             })),
-          })}>
-            <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-            Word
-          </Button>
+          })}>Word</Button>
           <Button variant="outline" onClick={() => exportToExcel({
             reportNo: "SLX-UNC-TEMPLATES-2026", title: "Uncertainty Budget Templates", subtitle: "Pre-built templates for solar PV measurements",
             standard: "GUM JCGM 100:2008", date: new Date().toISOString().slice(0, 10),
@@ -52,15 +62,30 @@ export default function TemplatesPage() {
               headers: ["Component", "Type", "Distribution", "Default Uncertainty", "Sensitivity Coeff.", "Category"],
               rows: t.components.map(c => [c.name, c.type, c.distribution, String(c.defaultUncertainty), String(c.sensitivityCoefficient), c.category || ""]),
             })),
-          })}>
-            <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-            Excel
-          </Button>
-          <Link href="/uncertainty">
-            <Button variant="outline">Back to Dashboard</Button>
-          </Link>
+          })}>Excel</Button>
+          <Link href="/uncertainty"><Button variant="outline">Back to Dashboard</Button></Link>
         </div>
       </div>
+
+      {/* 6-Bound Diagram Dialog */}
+      <Dialog open={sixBoundOpen} onOpenChange={setSixBoundOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>6-Bound Uncertainty Visualization</DialogTitle>
+          </DialogHeader>
+          {selectedConfig && (
+            <SixBoundDiagram
+              measurand={selectedConfig.measurand}
+              measuredValue={selectedConfig.typicalValue}
+              unit={selectedConfig.unit}
+              combinedUncertainty={selectedConfig.typicalUc}
+              coverageFactors={STANDARD_COVERAGE_FACTORS}
+              standardRef={selectedConfig.standardRef}
+              testType={selectedConfig.testType}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Templates grouped by category */}
       {categories.map((category) => {
@@ -68,66 +93,46 @@ export default function TemplatesPage() {
         return (
           <div key={category} className="space-y-4">
             <div className="flex items-center gap-3">
-              <h2 className="text-xl font-semibold text-gray-900">{category}</h2>
-              <Badge className={CATEGORY_COLORS[category] || "bg-gray-100 text-gray-800"}>
-                {templates.length} template{templates.length > 1 ? "s" : ""}
-              </Badge>
+              <h2 className="text-2xl font-semibold">{category}</h2>
+              <Badge variant="secondary">{templates.length} template{templates.length > 1 ? "s" : ""}</Badge>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {templates.map((template) => (
                 <Card key={template.id} className="flex flex-col">
-                  <CardHeader>
+                  <CardHeader className="pb-2">
                     <CardTitle className="text-base">{template.name}</CardTitle>
                     <CardDescription>{template.description}</CardDescription>
                   </CardHeader>
-                  <CardContent className="flex-1">
-                    <div className="space-y-3">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Measurand</span>
-                        <span className="font-medium">{template.measurand}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Components</span>
-                        <span className="font-medium">{template.components.length}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Type A</span>
-                        <span className="font-medium">
-                          {template.components.filter((c) => c.type === "typeA").length}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Type B</span>
-                        <span className="font-medium">
-                          {template.components.filter((c) => c.type === "typeB").length}
-                        </span>
-                      </div>
-                      <div className="pt-2 border-t">
-                        <p className="text-xs text-muted-foreground font-medium mb-2">Components:</p>
-                        <div className="flex flex-wrap gap-1">
-                          {template.components.slice(0, 4).map((c, i) => (
-                            <Badge key={i} variant="outline" className="text-xs">
-                              {c.name.length > 20 ? c.name.slice(0, 18) + "..." : c.name}
-                            </Badge>
-                          ))}
-                          {template.components.length > 4 && (
-                            <Badge variant="secondary" className="text-xs">
-                              +{template.components.length - 4} more
-                            </Badge>
-                          )}
-                        </div>
+                  <CardContent className="flex-1 space-y-3">
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>Measurand</div><div className="font-medium text-right">{template.measurand}</div>
+                      <div>Components</div><div className="font-medium text-right">{template.components.length}</div>
+                      <div>Type A</div><div className="font-medium text-right">{template.components.filter((c) => c.type === "typeA").length}</div>
+                      <div>Type B</div><div className="font-medium text-right">{template.components.filter((c) => c.type === "typeB").length}</div>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Components:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {template.components.slice(0, 4).map((c, i) => (
+                          <Badge key={i} variant="outline" className="text-xs">
+                            {c.name.length > 20 ? c.name.slice(0, 18) + "..." : c.name}
+                          </Badge>
+                        ))}
+                        {template.components.length > 4 && (
+                          <Badge variant="outline" className="text-xs">+{template.components.length - 4} more</Badge>
+                        )}
                       </div>
                     </div>
                   </CardContent>
-                  <CardFooter>
-                    <Link
-                      href={`/uncertainty/calculator?template=${template.id}`}
-                      className="w-full"
-                    >
-                      <Button className="w-full" variant="outline">
-                        Use Template
-                      </Button>
+                  <CardFooter className="flex gap-2">
+                    <Link href={`/uncertainty/calculator?template=${template.id}`} className="flex-1">
+                      <Button className="w-full" size="sm">Use Template</Button>
                     </Link>
+                    {getConfigByTemplateId(template.id) && (
+                      <Button variant="outline" size="sm" onClick={() => openSixBound(template.id)}>
+                        <BarChart3 className="h-4 w-4 mr-1" />6-Bound
+                      </Button>
+                    )}
                   </CardFooter>
                 </Card>
               ))}
