@@ -1,4 +1,3 @@
-// @ts-nocheck
 export type BookingType = "test" | "maintenance" | "calibration" | "intermediate-check" | "reserved";
 export type BookingStatus = "confirmed" | "tentative" | "in-progress" | "completed" | "cancelled";
 export type ServiceRequestStatus = "pending" | "under-review" | "approved" | "scheduled" | "rejected";
@@ -47,11 +46,4 @@ export function getEquipmentAvailability(equipmentId: string, startDate: string,
     result.push({ date: dateStr, available: !booking, booking: booking || null });
   }
   return result;
-}
-export function getAvailableEquipmentForPeriod(category: string, startDate: string, endDate: string): { equipmentId: string; equipmentName: string; conflicts: EquipmentBooking[] }[] {
-  const { equipment } = require("./equipment-data");
-  return equipment.filter((e: any) => e.category === category).map((e: any) => {
-    const conflicts = equipmentBookings.filter(b => b.equipmentId === e.id && b.status !== "cancelled" && b.startDate <= endDate && b.endDate >= startDate);
-    return { equipmentId: e.id, equipmentName: e.name, conflicts };
-  });
 }
