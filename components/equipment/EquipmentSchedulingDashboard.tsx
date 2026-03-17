@@ -12,7 +12,7 @@ export default function EquipmentSchedulingDashboard() {
   const activeBookings = equipmentBookings.filter(b => b.status !== "cancelled" && b.status !== "completed");
   const today = new Date().toISOString().split("T")[0];
   const days = Array.from({ length: 30 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() + i - 7); return d.toISOString().split("T")[0]; });
-  const equipmentIds = [...new Set(equipmentBookings.map(b => b.equipmentId))];
+  const equipmentIds = Array.from(new Set(equipmentBookings.map(b => b.equipmentId)));
 
   return (
     <div className="space-y-6">
