@@ -87,6 +87,7 @@ import {
 } from "@/lib/document-numbering"
 import type { DocumentType, DocumentRegistryEntry } from "@/lib/document-numbering"
 import type { AuditTrailLogEntry } from "@/lib/traceability-data"
+import { AuditTrailTimeline, LinkedDocumentReferences, ExportToPDF } from "@/components/traceability/TraceabilityEnhancements"
 
 const CHART_COLORS = ["#3b82f6", "#8b5cf6", "#06b6d4", "#84cc16", "#f97316", "#ef4444", "#ec4899", "#14b8a6", "#eab308"]
 
@@ -958,7 +959,7 @@ export default function TraceabilityPage() {
       </div>
 
       <Tabs defaultValue="numbering" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="numbering" className="flex items-center gap-2">
             <Hash className="h-4 w-4" />
             <span className="hidden sm:inline">Document Numbering</span>
@@ -979,6 +980,11 @@ export default function TraceabilityPage() {
             <span className="hidden sm:inline">Audit Trail</span>
             <span className="sm:hidden">Audit</span>
           </TabsTrigger>
+          <TabsTrigger value="enhanced" className="flex items-center gap-2">
+            <Eye className="h-4 w-4" />
+            <span className="hidden sm:inline">Advanced Tools</span>
+            <span className="sm:hidden">Advanced</span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="numbering">
@@ -992,6 +998,13 @@ export default function TraceabilityPage() {
         </TabsContent>
         <TabsContent value="audit">
           <AuditTrailTab />
+        </TabsContent>
+        <TabsContent value="enhanced">
+          <div className="space-y-8">
+            <AuditTrailTimeline />
+            <LinkedDocumentReferences />
+            <ExportToPDF />
+          </div>
         </TabsContent>
       </Tabs>
     </div>
