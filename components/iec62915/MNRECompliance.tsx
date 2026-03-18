@@ -195,7 +195,7 @@ export function MNRECompliance({ selectedChanges }: MNREComplianceProps) {
               <span className="font-semibold">Product Family Definition:</span> Modules sharing the same cell technology, construction type (glass-backsheet, glass-glass), encapsulant type, and critical materials. All variants must use identical BoM except for number of cells (fewer-cell variants).
             </div>
             <div>
-              <span className="font-semibold">Fewer-Cell Variant Exemption:</span> If a module has fewer cells than the type-tested model but is otherwise identical, it may qualify with reduced testing scope (mechanical loads MQT 16/17/20 only). The higher-power model's test results cover the variant for all other tests.
+              <span className="font-semibold">Fewer-Cell Variant Exemption:</span> If a module has fewer cells than the type-tested model but is otherwise identical, it may qualify with reduced testing scope (mechanical loads MQT 16/17/20 only). The higher-power model&apos;s test results cover the variant for all other tests.
             </div>
             <div>
               <span className="font-semibold">Retesting Triggers:</span> Any change to BoM components (Clause 4.2) requires notification to the certification body within 30 days. The IEC TS 62915 Table A.1 matrix determines which tests must be repeated. Full requalification is required for semiconductor material changes or construction class changes.
