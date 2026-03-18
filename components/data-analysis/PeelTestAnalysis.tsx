@@ -10,6 +10,7 @@ import {
   ComposedChart, Cell
 } from "recharts"
 import { CheckCircle, XCircle, AlertTriangle, BarChart3, TrendingUp } from "lucide-react"
+import { IECStandardCard } from "./IECStandardCard"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -224,6 +225,34 @@ export function PeelTestAnalysis() {
 
   return (
     <div className="space-y-4">
+      <IECStandardCard
+        standard="IEC 61215-2 MQT 22"
+        title="Terrestrial PV modules — Part 2: Test procedures — MQT 22 Peel test"
+        testConditions={[
+          "Specimen width: 10 mm typical (min per standard)",
+          "Crosshead speed: 50 mm/min",
+          "Peel angle: 180° (backsheet) or 90° (alternatives)",
+          "Temperature: 23°C ± 5°C, 50% ± 10% RH",
+        ]}
+        dosageLevels={[
+          "Peel length: minimum 50 mm steady-state region",
+          "Pre-conditioning: TC200 (-40°C to 85°C), DH1000 (85°C/85%RH), UV 15 kWh/m², HF10",
+          "Number of specimens: ≥3 per interface per condition",
+        ]}
+        passCriteria={[
+          { parameter: "Backsheet peel", requirement: "≥15 N/cm (180° peel)", note: "Min adhesion" },
+          { parameter: "Cell-encapsulant", requirement: "≥40 N/cm", note: "Cell adhesion" },
+          { parameter: "Failure mode", requirement: "Cohesive preferred over adhesive", note: "Indicates good bonding" },
+        ]}
+        failCriteria={[
+          { parameter: "Backsheet peel", requirement: "<15 N/cm at any condition" },
+          { parameter: "Adhesive failure", requirement: "Clean interface separation indicates poor bonding" },
+        ]}
+        notes={[
+          "Post-conditioning retention should be >80% of initial values",
+          "Failure mode classification: adhesive, cohesive, mixed, substrate",
+        ]}
+      />
       {/* Filters + Summary */}
       <div className="flex flex-wrap gap-3 items-center">
         <div className="flex gap-1">

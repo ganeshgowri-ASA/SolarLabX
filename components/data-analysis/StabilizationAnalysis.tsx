@@ -9,6 +9,7 @@ import {
   CartesianGrid, Tooltip, Legend, ReferenceLine, Cell, ComposedChart, Area
 } from "recharts"
 import { CheckCircle, XCircle, Sun, TrendingUp, Thermometer } from "lucide-react"
+import { IECStandardCard } from "./IECStandardCard"
 
 // ─── Types & Constants ──────────────────────────────────────────────────────
 
@@ -182,6 +183,34 @@ export function StabilizationAnalysis() {
 
   return (
     <div className="space-y-4">
+      <IECStandardCard
+        standard="IEC 61215-2 MQT 19"
+        title="Terrestrial PV modules — Part 2: Test procedures — MQT 19 Stabilization"
+        testConditions={[
+          "Light source: natural sunlight or Class A+ solar simulator",
+          "Irradiance: 600–1000 W/m² during exposure",
+          "Module temperature: 50°C ± 10°C during exposure",
+          "I-V measurements at STC between exposures",
+        ]}
+        dosageLevels={[
+          "Crystalline Si: until ±2% Pmax between consecutive measurements",
+          "Thin-film (CdTe/CIGS/a-Si): 43 kWh/m² cumulative exposure",
+          "Perovskite/tandem: extended protocol may apply per manufacturer",
+        ]}
+        passCriteria={[
+          { parameter: "Consecutive Pmax", requirement: "±2% between consecutive measurements", note: "c-Si criterion" },
+          { parameter: "Thin-film exposure", requirement: "43 kWh/m² cumulative irradiance", note: "CdTe, CIGS, a-Si" },
+          { parameter: "Stabilized Pmax", requirement: "Within nameplate tolerance after stabilization" },
+        ]}
+        failCriteria={[
+          { parameter: "Pmax drift", requirement: ">2% variation after extended exposure (c-Si)" },
+          { parameter: "Thin-film", requirement: "Continuing degradation after 43 kWh/m²" },
+        ]}
+        notes={[
+          "Stabilization must be completed before all subsequent qualification tests",
+          "a-Si modules require Staebler-Wronski degradation stabilization (~1000h light soak)",
+        ]}
+      />
       {/* Technology Selector + Summary */}
       <div className="flex flex-wrap gap-3 items-center">
         <span className="text-xs text-gray-500 self-center mr-1">Technology:</span>

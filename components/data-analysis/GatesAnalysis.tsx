@@ -9,6 +9,7 @@ import {
   CartesianGrid, Tooltip, Legend, ReferenceLine, Cell
 } from "recharts"
 import { CheckCircle, XCircle, AlertTriangle, Target, Shield } from "lucide-react"
+import { IECStandardCard } from "./IECStandardCard"
 
 // ─── Types & Constants ──────────────────────────────────────────────────────
 
@@ -123,6 +124,34 @@ export function GatesAnalysis() {
 
   return (
     <div className="space-y-4">
+      <IECStandardCard
+        standard="IEC TS 60904-13"
+        title="PV devices — Part 13: Electroluminescence of PV modules — Measurement and image interpretation"
+        testConditions={[
+          "EL imaging at Isc forward bias current in dark conditions",
+          "Camera: cooled Si-CCD or InGaAs (for thin-film)",
+          "Exposure: 10–60s depending on module technology",
+          "Visual inspection per IEC 61215-2 MQT 01",
+        ]}
+        dosageLevels={[
+          "Forward current: 1× Isc and 0.1× Isc (two-image method)",
+          "Multiple exposures for SNR optimization",
+          "Pre- and post-stress EL comparison for degradation assessment",
+        ]}
+        passCriteria={[
+          { parameter: "Cat A defects", requirement: "Allowed — minor cosmetic", note: "No power impact" },
+          { parameter: "Cat B defects", requirement: "≤5% of total cell area", note: "Inactive/dark areas" },
+          { parameter: "Cat C defects", requirement: "0% — not allowed", note: "Critical: cracks through busbars, >10% cell inactive" },
+        ]}
+        failCriteria={[
+          { parameter: "Cat B defects", requirement: ">5% of total cell area" },
+          { parameter: "Cat C defects", requirement: "Any Cat C defect present" },
+        ]}
+        notes={[
+          "Two-current method (Isc + 0.1×Isc) distinguishes crack types from shunts",
+          "Post-stress EL comparison critical for mechanical load and hail tests",
+        ]}
+      />
       {/* Visual Gate Summary - Color-coded horizontal bars with MARGINAL support */}
       <Card>
         <CardHeader className="pb-2">

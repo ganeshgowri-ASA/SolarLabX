@@ -11,6 +11,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine
 } from "recharts"
 import { AlertTriangle, CheckCircle, Zap, Thermometer, Activity } from "lucide-react"
+import { IECStandardCard } from "./IECStandardCard"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -121,6 +122,34 @@ export function LeTIDAnalysis() {
 
   return (
     <div className="space-y-4">
+      <IECStandardCard
+        standard="IEC TS 63342"
+        title="Crystalline silicon PV modules — Light and elevated Temperature Induced Degradation (LeTID) test"
+        testConditions={[
+          "Temperature: 75°C ± 2°C module temperature",
+          "Irradiance: 1000 W/m² (Class A+ simulator or equivalent)",
+          "Duration: 162 hours continuous exposure",
+          "I-V measurement at STC at regular intervals",
+        ]}
+        dosageLevels={[
+          "Total exposure: 162 hours at 75°C / 1000 W/m²",
+          "I-V measurement intervals: every 6–12 hours",
+          "Optional extended test: 324 hours for margin assessment",
+        ]}
+        passCriteria={[
+          { parameter: "ΔPmax", requirement: "≤2% degradation from stabilized value", note: "After 162h" },
+          { parameter: "Recovery trend", requirement: "Pmax recovery visible after degradation nadir" },
+        ]}
+        failCriteria={[
+          { parameter: "ΔPmax", requirement: ">2% degradation at 162h" },
+          { parameter: "Continuing degradation", requirement: "No recovery trend after extended exposure" },
+        ]}
+        notes={[
+          "LeTID primarily affects p-type PERC and multicrystalline cells",
+          "B-O LID typically stabilizes within 10–20 kWh/m²; LeTID continues beyond",
+          "Dark annealing at 75°C can accelerate recovery phase",
+        ]}
+      />
       {/* Header badges */}
       <div className="flex items-center gap-2 flex-wrap">
         <Badge variant="outline" className="border-amber-300 text-amber-700">IEC TS 63342</Badge>

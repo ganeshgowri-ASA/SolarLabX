@@ -74,6 +74,7 @@ import { BypassDiodeAnalysis } from "./BypassDiodeAnalysis"
 import { LeTIDAnalysis } from "./LeTIDAnalysis"
 import { GelContentAnalysis } from "./GelContentAnalysis"
 import { BifacialityAnalysis } from "./BifacialityAnalysis"
+import { IECStandardCard } from "./IECStandardCard"
 import TestProtocolsManager from "@/components/lims/TestProtocolsManager"
 import {
   generateMockData,
@@ -1707,6 +1708,34 @@ export default function DataAnalysisPage() {
               Power vs. time stabilization curves for LID/LeTID monitoring per IEC 61215 light soaking requirements
             </p>
           </div>
+          <IECStandardCard
+            standard="IEC 61215-2 MQT 19"
+            title="Light soaking for initial stabilization — LID and LeTID monitoring"
+            testConditions={[
+              "Irradiance: 600–1000 W/m² (natural sunlight or Class A+ simulator)",
+              "Module temperature: 50°C ± 10°C during exposure",
+              "Open-circuit or maximum power point tracking during soak",
+              "I-V measurements at STC between exposure intervals",
+            ]}
+            dosageLevels={[
+              "Crystalline Si (LID): 15–20 kWh/m² cumulative exposure",
+              "Thin-film: 43 kWh/m² per MQT 19",
+              "LeTID extended: 162h at 75°C per IEC TS 63342",
+            ]}
+            passCriteria={[
+              { parameter: "LID (ΔPmax)", requirement: "≤2% from initial Pmax", note: "After 15–20 kWh/m²" },
+              { parameter: "Stabilization", requirement: "±2% between consecutive measurements", note: "c-Si criterion" },
+              { parameter: "Temperature", requirement: "50°C ± 10°C during exposure", note: "Module temp" },
+            ]}
+            failCriteria={[
+              { parameter: "ΔPmax", requirement: ">2% degradation after stabilization exposure" },
+              { parameter: "Non-stabilizing", requirement: "Continuing downward trend after 20 kWh/m²" },
+            ]}
+            notes={[
+              "LID primarily affects boron-doped p-type c-Si (B-O defect)",
+              "Gallium-doped cells show significantly lower LID (<0.5%)",
+            ]}
+          />
           <div className="grid gap-4 md:grid-cols-4">
             {[
               { label: "Initial Pmax", value: "412.5 W", sub: "pre-light soak", color: "text-blue-600" },

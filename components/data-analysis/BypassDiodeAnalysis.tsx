@@ -9,6 +9,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine, BarChart, Bar, Cell
 } from "recharts"
 import { Zap, Thermometer, CheckCircle, AlertTriangle, XCircle, TrendingUp } from "lucide-react"
+import { IECStandardCard } from "./IECStandardCard"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -215,6 +216,34 @@ export function BypassDiodeAnalysis() {
 
   return (
     <div className="space-y-4">
+      <IECStandardCard
+        standard="IEC 61215-2 MQT 18"
+        title="Terrestrial PV modules — Part 2: Test procedures — MQT 18 Bypass diode thermal test"
+        testConditions={[
+          "Diode stressed at 1.25 × Isc for 1 hour",
+          "Ambient temperature: 75°C ± 5°C",
+          "Module mounted in open-rack configuration",
+          "Thermocouple on diode junction or package",
+        ]}
+        dosageLevels={[
+          "Stress current: 1.25 × Isc (module short-circuit current)",
+          "Duration: 1 hour continuous at 75°C ambient",
+          "Thermal cycling: additional 200 cycles if required per MQT 11",
+        ]}
+        passCriteria={[
+          { parameter: "Max temp rise", requirement: "≤15°C above ambient (75°C)", note: "Tj ≤ 90°C" },
+          { parameter: "Diode function", requirement: "No open/short circuit after test", note: "Functional check" },
+          { parameter: "Vf linearity", requirement: "Linear Vf vs. T relationship", note: "~−2 mV/°C typical" },
+        ]}
+        failCriteria={[
+          { parameter: "Temp rise", requirement: ">15°C above ambient" },
+          { parameter: "Diode failure", requirement: "Open or short circuit after stress" },
+        ]}
+        notes={[
+          "IEC 61730 MST 22 has additional safety requirements for diode testing",
+          "Reverse current test at 1.25 × Isc worst-case string current",
+        ]}
+      />
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
         <Card className="text-center py-2">

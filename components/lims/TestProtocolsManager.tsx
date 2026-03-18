@@ -643,6 +643,9 @@ export default function TestProtocolsManager() {
           <TabsTrigger value="status" className="text-xs">
             <Activity className="h-3 w-3 mr-1" /> Status Tracking
           </TabsTrigger>
+          <TabsTrigger value="dosage" className="text-xs">
+            <Info className="h-3 w-3 mr-1" /> Dosage Matrix
+          </TabsTrigger>
         </TabsList>
 
         {/* ── DASHBOARD TAB ──────────────────────────────────────── */}
@@ -1184,6 +1187,178 @@ export default function TestProtocolsManager() {
               </CardContent>
             </Card>
           ))}
+        </TabsContent>
+
+        {/* ── DOSAGE MATRIX TAB ──────────────────────────────────── */}
+        <TabsContent value="dosage" className="space-y-4 mt-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Info className="h-4 w-4 text-blue-500" />
+                Test Dosage Matrix — IEC Qualification & Type Approval
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Complete reference of test standards, dosage levels, acceptance criteria, sample requirements, and equipment for solar PV module qualification testing.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-gray-100 dark:bg-gray-800">
+                      <th className="text-left p-2 font-semibold border">Test</th>
+                      <th className="text-left p-2 font-semibold border">Standard</th>
+                      <th className="text-left p-2 font-semibold border">Dosage / Exposure</th>
+                      <th className="text-left p-2 font-semibold border">Pass/Fail Criteria</th>
+                      <th className="text-left p-2 font-semibold border">Sample Size</th>
+                      <th className="text-left p-2 font-semibold border">Equipment</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      {
+                        test: "IV Curve",
+                        standard: "IEC 60904-1",
+                        dosage: "STC: 1000 W/m², 25°C, AM1.5G",
+                        criteria: "Pmax ±3% of nameplate; FF >70% (c-Si)",
+                        samples: "100% of modules",
+                        equipment: "Class A+ Solar Simulator, I-V Tracer",
+                      },
+                      {
+                        test: "Peel Test",
+                        standard: "IEC 61215-2 MQT 22",
+                        dosage: "50 mm/min, 180° peel, 50 mm length",
+                        criteria: "≥15 N/cm backsheet; ≥40 N/cm cell",
+                        samples: "≥3 specimens/interface",
+                        equipment: "Universal Testing Machine (UTM)",
+                      },
+                      {
+                        test: "Bypass Diode",
+                        standard: "IEC 61215-2 MQT 18",
+                        dosage: "1.25×Isc, 75°C ambient, 1 hr",
+                        criteria: "Max temp rise ≤15°C; no diode failure",
+                        samples: "2 modules",
+                        equipment: "DC Power Supply, Thermocouples, Chamber",
+                      },
+                      {
+                        test: "Stabilization",
+                        standard: "IEC 61215-2 MQT 19",
+                        dosage: "±2% Pmax consecutive (c-Si); 43 kWh/m² (thin-film)",
+                        criteria: "Pmax within nameplate after stabilization",
+                        samples: "All test modules",
+                        equipment: "Solar Simulator or Outdoor Exposure Rack",
+                      },
+                      {
+                        test: "Temperature Coefficients",
+                        standard: "IEC 61215-2 MQT 04",
+                        dosage: "5 temps, 25–75°C, ΔT≥10°C, 800–1100 W/m²",
+                        criteria: "R² ≥0.99 for α, β, γ linear fits",
+                        samples: "2 modules",
+                        equipment: "Climate Chamber + Solar Simulator",
+                      },
+                      {
+                        test: "Gates / EL Inspection",
+                        standard: "IEC TS 60904-13",
+                        dosage: "EL at 1×Isc and 0.1×Isc forward bias",
+                        criteria: "Cat B ≤5% area; Cat C = 0%",
+                        samples: "All modules pre/post stress",
+                        equipment: "EL Camera (Si-CCD), Dark Room",
+                      },
+                      {
+                        test: "Adhesion (Lap Shear)",
+                        standard: "IEC 62788-1-6",
+                        dosage: "Pull at 50 mm/min, 23°C, 25×25mm area",
+                        criteria: "≥0.5 MPa at 23°C; cohesive failure mode",
+                        samples: "≥5 specimens/condition",
+                        equipment: "Universal Testing Machine (UTM)",
+                      },
+                      {
+                        test: "Gel Content",
+                        standard: "IEC 62788-1-2",
+                        dosage: "Xylene reflux 110°C, 24h Soxhlet extraction",
+                        criteria: "EVA ≥65%; POE ≥70%",
+                        samples: "≥3 specimens/sample",
+                        equipment: "Soxhlet Extractor, Analytical Balance, DSC",
+                      },
+                      {
+                        test: "Bifaciality",
+                        standard: "IEC TS 60904-1-2",
+                        dosage: "Front 1000 W/m²; Rear 135 W/m² (or 1000)",
+                        criteria: "φ = Prear/Pfront; within manufacturer spec",
+                        samples: "2 modules",
+                        equipment: "Bifacial Solar Simulator or Outdoor Setup",
+                      },
+                      {
+                        test: "Light Soaking (LID)",
+                        standard: "IEC 61215-2 MQT 19",
+                        dosage: "15–20 kWh/m², 50±10°C, 600–1000 W/m²",
+                        criteria: "ΔPmax ≤2% from initial",
+                        samples: "All test modules",
+                        equipment: "Continuous Light Soak Station / Outdoor",
+                      },
+                      {
+                        test: "LeTID",
+                        standard: "IEC TS 63342",
+                        dosage: "162h at 75°C, 1000 W/m²",
+                        criteria: "ΔPmax ≤2% at 162h",
+                        samples: "2 modules",
+                        equipment: "LeTID Test Chamber, Solar Simulator",
+                      },
+                      {
+                        test: "Damp Heat (DH)",
+                        standard: "IEC 61215-2 MQT 13",
+                        dosage: "1000h at 85°C / 85% RH",
+                        criteria: "ΔPmax ≤5%; insulation ≥40 MΩ·m²",
+                        samples: "2 modules (Seq C)",
+                        equipment: "Climate Chamber (DH rated)",
+                      },
+                      {
+                        test: "Thermal Cycling (TC)",
+                        standard: "IEC 61215-2 MQT 11",
+                        dosage: "200 cycles, −40°C to +85°C, ≤100°C/hr",
+                        criteria: "ΔPmax ≤5%; no major visual defects",
+                        samples: "4 modules (Seq A+B)",
+                        equipment: "Thermal Cycling Chamber",
+                      },
+                      {
+                        test: "Humidity Freeze (HF)",
+                        standard: "IEC 61215-2 MQT 12",
+                        dosage: "10 cycles, −40°C to +85°C/85%RH",
+                        criteria: "ΔPmax ≤5%; no delamination",
+                        samples: "2 modules (Seq A)",
+                        equipment: "Climate Chamber (HF capable)",
+                      },
+                      {
+                        test: "UV Exposure",
+                        standard: "IEC 61215-2 MQT 10",
+                        dosage: "15 kWh/m² (280–385nm), 60°C module temp",
+                        criteria: "ΔPmax ≤5%; no yellowing/delamination",
+                        samples: "2 modules (Seq A)",
+                        equipment: "UV Chamber / UV Lamps",
+                      },
+                      {
+                        test: "NMOT / NOCT",
+                        standard: "IEC 61215-2 MQT 05",
+                        dosage: "800 W/m², 20°C ambient, 1 m/s wind",
+                        criteria: "Report NMOT value; typical 42–48°C",
+                        samples: "1 module",
+                        equipment: "Outdoor Test Rack, Weather Station, DAQ",
+                      },
+                    ].map((row, i) => (
+                      <tr key={i} className={i % 2 === 0 ? "bg-white dark:bg-gray-900" : "bg-gray-50 dark:bg-gray-800/50"}>
+                        <td className="p-2 border font-medium">{row.test}</td>
+                        <td className="p-2 border font-mono text-blue-600 dark:text-blue-400">{row.standard}</td>
+                        <td className="p-2 border">{row.dosage}</td>
+                        <td className="p-2 border">{row.criteria}</td>
+                        <td className="p-2 border">{row.samples}</td>
+                        <td className="p-2 border">{row.equipment}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

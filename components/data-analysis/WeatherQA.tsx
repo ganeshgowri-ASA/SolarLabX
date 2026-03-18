@@ -9,6 +9,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine, ComposedChart, Area
 } from "recharts"
 import { Sun, CloudRain, Thermometer, Wind, CheckCircle, XCircle, AlertTriangle, BarChart3 } from "lucide-react"
+import { IECStandardCard } from "./IECStandardCard"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -132,6 +133,36 @@ export function WeatherQA() {
 
   return (
     <div className="space-y-4">
+      <IECStandardCard
+        standard="IEC 61215-2 (DH/TC/HF/UV)"
+        title="Environmental stress test sequence — Damp Heat, Thermal Cycling, Humidity Freeze, UV exposure"
+        testConditions={[
+          "DH: 85°C / 85% RH continuous exposure in climate chamber",
+          "TC: −40°C to +85°C, ramp ≤100°C/hr, 10min dwell",
+          "HF: −40°C to +85°C / 85% RH, 20 cycles",
+          "UV: 280–385nm, module temperature 60°C ± 5°C",
+        ]}
+        dosageLevels={[
+          "DH: 1000 hours (DH1000) standard, 2000h extended",
+          "TC: 200 cycles (TC200) standard, 600 extended",
+          "HF: 10 cycles (HF10)",
+          "UV: 15 kWh/m² front-side (UV15), 5 kWh/m² rear",
+        ]}
+        passCriteria={[
+          { parameter: "Pmax degradation", requirement: "≤5% from initial (after each stress)", note: "Per IEC 61215" },
+          { parameter: "Insulation resistance", requirement: "≥40 MΩ·m² (wet leakage)", note: "IEC 61730 safety" },
+          { parameter: "Visual inspection", requirement: "No major defects per MQT 01", note: "Post-stress" },
+        ]}
+        failCriteria={[
+          { parameter: "Pmax", requirement: ">5% degradation after any stress test" },
+          { parameter: "Safety", requirement: "Insulation resistance <40 MΩ·m²" },
+          { parameter: "Visual", requirement: "Delamination, broken cells, corrosion" },
+        ]}
+        notes={[
+          "Sequence A: UV15 → TC50 → HF10; Sequence B: TC200; Sequence C: DH1000",
+          "Extended tests (TC600, DH2000) per IEC 63209 for differentiated testing",
+        ]}
+      />
       {/* Overall QC Summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card>
