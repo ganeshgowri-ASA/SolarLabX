@@ -73,6 +73,7 @@ import { GatesAnalysis } from "./GatesAnalysis"
 import { BypassDiodeAnalysis } from "./BypassDiodeAnalysis"
 import { LeTIDAnalysis } from "./LeTIDAnalysis"
 import { GelContentAnalysis } from "./GelContentAnalysis"
+import { BifacialityAnalysis } from "./BifacialityAnalysis"
 import TestProtocolsManager from "@/components/lims/TestProtocolsManager"
 import {
   generateMockData,
@@ -1692,105 +1693,10 @@ export default function DataAnalysisPage() {
           <div className="mb-4">
             <h2 className="text-lg font-semibold">Bifaciality Analysis</h2>
             <p className="text-sm text-muted-foreground">
-              Front/rear power ratio, bifaciality factor (φ), albedo sensitivity per IEC TS 60904-1-2
+              Front/rear power ratio, bifaciality coefficients (φ), G_effective, albedo sensitivity per IEC TS 60904-1-2
             </p>
           </div>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {[
-              { label: "Bifaciality Factor (φ)", value: "72.3%", sub: "Prear/Pfront ratio", color: "text-blue-600" },
-              { label: "Front Pmax (STC)", value: "415 W", sub: "at 1000 W/m² front", color: "text-green-600" },
-              { label: "Rear Pmax (STC)", value: "300 W", sub: "at 1000 W/m² rear", color: "text-purple-600" },
-              { label: "Energy Gain (15% albedo)", value: "+8.2%", sub: "annual yield estimate", color: "text-amber-600" },
-            ].map(({ label, value, sub, color }) => (
-              <Card key={label}>
-                <CardContent className="pt-4 pb-3">
-                  <CardDescription>{label}</CardDescription>
-                  <div className={`text-2xl font-bold ${color}`}>{value}</div>
-                  <p className="text-xs text-muted-foreground">{sub}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4 text-blue-500" />
-                  Front vs. Rear Power (Sample Batch)
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={[
-                    { id: "S1", front: 418, rear: 302 },
-                    { id: "S2", front: 415, rear: 299 },
-                    { id: "S3", front: 412, rear: 295 },
-                    { id: "S4", front: 419, rear: 305 },
-                    { id: "S5", front: 416, rear: 301 },
-                  ]}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="id" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 10 }} domain={[280, 430]} />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="front" name="Front Pmax (W)" fill="#3b82f6" />
-                    <Bar dataKey="rear" name="Rear Pmax (W)" fill="#22c55e" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-green-500" />
-                  Bifaciality Factor φ Distribution
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={[
-                    { bin: "68–70%", count: 1 },
-                    { bin: "70–72%", count: 3 },
-                    { bin: "72–74%", count: 6 },
-                    { bin: "74–76%", count: 4 },
-                    { bin: "76–78%", count: 2 },
-                  ]}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="bin" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 10 }} />
-                    <Tooltip />
-                    <Bar dataKey="count" name="Count" fill="#a855f7">
-                      {[0,1,2,3,4].map(i => <Cell key={i} fill={i === 2 ? "#7c3aed" : "#c4b5fd"} />)}
-                    </Bar>
-                    <ReferenceLine y={0} />
-                  </BarChart>
-                </ResponsiveContainer>
-                <p className="text-xs text-muted-foreground mt-2">Mean φ = 72.3% ± 2.1% (1σ). Manufacturer spec: 70% min.</p>
-              </CardContent>
-            </Card>
-          </div>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Albedo Sensitivity – Energy Gain vs. Ground Reflectance</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={200}>
-                <LineChart data={[
-                  { albedo: 5, gain: 0.8 }, { albedo: 10, gain: 2.1 }, { albedo: 15, gain: 3.8 },
-                  { albedo: 20, gain: 5.2 }, { albedo: 25, gain: 6.9 }, { albedo: 30, gain: 8.4 },
-                  { albedo: 40, gain: 10.8 }, { albedo: 50, gain: 13.1 },
-                ]}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="albedo" label={{ value: "Albedo (%)", position: "insideBottom", offset: -5 }} tick={{ fontSize: 10 }} />
-                  <YAxis label={{ value: "Energy Gain (%)", angle: -90, position: "insideLeft" }} tick={{ fontSize: 10 }} />
-                  <Tooltip formatter={(v: number) => `+${v}%`} />
-                  <Line type="monotone" dataKey="gain" name="Energy Gain" stroke="#22c55e" strokeWidth={2} dot={{ r: 3 }} />
-                  <ReferenceLine x={20} stroke="#f59e0b" strokeDasharray="4 4" label={{ value: "Grass", fontSize: 10 }} />
-                  <ReferenceLine x={80} stroke="#3b82f6" strokeDasharray="4 4" label={{ value: "Snow", fontSize: 10 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+          <BifacialityAnalysis />
         </TabsContent>
 
         {/* ===================== TAB: LIGHT SOAKING ===================== */}

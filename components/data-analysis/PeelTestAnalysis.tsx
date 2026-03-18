@@ -178,6 +178,50 @@ export function PeelTestAnalysis() {
   const failCount = filteredData.length - passCount
   const passRate = filteredData.length > 0 ? parseFloat((passCount / filteredData.length * 100).toFixed(1)) : 0
 
+  // Detailed statistics
+  const detailedStats = useMemo(() => {
+    const values = filteredData.map(d => d.peelStrength)
+    if (values.length === 0) return { mean: 0, min: 0, max: 0, stdDev: 0, cv: 0 }
+    const mean = values.reduce((a, b) => a + b, 0) / values.length
+    const min = Math.min(...values)
+    const max = Math.max(...values)
+    const variance = values.reduce((s, v) => s + (v - mean) ** 2, 0) / (values.length - 1 || 1)
+    const stdDev = Math.sqrt(variance)
+    const cv = mean > 0 ? (stdDev / mean) * 100 : 0
+    return {
+      mean: parseFloat(mean.toFixed(1)),
+      min: parseFloat(min.toFixed(1)),
+      max: parseFloat(max.toFixed(1)),
+      stdDev: parseFloat(stdDev.toFixed(2)),
+      cv: parseFloat(cv.toFixed(1)),
+    }
+  }, [filteredData])
+
+  // Before/After summary by material
+  const beforeAfterSummary = useMemo(() => {
+    const materials = ["backsheet", "encapsulant_glass", "encapsulant_backsheet"]
+    return materials.map(mat => {
+      const initial = data.filter(d => d.conditionType === "initial" && d.material === mat).map(d => d.peelStrength)
+      const postDH = data.filter(d => d.conditionType === "post_dh1000" && d.material === mat).map(d => d.peelStrength)
+      const calcStats = (arr: number[]) => {
+        if (arr.length === 0) return { mean: 0, min: 0, max: 0, stdDev: 0 }
+        const mean = arr.reduce((a, b) => a + b, 0) / arr.length
+        const stdDev = Math.sqrt(arr.reduce((s, v) => s + (v - mean) ** 2, 0) / (arr.length - 1 || 1))
+        return { mean: parseFloat(mean.toFixed(1)), min: parseFloat(Math.min(...arr).toFixed(1)), max: parseFloat(Math.max(...arr).toFixed(1)), stdDev: parseFloat(stdDev.toFixed(2)) }
+      }
+      const beforeStats = calcStats(initial)
+      const afterStats = calcStats(postDH)
+      const retention = beforeStats.mean > 0 ? parseFloat((afterStats.mean / beforeStats.mean * 100).toFixed(1)) : 0
+      return {
+        material: MATERIAL_LABELS[mat],
+        before: beforeStats,
+        after: afterStats,
+        retention,
+        pass: afterStats.mean >= lsl,
+      }
+    })
+  }, [data, lsl])
+
   return (
     <div className="space-y-4">
       {/* Filters + Summary */}
@@ -211,7 +255,7 @@ export function PeelTestAnalysis() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
         <Card className="text-center py-2">
           <CardContent className="pt-3 pb-0">
             <div className="text-2xl font-bold">{filteredData.length}</div>
@@ -232,10 +276,20 @@ export function PeelTestAnalysis() {
         </Card>
         <Card className="text-center py-2">
           <CardContent className="pt-3 pb-0">
-            <div className="text-2xl font-bold text-blue-600">
-              {filteredData.length > 0 ? (filteredData.reduce((s, d) => s + d.peelStrength, 0) / filteredData.length).toFixed(1) : "—"}
-            </div>
-            <div className="text-xs text-gray-500">Mean Strength (N/cm)</div>
+            <div className="text-2xl font-bold text-blue-600">{detailedStats.mean}</div>
+            <div className="text-xs text-gray-500">Mean (N/cm)</div>
+          </CardContent>
+        </Card>
+        <Card className="text-center py-2">
+          <CardContent className="pt-3 pb-0">
+            <div className="text-2xl font-bold text-purple-600">±{detailedStats.stdDev}</div>
+            <div className="text-xs text-gray-500">Std Dev (N/cm)</div>
+          </CardContent>
+        </Card>
+        <Card className="text-center py-2">
+          <CardContent className="pt-3 pb-0">
+            <div className="text-2xl font-bold text-amber-600">{detailedStats.min}–{detailedStats.max}</div>
+            <div className="text-xs text-gray-500">Min–Max Range</div>
           </CardContent>
         </Card>
       </div>
@@ -350,6 +404,65 @@ export function PeelTestAnalysis() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Before / After Summary with Statistics */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Before vs After Conditioning – Statistical Summary</CardTitle>
+          <CardDescription className="text-xs">Initial vs Post DH1000 · Mean ± StdDev · Retention ratio</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-2 pr-3 font-semibold">Material</th>
+                  <th className="text-right py-2 pr-3 font-semibold" colSpan={4}>Before (N/cm)</th>
+                  <th className="text-right py-2 pr-3 font-semibold" colSpan={4}>After DH1000 (N/cm)</th>
+                  <th className="text-right py-2 pr-3 font-semibold">Retention</th>
+                  <th className="text-center py-2 font-semibold">Result</th>
+                </tr>
+                <tr className="border-b text-muted-foreground">
+                  <th className="py-1"></th>
+                  <th className="text-right py-1 pr-3 text-xs font-normal">Mean</th>
+                  <th className="text-right py-1 pr-3 text-xs font-normal">Min</th>
+                  <th className="text-right py-1 pr-3 text-xs font-normal">Max</th>
+                  <th className="text-right py-1 pr-3 text-xs font-normal">σ</th>
+                  <th className="text-right py-1 pr-3 text-xs font-normal">Mean</th>
+                  <th className="text-right py-1 pr-3 text-xs font-normal">Min</th>
+                  <th className="text-right py-1 pr-3 text-xs font-normal">Max</th>
+                  <th className="text-right py-1 pr-3 text-xs font-normal">σ</th>
+                  <th className="py-1"></th>
+                  <th className="py-1"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {beforeAfterSummary.map(row => (
+                  <tr key={row.material} className={`border-b ${!row.pass ? "bg-red-50" : ""}`}>
+                    <td className="py-2 pr-3 font-medium">{row.material}</td>
+                    <td className="py-2 pr-3 text-right font-mono font-semibold">{row.before.mean}</td>
+                    <td className="py-2 pr-3 text-right font-mono text-muted-foreground">{row.before.min}</td>
+                    <td className="py-2 pr-3 text-right font-mono text-muted-foreground">{row.before.max}</td>
+                    <td className="py-2 pr-3 text-right font-mono text-purple-600">{row.before.stdDev}</td>
+                    <td className="py-2 pr-3 text-right font-mono font-semibold">{row.after.mean}</td>
+                    <td className="py-2 pr-3 text-right font-mono text-muted-foreground">{row.after.min}</td>
+                    <td className="py-2 pr-3 text-right font-mono text-muted-foreground">{row.after.max}</td>
+                    <td className="py-2 pr-3 text-right font-mono text-purple-600">{row.after.stdDev}</td>
+                    <td className={`py-2 pr-3 text-right font-mono font-bold ${row.retention >= 80 ? "text-green-600" : "text-red-600"}`}>
+                      {row.retention}%
+                    </td>
+                    <td className="py-2 text-center">
+                      <span className={`px-2 py-0.5 rounded font-bold text-xs ${row.pass ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                        {row.pass ? "PASS" : "FAIL"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

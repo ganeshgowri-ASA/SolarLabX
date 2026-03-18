@@ -74,10 +74,16 @@ export function AdhesionAnalysis() {
       after: d.after,
     })), [peelData])
 
-  // Lap shear stats
+  // Lap shear stats with std dev
   const lapBeforeAvg = parseFloat((lapShearData.reduce((s, d) => s + d.before, 0) / lapShearData.length).toFixed(2))
   const lapAfterAvg = parseFloat((lapShearData.reduce((s, d) => s + d.after, 0) / lapShearData.length).toFixed(2))
   const lapRetention = parseFloat((lapAfterAvg / lapBeforeAvg * 100).toFixed(1))
+  const lapBeforeStd = parseFloat(Math.sqrt(lapShearData.reduce((s, d) => s + (d.before - lapBeforeAvg) ** 2, 0) / (lapShearData.length - 1 || 1)).toFixed(3))
+  const lapAfterStd = parseFloat(Math.sqrt(lapShearData.reduce((s, d) => s + (d.after - lapAfterAvg) ** 2, 0) / (lapShearData.length - 1 || 1)).toFixed(3))
+  const lapBeforeMin = Math.min(...lapShearData.map(d => d.before))
+  const lapBeforeMax = Math.max(...lapShearData.map(d => d.before))
+  const lapAfterMin = Math.min(...lapShearData.map(d => d.after))
+  const lapAfterMax = Math.max(...lapShearData.map(d => d.after))
 
   // Lap shear chart data
   const lapChartData = useMemo(() =>
@@ -99,17 +105,17 @@ export function AdhesionAnalysis() {
   return (
     <div className="space-y-4">
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
         <Card className="text-center py-2">
           <CardContent className="pt-3 pb-0">
             <div className="text-2xl font-bold text-amber-600">{peelBeforeAvg}</div>
-            <div className="text-xs text-gray-500">Before Avg (N/cm)</div>
+            <div className="text-xs text-gray-500">Peel Before (N/cm)</div>
           </CardContent>
         </Card>
         <Card className="text-center py-2">
           <CardContent className="pt-3 pb-0">
             <div className="text-2xl font-bold text-blue-600">{peelAfterAvg}</div>
-            <div className="text-xs text-gray-500">After Avg (N/cm)</div>
+            <div className="text-xs text-gray-500">Peel After (N/cm)</div>
           </CardContent>
         </Card>
         <Card className="text-center py-2">
@@ -117,7 +123,21 @@ export function AdhesionAnalysis() {
             <div className={`text-2xl font-bold ${peelRetention >= 80 ? "text-green-600" : "text-red-600"}`}>
               {peelRetention}%
             </div>
-            <div className="text-xs text-gray-500">Retention Ratio</div>
+            <div className="text-xs text-gray-500">Peel Retention</div>
+          </CardContent>
+        </Card>
+        <Card className="text-center py-2">
+          <CardContent className="pt-3 pb-0">
+            <div className="text-2xl font-bold text-purple-600">{lapBeforeAvg}</div>
+            <div className="text-xs text-gray-500">Lap Shear Before (MPa)</div>
+          </CardContent>
+        </Card>
+        <Card className="text-center py-2">
+          <CardContent className="pt-3 pb-0">
+            <div className={`text-2xl font-bold ${lapRetention >= 80 ? "text-green-600" : "text-red-600"}`}>
+              {lapRetention}%
+            </div>
+            <div className="text-xs text-gray-500">Lap Shear Retention</div>
           </CardContent>
         </Card>
         <Card className="text-center py-2">
@@ -276,6 +296,54 @@ export function AdhesionAnalysis() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Lap Shear Statistical Summary */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Lap Shear Test – Statistical Summary</CardTitle>
+          <CardDescription className="text-xs">ASTM D3163 · Before vs After conditioning</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-2 pr-3 font-semibold">Condition</th>
+                  <th className="text-right py-2 pr-3 font-semibold">Mean (MPa)</th>
+                  <th className="text-right py-2 pr-3 font-semibold">Min (MPa)</th>
+                  <th className="text-right py-2 pr-3 font-semibold">Max (MPa)</th>
+                  <th className="text-right py-2 pr-3 font-semibold">Std Dev (MPa)</th>
+                  <th className="text-right py-2 pr-3 font-semibold">n</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b">
+                  <td className="py-2 pr-3 font-medium text-amber-600">Before Conditioning</td>
+                  <td className="py-2 pr-3 text-right font-mono font-bold">{lapBeforeAvg}</td>
+                  <td className="py-2 pr-3 text-right font-mono">{lapBeforeMin}</td>
+                  <td className="py-2 pr-3 text-right font-mono">{lapBeforeMax}</td>
+                  <td className="py-2 pr-3 text-right font-mono text-purple-600">{lapBeforeStd}</td>
+                  <td className="py-2 pr-3 text-right font-mono">{lapShearData.length}</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2 pr-3 font-medium text-blue-600">After Conditioning</td>
+                  <td className="py-2 pr-3 text-right font-mono font-bold">{lapAfterAvg}</td>
+                  <td className="py-2 pr-3 text-right font-mono">{lapAfterMin}</td>
+                  <td className="py-2 pr-3 text-right font-mono">{lapAfterMax}</td>
+                  <td className="py-2 pr-3 text-right font-mono text-purple-600">{lapAfterStd}</td>
+                  <td className="py-2 pr-3 text-right font-mono">{lapShearData.length}</td>
+                </tr>
+                <tr className="border-t-2 font-semibold bg-amber-50">
+                  <td className="py-2 pr-3">Retention Ratio</td>
+                  <td className={`py-2 pr-3 text-right font-mono ${lapRetention >= 80 ? "text-green-600" : "text-red-600"}`} colSpan={5}>
+                    {lapRetention}% {lapRetention >= 80 ? "(PASS)" : "(FAIL)"}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* IEC Reference */}
       <Card className="bg-amber-50 border-amber-200">

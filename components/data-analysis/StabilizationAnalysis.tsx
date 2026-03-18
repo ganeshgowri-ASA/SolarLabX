@@ -6,9 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge"
 import {
   ResponsiveContainer, BarChart, Bar, LineChart, Line, XAxis, YAxis,
-  CartesianGrid, Tooltip, Legend, ReferenceLine, Cell
+  CartesianGrid, Tooltip, Legend, ReferenceLine, Cell, ComposedChart, Area
 } from "recharts"
-import { CheckCircle, XCircle, Sun, TrendingUp } from "lucide-react"
+import { CheckCircle, XCircle, Sun, TrendingUp, Thermometer } from "lucide-react"
 
 // ─── Types & Constants ──────────────────────────────────────────────────────
 
@@ -17,16 +17,19 @@ type Technology = "c-Si" | "CdTe" | "CIGS" | "a-Si" | "HJT" | "TOPCon" | "Perovs
 interface StabilizationCriteria {
   maxDelta: number // % between consecutive measurements
   description: string
+  needsAnnealing: boolean
+  annealingTemp: number // °C
+  annealingHours: number
 }
 
 const TECH_CRITERIA: Record<Technology, StabilizationCriteria> = {
-  "c-Si":       { maxDelta: 2,  description: "±2% Pmax between consecutive measurements" },
-  "CdTe":      { maxDelta: 3,  description: "±3% Pmax; requires extended light soaking" },
-  "CIGS":      { maxDelta: 3,  description: "±3% Pmax; metastable behavior expected" },
-  "a-Si":      { maxDelta: 5,  description: "±5% Pmax; Staebler-Wronski effect" },
-  "HJT":       { maxDelta: 2,  description: "±2% Pmax between consecutive measurements" },
-  "TOPCon":    { maxDelta: 2,  description: "±2% Pmax between consecutive measurements" },
-  "Perovskite": { maxDelta: 5, description: "±5% Pmax; significant LID/LeTID expected" },
+  "c-Si":       { maxDelta: 2,  description: "±2% Pmax between consecutive measurements", needsAnnealing: false, annealingTemp: 0, annealingHours: 0 },
+  "CdTe":      { maxDelta: 3,  description: "±3% Pmax; requires extended light soaking", needsAnnealing: true, annealingTemp: 70, annealingHours: 48 },
+  "CIGS":      { maxDelta: 3,  description: "±3% Pmax; metastable behavior expected", needsAnnealing: true, annealingTemp: 85, annealingHours: 24 },
+  "a-Si":      { maxDelta: 5,  description: "±5% Pmax; Staebler-Wronski effect", needsAnnealing: true, annealingTemp: 70, annealingHours: 100 },
+  "HJT":       { maxDelta: 2,  description: "±2% Pmax between consecutive measurements", needsAnnealing: false, annealingTemp: 0, annealingHours: 0 },
+  "TOPCon":    { maxDelta: 2,  description: "±2% Pmax between consecutive measurements", needsAnnealing: false, annealingTemp: 0, annealingHours: 0 },
+  "Perovskite": { maxDelta: 5, description: "±5% Pmax; significant LID/LeTID expected", needsAnnealing: true, annealingTemp: 85, annealingHours: 72 },
 }
 
 const TECH_COLORS: Record<Technology, string> = {
@@ -39,7 +42,7 @@ const TECH_COLORS: Record<Technology, string> = {
   "Perovskite": "#ec4899",
 }
 
-// Sample data for PERC module (c-Si default)
+// Sample data for each technology
 const SAMPLE_POWER_STAGES: Record<Technology, { P0: number; P1: number; P2: number; P3: number }> = {
   "c-Si":       { P0: 550, P1: 547, P2: 543, P3: 545 },
   "CdTe":      { P0: 420, P1: 412, P2: 405, P3: 410 },
@@ -61,7 +64,6 @@ function genExposureData(tech: Technology) {
   for (let i = 0; i < exposures.length; i++) {
     const kWh = exposures[i]
     const progress = Math.min(1, kWh / 120)
-    // Exponential approach to stabilized value with some noise
     const pmax = P0 + (P3 - P0) * (1 - Math.exp(-3 * progress)) + (Math.random() - 0.5) * 2
     points.push({
       kWh,
@@ -72,11 +74,55 @@ function genExposureData(tech: Technology) {
   return points
 }
 
-const STAGE_LABELS = {
-  P0: "Initial",
-  P1: "After Conditioning",
-  P2: "After Exposure",
-  P3: "Stabilized",
+// Annealing cycle data for thin-film technologies
+function genAnnealingData(tech: Technology) {
+  const criteria = TECH_CRITERIA[tech]
+  if (!criteria.needsAnnealing) return []
+
+  const stages = SAMPLE_POWER_STAGES[tech]
+  const P2 = stages.P2 // post-degradation
+  const P3 = stages.P3 // recovered
+  const totalHours = criteria.annealingHours
+  const points = []
+
+  // Temperature profile (ramp up, hold, cool down) and Pmax recovery
+  const timeSteps = [0, 2, 4, 8, 12, 16, 20, 24, 36, 48, 60, 72, 96, 100]
+    .filter(h => h <= totalHours + 4)
+
+  for (const h of timeSteps) {
+    // Temperature ramp: reach annealingTemp in first 2h, hold, cool in last 4h
+    let temp = 25
+    if (h <= 2) temp = 25 + (criteria.annealingTemp - 25) * (h / 2)
+    else if (h >= totalHours - 2) temp = criteria.annealingTemp - (criteria.annealingTemp - 25) * Math.min(1, (h - totalHours + 2) / 4)
+    else temp = criteria.annealingTemp
+
+    // Pmax recovery follows exponential
+    const progress = Math.min(1, h / (totalHours * 0.7))
+    const pmax = P2 + (P3 - P2) * (1 - Math.exp(-3 * progress)) + (Math.random() - 0.5) * 1
+    points.push({
+      hours: h,
+      temperature: parseFloat(temp.toFixed(0)),
+      pmax: parseFloat(pmax.toFixed(1)),
+      pct_recovery: parseFloat(((pmax - P2) / (P3 - P2) * 100).toFixed(1)),
+    })
+  }
+  return points
+}
+
+// Consecutive measurement data for stabilization check
+function genConsecutiveMeasurements(tech: Technology) {
+  const stages = SAMPLE_POWER_STAGES[tech]
+  const P3 = stages.P3
+  const criteria = TECH_CRITERIA[tech]
+  const measurements = []
+  for (let i = 1; i <= 6; i++) {
+    const pmax = P3 + (Math.random() - 0.5) * P3 * criteria.maxDelta / 100 * 0.8
+    measurements.push({
+      measurement: `M${i}`,
+      pmax: parseFloat(pmax.toFixed(1)),
+    })
+  }
+  return measurements
 }
 
 const STAGE_COLORS = ["#f59e0b", "#3b82f6", "#ef4444", "#22c55e"]
@@ -114,6 +160,25 @@ export function StabilizationAnalysis() {
   const overallDegradation = parseFloat(((stages.P3 - stages.P0) / stages.P0 * 100).toFixed(2))
 
   const exposureData = useMemo(() => genExposureData(selectedTech), [selectedTech])
+  const annealingData = useMemo(() => genAnnealingData(selectedTech), [selectedTech])
+  const consecutiveData = useMemo(() => genConsecutiveMeasurements(selectedTech), [selectedTech])
+
+  // Check consecutive measurements pass
+  const consecutiveChecks = useMemo(() => {
+    const checks = []
+    for (let i = 1; i < consecutiveData.length; i++) {
+      const delta = Math.abs((consecutiveData[i].pmax - consecutiveData[i - 1].pmax) / consecutiveData[i - 1].pmax * 100)
+      checks.push({
+        from: consecutiveData[i - 1].measurement,
+        to: consecutiveData[i].measurement,
+        delta: parseFloat(delta.toFixed(3)),
+        pass: delta <= criteria.maxDelta,
+      })
+    }
+    return checks
+  }, [consecutiveData, criteria])
+
+  const consecutiveAllPass = consecutiveChecks.every(c => c.pass)
 
   return (
     <div className="space-y-4">
@@ -126,16 +191,22 @@ export function StabilizationAnalysis() {
             {tech}
           </button>
         ))}
-        <div className="ml-auto">
+        <div className="ml-auto flex gap-2">
           <Badge className={allPass ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}>
             {allPass ? <CheckCircle className="mr-1 h-3 w-3" /> : <XCircle className="mr-1 h-3 w-3" />}
             {allPass ? "STABILIZED" : "NOT STABILIZED"}
           </Badge>
+          {criteria.needsAnnealing && (
+            <Badge className="bg-purple-100 text-purple-700">
+              <Thermometer className="mr-1 h-3 w-3" />
+              Annealing Required
+            </Badge>
+          )}
         </div>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <Card className="text-center py-2">
           <CardContent className="pt-3 pb-0">
             <div className="text-2xl font-bold text-amber-600">{stages.P0} W</div>
@@ -162,6 +233,15 @@ export function StabilizationAnalysis() {
               {selectedTech}
             </div>
             <div className="text-xs text-gray-500">Technology</div>
+          </CardContent>
+        </Card>
+        <Card className="text-center py-2">
+          <CardContent className="pt-3 pb-0">
+            <Badge className={consecutiveAllPass ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}>
+              {consecutiveAllPass ? <CheckCircle className="mr-1 h-3 w-3" /> : <XCircle className="mr-1 h-3 w-3" />}
+              {consecutiveAllPass ? "±" + criteria.maxDelta + "% MET" : "CHECK"}
+            </Badge>
+            <div className="text-xs text-gray-500 mt-1">Consecutive Check</div>
           </CardContent>
         </Card>
       </div>
@@ -220,10 +300,94 @@ export function StabilizationAnalysis() {
           </CardContent>
         </Card>
 
+        {/* Consecutive Measurement Stabilization Check */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Consecutive Measurement Check</CardTitle>
+            <CardDescription className="text-xs">
+              {selectedTech}: {criteria.description}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={200}>
+              <ComposedChart data={consecutiveData}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                <XAxis dataKey="measurement" tick={{ fontSize: 10 }} />
+                <YAxis domain={["dataMin - 3", "dataMax + 3"]} tick={{ fontSize: 10 }}
+                       label={{ value: "Pmax (W)", angle: -90, position: "insideLeft", fontSize: 9 }} />
+                <Tooltip formatter={(v: any) => [`${v} W`, "Pmax"]} />
+                <ReferenceLine y={stages.P3 * (1 + criteria.maxDelta / 100)} stroke="#ef4444" strokeDasharray="4 2" />
+                <ReferenceLine y={stages.P3 * (1 - criteria.maxDelta / 100)} stroke="#ef4444" strokeDasharray="4 2"
+                               label={{ value: `±${criteria.maxDelta}% band`, fill: "#ef4444", fontSize: 9 }} />
+                <Area type="monotone" dataKey="pmax" fill={TECH_COLORS[selectedTech]} fillOpacity={0.1} stroke="none" />
+                <Line type="monotone" dataKey="pmax" stroke={TECH_COLORS[selectedTech]} strokeWidth={2} dot={{ r: 4 }} />
+              </ComposedChart>
+            </ResponsiveContainer>
+            <div className="mt-2 space-y-1">
+              {consecutiveChecks.map(c => (
+                <div key={`${c.from}-${c.to}`} className="flex items-center justify-between text-xs px-2 py-1 border-b last:border-0">
+                  <span className="font-mono text-muted-foreground">{c.from} → {c.to}</span>
+                  <span className="font-mono">ΔPmax = {c.delta.toFixed(3)}%</span>
+                  <span className={`px-2 py-0.5 rounded font-bold ${c.pass ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                    {c.pass ? "PASS" : "FAIL"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Annealing Cycle (only for thin-film) */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Thermometer className="h-4 w-4 text-purple-500" />
+              {criteria.needsAnnealing ? "Annealing Cycle – Pmax Recovery" : "No Annealing Required"}
+            </CardTitle>
+            <CardDescription className="text-xs">
+              {criteria.needsAnnealing
+                ? `${criteria.annealingTemp}°C for ${criteria.annealingHours}h – temperature profile & power recovery`
+                : `${selectedTech} (crystalline) does not require thermal annealing`
+              }
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {criteria.needsAnnealing && annealingData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={260}>
+                <ComposedChart data={annealingData}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                  <XAxis dataKey="hours" tick={{ fontSize: 10 }}
+                         label={{ value: "Time (hours)", position: "insideBottom", offset: -5, fontSize: 9 }} />
+                  <YAxis yAxisId="pmax" tick={{ fontSize: 10 }}
+                         label={{ value: "Pmax (W)", angle: -90, position: "insideLeft", fontSize: 9 }} />
+                  <YAxis yAxisId="temp" orientation="right" domain={[0, 100]} tick={{ fontSize: 10 }}
+                         label={{ value: "Temp (°C)", angle: 90, position: "insideRight", fontSize: 9 }} />
+                  <Tooltip />
+                  <Legend wrapperStyle={{ fontSize: 10 }} />
+                  <Area yAxisId="temp" type="monotone" dataKey="temperature" fill="#fde68a" fillOpacity={0.3}
+                        stroke="#f59e0b" strokeWidth={1.5} name="Temperature (°C)" />
+                  <Line yAxisId="pmax" type="monotone" dataKey="pmax" stroke="#8b5cf6" strokeWidth={2.5}
+                        dot={{ r: 3 }} name="Pmax (W)" />
+                  <ReferenceLine yAxisId="pmax" y={stages.P3} stroke="#22c55e" strokeDasharray="4 2"
+                                 label={{ value: `P3=${stages.P3}W`, fill: "#22c55e", fontSize: 9 }} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[260px] flex items-center justify-center text-sm text-muted-foreground">
+                <div className="text-center">
+                  <CheckCircle className="h-12 w-12 text-green-300 mx-auto mb-2" />
+                  <p>Crystalline silicon ({selectedTech}) stabilizes through light soaking only.</p>
+                  <p className="text-xs mt-1">No thermal annealing cycle required per IEC 61215.</p>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Stabilization Criteria Check */}
         <Card className="lg:col-span-2">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Stabilization Criteria Check</CardTitle>
+            <CardTitle className="text-sm">Stabilization Stage Criteria Check</CardTitle>
             <CardDescription className="text-xs">{selectedTech}: {criteria.description}</CardDescription>
           </CardHeader>
           <CardContent>
@@ -275,7 +439,8 @@ export function StabilizationAnalysis() {
             Module power is measured at each stage: P0 (initial flash), P1 (after thermal conditioning at 85°C for 48h),
             P2 (after light soaking exposure), P3 (stabilized value used for subsequent tests).
             Stabilization criterion for crystalline Si: consecutive Pmax measurements within ±2% under standard test conditions.
-            Thin-film technologies (a-Si, CdTe, CIGS, Perovskite) may require extended exposure due to metastable effects.
+            Thin-film technologies (a-Si, CdTe, CIGS, Perovskite) may require extended exposure and thermal annealing cycles
+            due to metastable effects (Staebler-Wronski for a-Si, light-induced recovery for CdTe/CIGS).
           </div>
         </CardContent>
       </Card>
