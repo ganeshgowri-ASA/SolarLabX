@@ -16,7 +16,7 @@ import {
 import {
   Package, GitBranch, ClipboardList, Calendar, AlertTriangle, CheckCircle2,
   Clock, ChevronRight, Plus, Search, Download, FileText, Zap, Layers,
-  BarChart3, Target, ArrowRight, Info, Edit3, Wrench, Activity
+  BarChart3, Target, ArrowRight, Info, Edit3, Wrench, Activity, Shield
 } from "lucide-react"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -198,6 +198,106 @@ const GANTT_TASKS: GanttTask[] = [
   { id: "m3", name: "Milestone: CB Submission", type: "milestone", startDate: "2026-05-31", endDate: "2026-05-31", progress: 0, status: "not_started", dependencies: ["t8"] },
 ]
 
+// ─── Qualification Matrix Data ────────────────────────────────────────────────
+
+interface QualificationCriteria {
+  material: string
+  partType: string
+  applicableStandards: string[]
+  tests: {
+    testName: string
+    standard: string
+    dosage: string
+    duration: string
+    passCriteria: string
+    failCriteria: string
+  }[]
+}
+
+const BOM_QUALIFICATION_MATRIX: QualificationCriteria[] = [
+  {
+    material: "Encapsulant (EVA)",
+    partType: "encapsulant",
+    applicableStandards: ["IEC 61215", "IEC 62788-1-2", "IEC 62788-1-4", "IEC 62788-1-6"],
+    tests: [
+      { testName: "UV Preconditioning", standard: "IEC 61215 MQT 10", dosage: "15 kWh/m² (UVA 280-320nm) + 5 kWh/m² (UVB)", duration: "120-200 hours", passCriteria: "No delamination, discoloration ΔYI < 5", failCriteria: "Delamination, yellowing ΔYI ≥ 5, bubbles" },
+      { testName: "Gel Content (Cross-linking)", standard: "IEC 62788-1-2", dosage: "Soxhlet extraction in xylene, 24h", duration: "24 hours", passCriteria: "Gel content ≥ 65% (EVA)", failCriteria: "Gel content < 65%" },
+      { testName: "Volume Resistivity", standard: "IEC 62788-1-4", dosage: "500V DC applied, 23°C and 85°C/85%RH", duration: "1 min electrification", passCriteria: "≥ 1×10¹² Ω·cm (dry), ≥ 1×10¹⁰ Ω·cm (damp)", failCriteria: "Below threshold values" },
+      { testName: "Damp Heat Stability", standard: "IEC 61215 MQT 13", dosage: "85°C ± 2°C, 85% ± 5% RH", duration: "1000 hours", passCriteria: "Pmax degradation ≤ 5%, no delamination", failCriteria: "Pmax degradation > 5%, delamination" },
+      { testName: "Peel Strength (Adhesion)", standard: "IEC 62788-1-6", dosage: "180° peel test, 50mm/min", duration: "Per specimen", passCriteria: "≥ 40 N/cm (glass-EVA), ≥ 20 N/cm (EVA-backsheet)", failCriteria: "Below minimum adhesion values" },
+    ],
+  },
+  {
+    material: "Encapsulant (POE)",
+    partType: "encapsulant",
+    applicableStandards: ["IEC 61215", "IEC 62788-1-2", "IEC 62788-1-4"],
+    tests: [
+      { testName: "UV Preconditioning", standard: "IEC 61215 MQT 10", dosage: "15 kWh/m² (UVA) + 5 kWh/m² (UVB)", duration: "120-200 hours", passCriteria: "No delamination, ΔYI < 3 (better UV stability)", failCriteria: "Delamination, yellowing ΔYI ≥ 3" },
+      { testName: "Gel Content (Cross-linking)", standard: "IEC 62788-1-2", dosage: "Soxhlet extraction, 24h", duration: "24 hours", passCriteria: "Gel content ≥ 70% (POE)", failCriteria: "Gel content < 70%" },
+      { testName: "Volume Resistivity", standard: "IEC 62788-1-4", dosage: "500V DC, 23°C and 85°C/85%RH", duration: "1 min electrification", passCriteria: "≥ 1×10¹² Ω·cm (inherently higher than EVA)", failCriteria: "Below 1×10¹² Ω·cm" },
+      { testName: "Water Vapor Transmission", standard: "IEC 62788-1-4", dosage: "38°C, 90% RH", duration: "Until steady state", passCriteria: "≤ 5 g/m²/day", failCriteria: "> 5 g/m²/day" },
+    ],
+  },
+  {
+    material: "Backsheet (KPF/TPT/CPC)",
+    partType: "backsheet",
+    applicableStandards: ["IEC 61215", "IEC 62788-2", "IEC 61730"],
+    tests: [
+      { testName: "Partial Discharge", standard: "IEC 61730 MST 14", dosage: "1000V AC / 1500V DC system voltage", duration: "Per test sequence", passCriteria: "≤ 10 pC at 1000V", failCriteria: "> 10 pC partial discharge" },
+      { testName: "Water Vapor Transmission Rate", standard: "IEC 62788-2", dosage: "38°C, 90% RH (cup method)", duration: "Until steady state", passCriteria: "≤ 2 g/m²/day", failCriteria: "> 2 g/m²/day" },
+      { testName: "UV Exposure (Extended)", standard: "IEC 61215 / IEC 62788-7-2", dosage: "60 kWh/m² total UV dose (280-400nm)", duration: "500-800 hours", passCriteria: "No cracking, chalking, ΔE < 5, tensile retention > 50%", failCriteria: "Cracking, chalking, ΔE ≥ 5" },
+      { testName: "Dielectric Breakdown", standard: "IEC 61730 MST 16", dosage: "AC voltage ramp 500V/s", duration: "Until breakdown", passCriteria: "Breakdown voltage ≥ 18 kV/mm", failCriteria: "Breakdown < 18 kV/mm" },
+      { testName: "Thermal Cycling Adhesion", standard: "IEC 61215 MQT 11", dosage: "-40°C to 85°C, 200 cycles", duration: "~25 days", passCriteria: "Peel strength retention ≥ 80%", failCriteria: "Peel strength retention < 80%" },
+    ],
+  },
+  {
+    material: "Front Glass (Tempered Low-Iron)",
+    partType: "glass",
+    applicableStandards: ["IEC 61215", "IEC 61730", "EN 12150"],
+    tests: [
+      { testName: "Impact Test (Hail)", standard: "IEC 61215 MQT 17", dosage: "227g steel ball dropped from 1m height", duration: "11 impact points per module", passCriteria: "No breakage, Pmax degradation ≤ 5%", failCriteria: "Glass breakage or Pmax > 5% degradation" },
+      { testName: "Optical Transmittance", standard: "IEC 61215 / ISO 9050", dosage: "Spectrophotometer 350-1200nm", duration: "Per specimen", passCriteria: "≥ 90% weighted transmittance (350-1200nm)", failCriteria: "< 90% weighted transmittance" },
+      { testName: "Temper Stress (Fragmentation)", standard: "EN 12150-1", dosage: "Center punch fragmentation test", duration: "Per specimen", passCriteria: "≥ 40 fragments per 50×50mm area", failCriteria: "< 40 fragments (insufficient temper)" },
+      { testName: "Static Mechanical Load", standard: "IEC 61215 MQT 16", dosage: "2400 Pa front / 2400 Pa rear (or 5400 Pa)", duration: "1 hour each side × 3 cycles", passCriteria: "No breakage, Pmax ≤ 5% degradation", failCriteria: "Breakage or Pmax > 5%" },
+    ],
+  },
+  {
+    material: "Junction Box",
+    partType: "junction_box",
+    applicableStandards: ["IEC 62790", "IEC 61215", "IEC 61730"],
+    tests: [
+      { testName: "IP Rating (Ingress Protection)", standard: "IEC 62790 / IEC 60529", dosage: "IP67: 1m submersion 30min / IP68: per manufacturer", duration: "30 minutes (IP67)", passCriteria: "IP67 minimum (IP68 preferred), no water ingress", failCriteria: "Water ingress detected" },
+      { testName: "Bypass Diode Thermal Test", standard: "IEC 61215 MQT 18", dosage: "1.25× Isc for 1 hour, Tj measurement", duration: "1 hour per diode", passCriteria: "Tj(max) ≤ 150°C, no diode failure", failCriteria: "Tj > 150°C or diode failure/short" },
+      { testName: "Thermal Cycling (JB)", standard: "IEC 62790", dosage: "-40°C to 85°C, 200 cycles", duration: "~25 days", passCriteria: "No cracking, potting intact, contact resistance stable", failCriteria: "Cracking, potting failure, resistance increase > 5%" },
+      { testName: "Bypass Diode Functionality", standard: "IEC 61730 MST 22", dosage: "1.25× Isc reverse current, thermal imaging", duration: "Per test", passCriteria: "Diode conducts correctly, Tj ≤ 150°C", failCriteria: "Open/short circuit diode failure" },
+      { testName: "Pull-Out Test (Cable)", standard: "IEC 62790", dosage: "Axial pull force per cable spec", duration: "Per test", passCriteria: "≥ 60N pull-out force, no cable damage", failCriteria: "Cable pull-out or damage < 60N" },
+    ],
+  },
+  {
+    material: "Connectors (MC4 Type)",
+    partType: "other",
+    applicableStandards: ["IEC 62852", "EN 50521", "IEC 61730"],
+    tests: [
+      { testName: "Contact Resistance", standard: "IEC 62852", dosage: "4-wire measurement at rated current", duration: "Per connector pair", passCriteria: "< 0.5 mΩ contact resistance", failCriteria: "≥ 0.5 mΩ contact resistance" },
+      { testName: "Insulation Resistance", standard: "IEC 62852 / IEC 61730", dosage: "1000V DC (1500V system) between pins/housing", duration: "1 minute", passCriteria: "≥ 1000 MΩ (1 GΩ)", failCriteria: "< 1000 MΩ insulation resistance" },
+      { testName: "IP Rating", standard: "IEC 62852 / IEC 60529", dosage: "IP67 mated condition", duration: "30 minutes submersion", passCriteria: "IP67 — no water ingress when mated", failCriteria: "Water ingress detected" },
+      { testName: "Temperature Rise", standard: "IEC 62852", dosage: "Rated current for 6 hours", duration: "6 hours", passCriteria: "ΔT ≤ 30K above ambient", failCriteria: "ΔT > 30K temperature rise" },
+      { testName: "Locking Mechanism", standard: "IEC 62852", dosage: "Engagement/disengagement force test", duration: "Per test", passCriteria: "Requires tool for disconnection, ≥ 50N retention", failCriteria: "Disconnects without tool, < 50N retention" },
+    ],
+  },
+  {
+    material: "Frame (Aluminum 6005-T5)",
+    partType: "frame",
+    applicableStandards: ["IEC 61215", "IEC 61730", "ISO 2360"],
+    tests: [
+      { testName: "Static Mechanical Load", standard: "IEC 61215 MQT 16", dosage: "2400 Pa front + 2400 Pa rear load", duration: "1hr each side × 3 cycles", passCriteria: "No permanent deformation > 1mm, Pmax ≤ 5%", failCriteria: "Deformation > 1mm or Pmax > 5%" },
+      { testName: "Grounding Continuity", standard: "IEC 61730 MST 13", dosage: "2× rated short circuit current, min 2.5A", duration: "2 minutes", passCriteria: "Grounding resistance ≤ 0.1Ω", failCriteria: "Grounding resistance > 0.1Ω" },
+      { testName: "Anodizing Thickness", standard: "ISO 2360", dosage: "Eddy current measurement", duration: "Per specimen", passCriteria: "≥ 15 μm anodic layer (outdoor exposure)", failCriteria: "< 15 μm anodic coating" },
+      { testName: "Salt Mist Corrosion", standard: "IEC 61701 / ISO 9227", dosage: "5% NaCl, 35°C, pH 6.5-7.2", duration: "96 hours (severity level 6)", passCriteria: "No pitting, creepage ≤ 2mm from scribe", failCriteria: "Pitting or creepage > 2mm" },
+    ],
+  },
+]
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const statusColors = {
@@ -362,6 +462,9 @@ export default function IEC62915Page() {
           </TabsTrigger>
           <TabsTrigger value="scheduler" className="text-xs">
             <Calendar className="h-3 w-3 mr-1" /> Project Scheduler
+          </TabsTrigger>
+          <TabsTrigger value="qualification" className="text-xs">
+            <Shield className="h-3 w-3 mr-1" /> Qualification Matrix
           </TabsTrigger>
         </TabsList>
 
@@ -838,6 +941,117 @@ export default function IEC62915Page() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* ── QUALIFICATION MATRIX TAB ──────────────────────────── */}
+        <TabsContent value="qualification" className="space-y-4 mt-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Shield className="h-5 w-5 text-blue-600" />
+                IEC 62915 Material Qualification Matrix
+              </CardTitle>
+              <CardDescription className="text-sm">
+                Comprehensive pass/fail criteria per IEC test standards for all BOM material types.
+                Dosage, duration, and acceptance criteria per IEC 61215, IEC 61730, IEC 62788, and component standards.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          {BOM_QUALIFICATION_MATRIX.map((mat) => (
+            <Card key={mat.material}>
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Package className="h-4 w-4 text-primary" />
+                    {mat.material}
+                  </CardTitle>
+                  <div className="flex gap-1.5">
+                    {mat.applicableStandards.map((std) => (
+                      <Badge key={std} variant="outline" className="text-xs">{std}</Badge>
+                    ))}
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs w-40">Test Name</TableHead>
+                      <TableHead className="text-xs w-32">Standard</TableHead>
+                      <TableHead className="text-xs">Dosage / Condition</TableHead>
+                      <TableHead className="text-xs w-28">Duration</TableHead>
+                      <TableHead className="text-xs">Pass Criteria</TableHead>
+                      <TableHead className="text-xs">Fail Criteria</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {mat.tests.map((test) => (
+                      <TableRow key={test.testName}>
+                        <TableCell className="text-xs font-medium">{test.testName}</TableCell>
+                        <TableCell>
+                          <Badge className="text-xs bg-blue-50 text-blue-700">{test.standard}</Badge>
+                        </TableCell>
+                        <TableCell className="text-xs">{test.dosage}</TableCell>
+                        <TableCell className="text-xs font-mono">{test.duration}</TableCell>
+                        <TableCell className="text-xs">
+                          <span className="flex items-center gap-1">
+                            <CheckCircle2 className="h-3 w-3 text-green-500 shrink-0" />
+                            {test.passCriteria}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          <span className="flex items-center gap-1">
+                            <AlertTriangle className="h-3 w-3 text-red-500 shrink-0" />
+                            {test.failCriteria}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          ))}
+
+          {/* Quick Reference Summary */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Info className="h-4 w-4 text-blue-500" />
+                Key Dosage Quick Reference
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {[
+                  { label: "EVA Gel Content", value: "≥ 65%", note: "Soxhlet extraction 24h in xylene" },
+                  { label: "POE Gel Content", value: "≥ 70%", note: "Higher cross-linking than EVA" },
+                  { label: "Volume Resistivity", value: "≥ 1×10¹² Ω·cm", note: "At 23°C, dry condition" },
+                  { label: "UV Preconditioning", value: "15 kWh/m²", note: "UVA dose per IEC 61215 MQT 10" },
+                  { label: "Backsheet UV Aging", value: "60 kWh/m²", note: "Extended UV per IEC 62788-7-2" },
+                  { label: "Backsheet WVTR", value: "≤ 2 g/m²/day", note: "38°C, 90% RH" },
+                  { label: "Partial Discharge", value: "≤ 10 pC", note: "At 1000V per IEC 61730" },
+                  { label: "Hail Impact", value: "227g @ 1m", note: "Steel ball, 11 impact points" },
+                  { label: "Glass Transmittance", value: "≥ 90%", note: "Weighted, 350-1200nm range" },
+                  { label: "JB Diode Tj Max", value: "≤ 150°C", note: "At 1.25× Isc for 1 hour" },
+                  { label: "JB IP Rating", value: "IP67/IP68", note: "30 min submersion minimum" },
+                  { label: "Connector Contact R", value: "< 0.5 mΩ", note: "4-wire measurement at rated I" },
+                  { label: "Connector Insulation", value: "1000V / 1 GΩ", note: "1500V system, 1 min test" },
+                  { label: "Connector IP Rating", value: "IP67", note: "Mated condition required" },
+                  { label: "Frame Ground R", value: "≤ 0.1 Ω", note: "At 2× Isc, min 2.5A for 2 min" },
+                ].map((item) => (
+                  <div key={item.label} className="flex items-start gap-2 p-2 rounded bg-muted/50 border">
+                    <Zap className="h-3 w-3 text-amber-500 mt-0.5 shrink-0" />
+                    <div>
+                      <div className="text-xs font-semibold">{item.label}: <span className="text-primary">{item.value}</span></div>
+                      <div className="text-xs text-muted-foreground">{item.note}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
