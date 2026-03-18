@@ -66,6 +66,9 @@ import { IVCurveTab } from "./IVCurveTab"
 import { NMOTCalculator } from "./NMOTCalculator"
 import { PeelTestAnalysis } from "./PeelTestAnalysis"
 import { WeatherQA } from "./WeatherQA"
+import { BypassDiodeAnalysis } from "./BypassDiodeAnalysis"
+import { LeTIDAnalysis } from "./LeTIDAnalysis"
+import { GelContentAnalysis } from "./GelContentAnalysis"
 import TestProtocolsManager from "@/components/lims/TestProtocolsManager"
 import {
   generateMockData,
@@ -473,6 +476,14 @@ export default function DataAnalysisPage() {
           <TabsTrigger value="bypass" className="text-xs">
             <Zap className="mr-1 h-3 w-3" />
             Bypass Diode
+          </TabsTrigger>
+          <TabsTrigger value="letid" className="text-xs">
+            <Activity className="mr-1 h-3 w-3" />
+            LeTID
+          </TabsTrigger>
+          <TabsTrigger value="gelcontent" className="text-xs">
+            <FlaskConical className="mr-1 h-3 w-3" />
+            Gel Content
           </TabsTrigger>
           <TabsTrigger value="bifaciality" className="text-xs">
             <BarChart3 className="mr-1 h-3 w-3" />
@@ -1632,90 +1643,32 @@ export default function DataAnalysisPage() {
           <div className="mb-4">
             <h2 className="text-lg font-semibold">Bypass Diode Test Analysis</h2>
             <p className="text-sm text-muted-foreground">
-              Forward/reverse I-V characteristics, thermal evaluation per IEC 61215 MQT 18 &amp; IEC 61730 MST 22
+              Vf vs Temperature linear fit, stress test thermal evaluation per IEC 61215 MQT 18 &amp; IEC 61730 MST 22
             </p>
           </div>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {[
-              { label: "Diodes Tested", value: "24", sub: "8 modules × 3 diodes", color: "text-blue-600" },
-              { label: "Pass Rate", value: "95.8%", sub: "23/24 passed", color: "text-green-600" },
-              { label: "Avg Forward Vf", value: "0.52 V", sub: "at 5A test current", color: "text-purple-600" },
-              { label: "Max Junction Temp", value: "68°C", sub: "below Tj,max = 80°C", color: "text-amber-600" },
-            ].map(({ label, value, sub, color }) => (
-              <Card key={label}>
-                <CardContent className="pt-4 pb-3">
-                  <CardDescription>{label}</CardDescription>
-                  <div className={`text-2xl font-bold ${color}`}>{value}</div>
-                  <p className="text-xs text-muted-foreground">{sub}</p>
-                </CardContent>
-              </Card>
-            ))}
+          <BypassDiodeAnalysis />
+        </TabsContent>
+
+        {/* ===================== TAB: LeTID ===================== */}
+        <TabsContent value="letid" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">LeTID Analysis</h2>
+            <p className="text-sm text-muted-foreground">
+              Light and elevated Temperature Induced Degradation per IEC TS 63342
+            </p>
           </div>
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Zap className="h-4 w-4 text-yellow-500" />
-                  Forward I-V Characteristics
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={220}>
-                  <LineChart data={[
-                    { v: 0.0, m1: 0.00, m2: 0.00, m3: 0.00 },
-                    { v: 0.1, m1: 0.01, m2: 0.01, m3: 0.01 },
-                    { v: 0.2, m1: 0.05, m2: 0.04, m3: 0.05 },
-                    { v: 0.3, m1: 0.20, m2: 0.18, m3: 0.22 },
-                    { v: 0.4, m1: 0.80, m2: 0.75, m3: 0.85 },
-                    { v: 0.45, m1: 1.80, m2: 1.70, m3: 1.95 },
-                    { v: 0.5, m1: 3.50, m2: 3.30, m3: 3.80 },
-                    { v: 0.52, m1: 5.00, m2: 4.80, m3: 5.20 },
-                    { v: 0.55, m1: 8.00, m2: 7.60, m3: 8.40 },
-                  ]}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="v" label={{ value: "Vf (V)", position: "insideBottom", offset: -5 }} tick={{ fontSize: 10 }} />
-                    <YAxis label={{ value: "If (A)", angle: -90, position: "insideLeft" }} tick={{ fontSize: 10 }} />
-                    <Tooltip formatter={(v: number) => `${v.toFixed(2)} A`} />
-                    <Legend />
-                    <Line type="monotone" dataKey="m1" name="Module 1" stroke="#3b82f6" dot={false} strokeWidth={2} />
-                    <Line type="monotone" dataKey="m2" name="Module 2" stroke="#22c55e" dot={false} strokeWidth={2} />
-                    <Line type="monotone" dataKey="m3" name="Module 3" stroke="#f59e0b" dot={false} strokeWidth={2} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Thermometer className="h-4 w-4 text-red-500" />
-                  Bypass Diode Thermal Results (MQT 18)
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {[
-                    { module: "SMP-2026-041", d1: 52, d2: 55, d3: 50, status: "PASS" },
-                    { module: "SMP-2026-042", d1: 61, d2: 68, d3: 63, status: "PASS" },
-                    { module: "SMP-2026-043", d1: 58, d2: 57, d3: 59, status: "PASS" },
-                    { module: "SMP-2026-044", d1: 65, d2: 82, d3: 64, status: "FAIL" },
-                  ].map(({ module, d1, d2, d3, status }) => (
-                    <div key={module} className="flex items-center gap-3 p-2 rounded-lg border">
-                      <span className="text-xs font-mono w-28">{module}</span>
-                      <div className="flex gap-2 flex-1">
-                        {[d1, d2, d3].map((t, i) => (
-                          <span key={i} className={`text-xs px-2 py-0.5 rounded font-mono ${t > 80 ? 'bg-red-100 text-red-700' : t > 70 ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
-                            D{i + 1}: {t}°C
-                          </span>
-                        ))}
-                      </div>
-                      <span className={`text-xs font-bold ${status === 'PASS' ? 'text-green-600' : 'text-red-600'}`}>{status}</span>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">Tj,max = 80°C (rated). Values after 1h Isc loading + 10 thermal cycles.</p>
-              </CardContent>
-            </Card>
+          <LeTIDAnalysis />
+        </TabsContent>
+
+        {/* ===================== TAB: GEL CONTENT ===================== */}
+        <TabsContent value="gelcontent" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Gel Content &amp; Degree of Cure Analysis</h2>
+            <p className="text-sm text-muted-foreground">
+              Soxhlet extraction &amp; DSC methods per IEC 62788-1-6
+            </p>
           </div>
+          <GelContentAnalysis />
         </TabsContent>
 
         {/* ===================== TAB: BIFACIALITY ===================== */}
