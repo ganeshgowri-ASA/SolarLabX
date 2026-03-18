@@ -17,7 +17,14 @@ import {
   Clock,
   IndianRupee,
   Box,
+  Info,
+  AlertCircle,
+  FileText,
+  CheckCircle2,
 } from "lucide-react";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow
+} from "@/components/ui/table";
 
 const testTypeIcons: Record<string, React.ReactNode> = {
   TC: <Thermometer className="h-5 w-5 text-red-500" />,
@@ -192,6 +199,166 @@ export default function ChamberConfigPage() {
           ))}
         </div>
       </div>
+
+      {/* IEC Standard Chamber Requirements */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+          <FileText className="h-5 w-5 text-primary" />
+          IEC Standard Environmental Chamber Requirements
+        </h2>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* Damp Heat */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <Droplets className="h-5 w-5 text-cyan-500" />
+                <CardTitle className="text-base">Damp Heat (DH) — IEC 61215 MQT 13</CardTitle>
+              </div>
+              <CardDescription>Accelerated moisture ingress and corrosion test</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableBody>
+                  <TableRow><TableCell className="text-xs font-medium">Temperature</TableCell><TableCell className="text-xs">85°C ± 2°C</TableCell></TableRow>
+                  <TableRow><TableCell className="text-xs font-medium">Relative Humidity</TableCell><TableCell className="text-xs">85% ± 5% RH</TableCell></TableRow>
+                  <TableRow><TableCell className="text-xs font-medium">Duration</TableCell><TableCell className="text-xs">1000 hours (standard) / 2000 hours (extended)</TableCell></TableRow>
+                  <TableRow><TableCell className="text-xs font-medium">Ramp Rate</TableCell><TableCell className="text-xs">Stabilize within 2 hours of reaching setpoint</TableCell></TableRow>
+                  <TableRow><TableCell className="text-xs font-medium">Sample Loading</TableCell><TableCell className="text-xs">Module tilted 5-90° from vertical, air circulation maintained</TableCell></TableRow>
+                  <TableRow><TableCell className="text-xs font-medium">Measurements</TableCell><TableCell className="text-xs">Pmax, insulation resistance, visual inspection pre/post</TableCell></TableRow>
+                  <TableRow><TableCell className="text-xs font-medium">Pass Criteria</TableCell><TableCell className="text-xs font-semibold text-green-700">Pmax degradation ≤ 5%, wet leakage current pass, no major visual defects</TableCell></TableRow>
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          {/* Thermal Cycling */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <Thermometer className="h-5 w-5 text-red-500" />
+                <CardTitle className="text-base">Thermal Cycling (TC) — IEC 61215 MQT 11</CardTitle>
+              </div>
+              <CardDescription>Thermal fatigue and solder joint reliability test</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableBody>
+                  <TableRow><TableCell className="text-xs font-medium">Low Temperature</TableCell><TableCell className="text-xs">-40°C ± 2°C</TableCell></TableRow>
+                  <TableRow><TableCell className="text-xs font-medium">High Temperature</TableCell><TableCell className="text-xs">85°C ± 2°C</TableCell></TableRow>
+                  <TableRow><TableCell className="text-xs font-medium">Ramp Rate</TableCell><TableCell className="text-xs">≤ 100°C/hr maximum (typically 80-100°C/hr)</TableCell></TableRow>
+                  <TableRow><TableCell className="text-xs font-medium">Dwell Time</TableCell><TableCell className="text-xs">≥ 10 minutes at each extreme</TableCell></TableRow>
+                  <TableRow><TableCell className="text-xs font-medium">Cycle Count</TableCell><TableCell className="text-xs">200 cycles (TC200) or 50 cycles (TC50 per sequence)</TableCell></TableRow>
+                  <TableRow><TableCell className="text-xs font-medium">Cycle Duration</TableCell><TableCell className="text-xs">~3 hours per cycle (with ramp and dwell)</TableCell></TableRow>
+                  <TableRow><TableCell className="text-xs font-medium">Current Injection</TableCell><TableCell className="text-xs">Isc applied during test (IEC 61215:2021)</TableCell></TableRow>
+                  <TableRow><TableCell className="text-xs font-medium">Pass Criteria</TableCell><TableCell className="text-xs font-semibold text-green-700">Pmax degradation ≤ 5%, no open circuits, visual pass</TableCell></TableRow>
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          {/* Humidity Freeze */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <Snowflake className="h-5 w-5 text-blue-500" />
+                <CardTitle className="text-base">Humidity Freeze (HF) — IEC 61215 MQT 12</CardTitle>
+              </div>
+              <CardDescription>Thermal shock with moisture penetration test</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableBody>
+                  <TableRow><TableCell className="text-xs font-medium">High Temperature</TableCell><TableCell className="text-xs">85°C ± 2°C</TableCell></TableRow>
+                  <TableRow><TableCell className="text-xs font-medium">High Humidity</TableCell><TableCell className="text-xs">85% ± 5% RH (at high temp phase)</TableCell></TableRow>
+                  <TableRow><TableCell className="text-xs font-medium">Low Temperature</TableCell><TableCell className="text-xs">-40°C ± 2°C (no humidity control)</TableCell></TableRow>
+                  <TableRow><TableCell className="text-xs font-medium">Ramp Rate</TableCell><TableCell className="text-xs">≤ 100°C/hr maximum</TableCell></TableRow>
+                  <TableRow><TableCell className="text-xs font-medium">Dwell at 85°C/85%RH</TableCell><TableCell className="text-xs">≥ 20 hours</TableCell></TableRow>
+                  <TableRow><TableCell className="text-xs font-medium">Dwell at -40°C</TableCell><TableCell className="text-xs">≥ 30 minutes (minimum)</TableCell></TableRow>
+                  <TableRow><TableCell className="text-xs font-medium">Cycle Count</TableCell><TableCell className="text-xs">10 cycles (HF10)</TableCell></TableRow>
+                  <TableRow><TableCell className="text-xs font-medium">Pass Criteria</TableCell><TableCell className="text-xs font-semibold text-green-700">Pmax degradation ≤ 5%, wet leakage pass, no delamination</TableCell></TableRow>
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          {/* UV Preconditioning */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <Sun className="h-5 w-5 text-yellow-500" />
+                <CardTitle className="text-base">UV Preconditioning — IEC 61215 MQT 10</CardTitle>
+              </div>
+              <CardDescription>UV degradation screening of encapsulant and backsheet</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableBody>
+                  <TableRow><TableCell className="text-xs font-medium">Wavelength Range</TableCell><TableCell className="text-xs">280 - 400 nm (UVA + UVB)</TableCell></TableRow>
+                  <TableRow><TableCell className="text-xs font-medium">Total UV Dose</TableCell><TableCell className="text-xs">15 kWh/m² UVA (280-320nm) + 5 kWh/m² UVB (320-400nm)</TableCell></TableRow>
+                  <TableRow><TableCell className="text-xs font-medium">UV Irradiance</TableCell><TableCell className="text-xs">100-250 W/m² (adjustable, measured at test plane)</TableCell></TableRow>
+                  <TableRow><TableCell className="text-xs font-medium">Module Temperature</TableCell><TableCell className="text-xs">60°C ± 5°C (module surface)</TableCell></TableRow>
+                  <TableRow><TableCell className="text-xs font-medium">Duration</TableCell><TableCell className="text-xs">~120-200 hours (depending on UV intensity)</TableCell></TableRow>
+                  <TableRow><TableCell className="text-xs font-medium">Uniformity</TableCell><TableCell className="text-xs">UV irradiance uniformity ≤ ± 15% across test plane</TableCell></TableRow>
+                  <TableRow><TableCell className="text-xs font-medium">Measurement</TableCell><TableCell className="text-xs">UV radiometer calibrated per ISO 17025, traceable</TableCell></TableRow>
+                  <TableRow><TableCell className="text-xs font-medium">Pass Criteria</TableCell><TableCell className="text-xs font-semibold text-green-700">No delamination, yellowing index ΔYI ≤ 5, Pmax ≤ 5% degradation</TableCell></TableRow>
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Chamber Tolerance Summary */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <AlertCircle className="h-5 w-5 text-amber-500" />
+            Chamber Tolerance Summary (IEC 61215:2021 / IEC 61730:2023)
+          </CardTitle>
+          <CardDescription>
+            Critical control parameters and their allowable tolerances for accredited testing
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-xs">Test Type</TableHead>
+                <TableHead className="text-xs">Parameter</TableHead>
+                <TableHead className="text-xs">Setpoint</TableHead>
+                <TableHead className="text-xs">Tolerance</TableHead>
+                <TableHead className="text-xs">Measurement Instrument</TableHead>
+                <TableHead className="text-xs">Cal. Interval</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {[
+                { test: "DH", param: "Temperature", setpoint: "85°C", tolerance: "± 2°C", instrument: "Calibrated PT100 (Class A)", cal: "12 months" },
+                { test: "DH", param: "Humidity", setpoint: "85% RH", tolerance: "± 5% RH", instrument: "Capacitive RH sensor (± 1.5%)", cal: "12 months" },
+                { test: "TC", param: "Low Temp", setpoint: "-40°C", tolerance: "± 2°C", instrument: "Calibrated PT100 (Class A)", cal: "12 months" },
+                { test: "TC", param: "High Temp", setpoint: "85°C", tolerance: "± 2°C", instrument: "Calibrated PT100 (Class A)", cal: "12 months" },
+                { test: "TC", param: "Ramp Rate", setpoint: "100°C/hr", tolerance: "max (not exceeded)", instrument: "PLC ramp controller + PT100", cal: "12 months" },
+                { test: "HF", param: "Low Temp", setpoint: "-40°C", tolerance: "± 2°C", instrument: "Calibrated PT100 (Class A)", cal: "12 months" },
+                { test: "HF", param: "High Temp", setpoint: "85°C", tolerance: "± 2°C", instrument: "Calibrated PT100 (Class A)", cal: "12 months" },
+                { test: "HF", param: "Humidity", setpoint: "85% RH", tolerance: "± 5% RH", instrument: "Capacitive RH sensor (± 1.5%)", cal: "12 months" },
+                { test: "UV", param: "Wavelength", setpoint: "280-400nm", tolerance: "per lamp specification", instrument: "UV radiometer (ISO 17025)", cal: "12 months" },
+                { test: "UV", param: "Total Dose", setpoint: "15 kWh/m²", tolerance: "Measured (integrated)", instrument: "UV integrating radiometer", cal: "12 months" },
+                { test: "UV", param: "Module Temp", setpoint: "60°C", tolerance: "± 5°C", instrument: "Thermocouple / PT100", cal: "12 months" },
+              ].map((row, i) => (
+                <TableRow key={i}>
+                  <TableCell><Badge variant="outline" className="text-xs">{row.test}</Badge></TableCell>
+                  <TableCell className="text-xs font-medium">{row.param}</TableCell>
+                  <TableCell className="text-xs font-mono">{row.setpoint}</TableCell>
+                  <TableCell className="text-xs font-mono font-semibold text-primary">{row.tolerance}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{row.instrument}</TableCell>
+                  <TableCell className="text-xs">{row.cal}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }
