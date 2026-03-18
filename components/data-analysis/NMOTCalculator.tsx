@@ -12,6 +12,7 @@ import {
   ComposedChart
 } from "recharts"
 import { Sun, Thermometer, Wind, TrendingUp, AlertCircle, CheckCircle } from "lucide-react"
+import { IECStandardCard } from "./IECStandardCard"
 
 // NMOT determination per IEC 61215-2 / IEC 61853-2
 // NMOT = module temperature at: G=800 W/m², Ta=20°C, WS=1 m/s
@@ -119,6 +120,35 @@ export function NMOTCalculator() {
 
   return (
     <div className="space-y-4">
+      <IECStandardCard
+        standard="IEC 61215-2 MQT 05"
+        title="Terrestrial PV modules — Part 2: Test procedures — MQT 05 NMOT determination"
+        testConditions={[
+          "Irradiance: 800 W/m² on module plane",
+          "Ambient temperature: 20°C reference",
+          "Wind speed: 1 m/s parallel to module surface",
+          "Open-rack mounting, 1m above ground",
+        ]}
+        dosageLevels={[
+          "Irradiance range for regression: 400–1100 W/m²",
+          "Data collection: minimum 2 clear-sky days",
+          "Ambient temperature: 10–35°C for valid data points",
+        ]}
+        passCriteria={[
+          { parameter: "NMOT", requirement: "Reported value at 800 W/m², 20°C, 1 m/s", note: "Typical: 42–48°C" },
+          { parameter: "R² (regression)", requirement: "≥0.9 for ΔT vs. irradiance fit" },
+          { parameter: "Data points", requirement: "≥100 valid 10-min averages" },
+        ]}
+        failCriteria={[
+          { parameter: "R²", requirement: "<0.9 indicates poor data quality" },
+          { parameter: "NMOT", requirement: ">55°C may indicate mounting or ventilation issues" },
+        ]}
+        notes={[
+          "NMOT replaces NOCT terminology per IEC 61215:2021",
+          "Used for energy yield prediction and temperature derating",
+          "Wind speed correction critical for accurate NMOT determination",
+        ]}
+      />
       {/* NMOT Result Header */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className={`border-l-4 ${nmotStatus === "pass" ? "border-l-green-500" : nmotStatus === "marginal" ? "border-l-amber-500" : "border-l-red-500"}`}>

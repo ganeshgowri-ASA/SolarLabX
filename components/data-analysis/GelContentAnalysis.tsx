@@ -9,6 +9,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine, Cell
 } from "recharts"
 import { FlaskConical, CheckCircle, XCircle, Beaker } from "lucide-react"
+import { IECStandardCard } from "./IECStandardCard"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -130,6 +131,34 @@ export function GelContentAnalysis() {
 
   return (
     <div className="space-y-4">
+      <IECStandardCard
+        standard="IEC 62788-1-2"
+        title="Measurement procedures for materials used in PV modules — Part 1-2: Encapsulants — Gel content (Soxhlet extraction)"
+        testConditions={[
+          "Extraction solvent: xylene (reflux at ~110°C)",
+          "Extraction duration: 24 hours minimum",
+          "Sample mass: 0.3–0.5 g per specimen",
+          "Drying: vacuum oven at 50°C to constant mass",
+        ]}
+        dosageLevels={[
+          "Xylene reflux at 110°C for 24 hours",
+          "Minimum 3 specimens per sample",
+          "Alternative: DSC method for degree of cure crosscheck",
+        ]}
+        passCriteria={[
+          { parameter: "EVA gel content", requirement: "≥65%", note: "Ethylene-vinyl acetate" },
+          { parameter: "POE gel content", requirement: "≥70%", note: "Polyolefin elastomer" },
+          { parameter: "Repeatability", requirement: "CV < 5% between specimens" },
+        ]}
+        failCriteria={[
+          { parameter: "EVA", requirement: "<65% indicates undercure" },
+          { parameter: "POE", requirement: "<70% indicates undercure" },
+        ]}
+        notes={[
+          "Under-cured encapsulant leads to delamination and PID susceptibility",
+          "DSC residual enthalpy <3 J/g confirms adequate cure for EVA",
+        ]}
+      />
       {/* Header badges */}
       <div className="flex items-center gap-2 flex-wrap">
         <Badge variant="outline" className="border-amber-300 text-amber-700">IEC 62788-1-6</Badge>

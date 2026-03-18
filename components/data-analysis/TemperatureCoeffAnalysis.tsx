@@ -12,6 +12,7 @@ import {
   CartesianGrid, Tooltip, Legend, ReferenceLine, ComposedChart
 } from "recharts"
 import { Thermometer, CheckCircle, AlertTriangle, Calculator } from "lucide-react"
+import { IECStandardCard } from "./IECStandardCard"
 
 // ─── Types & Constants ──────────────────────────────────────────────────────
 
@@ -107,6 +108,35 @@ export function TemperatureCoeffAnalysis() {
 
   return (
     <div className="space-y-4">
+      <IECStandardCard
+        standard="IEC 61215-2 MQT 04"
+        title="Terrestrial PV modules — Part 2: Test procedures — MQT 04 Temperature coefficients"
+        testConditions={[
+          "Minimum 5 temperature points between 25°C and 75°C",
+          "Temperature step: ΔT ≥ 10°C between points",
+          "Irradiance: 800–1100 W/m² (natural sunlight or simulator)",
+          "Spectral correction per IEC 60904-7 if needed",
+        ]}
+        dosageLevels={[
+          "Temperature range: 25°C to 75°C (minimum 50°C span)",
+          "Minimum 5 data points across the temperature range",
+          "Each point: steady-state (ΔT < 1°C/min)",
+        ]}
+        passCriteria={[
+          { parameter: "α (Isc)", requirement: "Reported in %/°C or mA/°C", note: "Positive for c-Si" },
+          { parameter: "β (Voc)", requirement: "Reported in %/°C or mV/°C", note: "Negative, typ. −0.3%/°C" },
+          { parameter: "γ (Pmax)", requirement: "Reported in %/°C", note: "Negative, typ. −0.4%/°C" },
+          { parameter: "R² (linear fit)", requirement: "≥0.99 for each coefficient" },
+        ]}
+        failCriteria={[
+          { parameter: "R²", requirement: "<0.99 indicates non-linear behavior or measurement error" },
+          { parameter: "Data points", requirement: "<5 temperatures or ΔT < 10°C between points" },
+        ]}
+        notes={[
+          "Temperature coefficients are essential for energy yield prediction",
+          "STC correction: P_STC = P_meas × [1 + γ × (25 − T_cell)]",
+        ]}
+      />
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         {[

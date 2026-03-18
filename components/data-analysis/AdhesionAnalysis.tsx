@@ -9,6 +9,7 @@ import {
   CartesianGrid, Tooltip, Legend, ReferenceLine, Cell, PieChart, Pie
 } from "recharts"
 import { CheckCircle, XCircle, FlaskConical } from "lucide-react"
+import { IECStandardCard } from "./IECStandardCard"
 
 // ─── Types & Constants ──────────────────────────────────────────────────────
 
@@ -104,6 +105,34 @@ export function AdhesionAnalysis() {
 
   return (
     <div className="space-y-4">
+      <IECStandardCard
+        standard="IEC 62788-1-6"
+        title="Measurement procedures for materials used in PV modules — Part 1-6: Encapsulants — Adhesion"
+        testConditions={[
+          "Test temperature: 23°C ± 2°C",
+          "Sample conditioning: 24h at 23°C / 50% RH",
+          "Pull rate: 50 mm/min (lap shear) or per method",
+          "Substrate: glass-encapsulant-backsheet laminate coupon",
+        ]}
+        dosageLevels={[
+          "Test area: 25 mm × 25 mm bonded area (lap shear)",
+          "Pre-conditioning options: initial, post-DH1000, post-TC200",
+          "Minimum 5 specimens per condition per interface",
+        ]}
+        passCriteria={[
+          { parameter: "Adhesion strength", requirement: "≥0.5 MPa at 23°C", note: "Lap shear method" },
+          { parameter: "Failure mode", requirement: "Cohesive failure preferred", note: "Within encapsulant" },
+          { parameter: "Post-aging retention", requirement: ">70% of initial adhesion" },
+        ]}
+        failCriteria={[
+          { parameter: "Adhesion", requirement: "<0.5 MPa at any test condition" },
+          { parameter: "Adhesive failure", requirement: "Clean delamination at interface" },
+        ]}
+        notes={[
+          "Complementary to IEC 61215-2 MQT 22 peel test",
+          "Measures cross-bonding strength vs. peel test linear adhesion",
+        ]}
+      />
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
         <Card className="text-center py-2">

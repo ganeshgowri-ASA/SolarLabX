@@ -13,6 +13,7 @@ import {
   ComposedChart, Area
 } from "recharts"
 import { Zap, Thermometer, TrendingUp, CheckCircle, AlertTriangle, Download } from "lucide-react"
+import { IECStandardCard } from "./IECStandardCard"
 
 // ─── IV Curve generation ────────────────────────────────────────────────────
 
@@ -139,6 +140,35 @@ export function IVCurveTab() {
 
   return (
     <div className="space-y-4">
+      <IECStandardCard
+        standard="IEC 60904-1"
+        title="Photovoltaic devices — Part 1: Measurement of photovoltaic current-voltage characteristics"
+        testConditions={[
+          "Standard Test Conditions (STC): 1000 W/m² irradiance",
+          "Cell temperature: 25°C ± 2°C",
+          "Spectral distribution: AM 1.5G (IEC 60904-3)",
+          "Four-wire Kelvin connection for I-V sweep",
+        ]}
+        dosageLevels={[
+          "Irradiance: 1000 W/m² (STC), 200–1100 W/m² for linearity",
+          "Temperature range: 25°C (STC), 15–75°C for temp correction (IEC 60891)",
+          "Sweep rate: ≤100 ms for capacitance-insensitive modules",
+        ]}
+        passCriteria={[
+          { parameter: "Pmax", requirement: "Within ±3% of nameplate rating", note: "At STC" },
+          { parameter: "Isc", requirement: "Within ±3% of nameplate", note: "Short-circuit current" },
+          { parameter: "Voc", requirement: "Within ±3% of nameplate", note: "Open-circuit voltage" },
+          { parameter: "FF", requirement: ">70% for crystalline Si", note: "Fill factor" },
+        ]}
+        failCriteria={[
+          { parameter: "Pmax deviation", requirement: ">±3% from nameplate at STC" },
+          { parameter: "FF", requirement: "<65% indicates possible defect or mismatch" },
+        ]}
+        notes={[
+          "Temperature correction per IEC 60891 required if Tcell ≠ 25°C",
+          "Measurement uncertainty budget per ISO/IEC 17025 typically ±2% for Pmax",
+        ]}
+      />
       {/* Module Parameters Input */}
       <Card>
         <CardHeader className="pb-2">
