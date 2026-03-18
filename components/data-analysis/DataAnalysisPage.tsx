@@ -66,6 +66,10 @@ import { IVCurveTab } from "./IVCurveTab"
 import { NMOTCalculator } from "./NMOTCalculator"
 import { PeelTestAnalysis } from "./PeelTestAnalysis"
 import { WeatherQA } from "./WeatherQA"
+import { StabilizationAnalysis } from "./StabilizationAnalysis"
+import { TemperatureCoeffAnalysis } from "./TemperatureCoeffAnalysis"
+import { AdhesionAnalysis } from "./AdhesionAnalysis"
+import { GatesAnalysis } from "./GatesAnalysis"
 import TestProtocolsManager from "@/components/lims/TestProtocolsManager"
 import {
   generateMockData,
@@ -481,6 +485,18 @@ export default function DataAnalysisPage() {
           <TabsTrigger value="lightsoaking" className="text-xs">
             <Sun className="mr-1 h-3 w-3" />
             Light Soaking
+          </TabsTrigger>
+          <TabsTrigger value="stabilization" className="text-xs">
+            <RefreshCw className="mr-1 h-3 w-3" />
+            Stabilization
+          </TabsTrigger>
+          <TabsTrigger value="tempcoeff" className="text-xs">
+            <Thermometer className="mr-1 h-3 w-3" />
+            Temp Coeff
+          </TabsTrigger>
+          <TabsTrigger value="adhesion" className="text-xs">
+            <Layers className="mr-1 h-3 w-3" />
+            Adhesion
           </TabsTrigger>
           <TabsTrigger value="gates" className="text-xs">
             <Target className="mr-1 h-3 w-3" />
@@ -1924,78 +1940,48 @@ export default function DataAnalysisPage() {
         </TabsContent>
 
         {/* ===================== TAB: GATES ===================== */}
-        <TabsContent value="gates" className="space-y-6">
+        {/* ===================== TAB: STABILIZATION ===================== */}
+        <TabsContent value="stabilization" className="space-y-6">
           <div className="mb-4">
-            <h2 className="text-lg font-semibold">Gates Analysis – Degradation Gates per IEC 61215</h2>
+            <h2 className="text-lg font-semibold">Stabilization Analysis</h2>
             <p className="text-sm text-muted-foreground">
-              Sequential test matrix gates: pass/fail at each degradation checkpoint, cumulative performance tracking
+              IEC 61215-2 MQT 19 — Power stabilization tracking, technology-specific criteria, light soaking exposure
             </p>
           </div>
-          <div className="grid gap-4 md:grid-cols-4">
-            {[
-              { label: "Gates Passed", value: "18/21", sub: "across all test sequences", color: "text-green-600" },
-              { label: "Gates Failed", value: "3", sub: "require investigation", color: "text-red-600" },
-              { label: "Max Degradation", value: "-3.8%", sub: "DH1000 gate (limit: 5%)", color: "text-amber-600" },
-              { label: "Waived Gates", value: "0", sub: "all required gates tested", color: "text-gray-600" },
-            ].map(({ label, value, sub, color }) => (
-              <Card key={label}>
-                <CardContent className="pt-4 pb-3">
-                  <CardDescription>{label}</CardDescription>
-                  <div className={`text-2xl font-bold ${color}`}>{value}</div>
-                  <p className="text-xs text-muted-foreground">{sub}</p>
-                </CardContent>
-              </Card>
-            ))}
+          <StabilizationAnalysis />
+        </TabsContent>
+
+        {/* ===================== TAB: TEMP COEFF ===================== */}
+        <TabsContent value="tempcoeff" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Temperature Coefficient Analysis</h2>
+            <p className="text-sm text-muted-foreground">
+              IEC 60904-10 — Temperature coefficients α(Isc), β(Voc), γ(Pmax), STC correction calculator
+            </p>
           </div>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">IEC 61215 Sequential Test Gates – Pmax Degradation</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-2 pr-4 font-semibold">Gate</th>
-                      <th className="text-left py-2 pr-4">Test Sequence</th>
-                      <th className="text-right py-2 pr-4">ΔPmax (%)</th>
-                      <th className="text-right py-2 pr-4">Limit (%)</th>
-                      <th className="text-right py-2 pr-4">R_ins</th>
-                      <th className="text-center py-2">Result</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[
-                      { gate: "G1", seq: "MQT 01→02→03", dpmax: -0.2, limit: 5, rins: "OK", pass: true },
-                      { gate: "G2", seq: "→MQT 10 (UV)→02→03", dpmax: -0.8, limit: 5, rins: "OK", pass: true },
-                      { gate: "G3", seq: "→MQT 11 (TC200)→02→03→07", dpmax: -1.4, limit: 5, rins: "OK", pass: true },
-                      { gate: "G4", seq: "→MQT 12 (HF10)→02→03→07", dpmax: -1.9, limit: 5, rins: "OK", pass: true },
-                      { gate: "G5", seq: "→MQT 13 (DH1000)→02→03→07", dpmax: -3.8, limit: 5, rins: "OK", pass: true },
-                      { gate: "G6", seq: "→MQT 11×2 (TC400)→02→03→07", dpmax: -2.6, limit: 5, rins: "OK", pass: true },
-                      { gate: "G7a", seq: "MQT 14 (Robustness)→02", dpmax: -0.1, limit: 5, rins: "OK", pass: true },
-                      { gate: "G7b", seq: "MQT 15 (Wet Leakage)→02", dpmax: -0.3, limit: 5, rins: "OK", pass: true },
-                      { gate: "G8", seq: "MQT 16 (Mech Load)→02→07", dpmax: -1.1, limit: 5, rins: "OK", pass: true },
-                      { gate: "G9", seq: "MQT 17 (Hail)→02→07", dpmax: -0.5, limit: 5, rins: "OK", pass: true },
-                      { gate: "G10", seq: "MQT 18 (Bypass Diode)→11×2→02→07", dpmax: -5.2, limit: 5, rins: "FAIL", pass: false },
-                    ].map(({ gate, seq, dpmax, limit, rins, pass }) => (
-                      <tr key={gate} className={`border-b ${!pass ? 'bg-red-50' : ''}`}>
-                        <td className="py-1.5 pr-4 font-mono font-bold text-muted-foreground">{gate}</td>
-                        <td className="py-1.5 pr-4 text-muted-foreground">{seq}</td>
-                        <td className={`py-1.5 pr-4 text-right font-mono font-bold ${Math.abs(dpmax) > limit ? 'text-red-600' : Math.abs(dpmax) > limit * 0.7 ? 'text-amber-600' : 'text-green-600'}`}>{dpmax.toFixed(1)}%</td>
-                        <td className="py-1.5 pr-4 text-right text-muted-foreground">≤ {limit}%</td>
-                        <td className={`py-1.5 pr-4 text-right ${rins === 'OK' ? 'text-green-600' : 'text-red-600'} font-medium`}>{rins}</td>
-                        <td className="py-1.5 text-center">
-                          <span className={`px-2 py-0.5 rounded font-bold text-xs ${pass ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                            {pass ? 'PASS' : 'FAIL'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
+          <TemperatureCoeffAnalysis />
+        </TabsContent>
+
+        {/* ===================== TAB: ADHESION ===================== */}
+        <TabsContent value="adhesion" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Adhesion Analysis</h2>
+            <p className="text-sm text-muted-foreground">
+              IEC 61215 MQT 23 — Peel test, lap shear, failure mode classification with before/after conditioning comparison
+            </p>
+          </div>
+          <AdhesionAnalysis />
+        </TabsContent>
+
+        {/* ===================== TAB: GATES ===================== */}
+        <TabsContent value="gates" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Gates Analysis – Qualification Gates per IEC 61215</h2>
+            <p className="text-sm text-muted-foreground">
+              Visual inspection, performance with uncertainty budget, and post-test degradation gates
+            </p>
+          </div>
+          <GatesAnalysis />
         </TabsContent>
 
         {/* ===================== TAB: SOLAR VISION AI ===================== */}
