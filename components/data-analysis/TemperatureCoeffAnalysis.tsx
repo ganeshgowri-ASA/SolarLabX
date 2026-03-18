@@ -297,6 +297,89 @@ export function TemperatureCoeffAnalysis() {
         </CardContent>
       </Card>
 
+      {/* Raw Temperature Data Table */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Temperature Test – Raw Measurements</CardTitle>
+          <CardDescription className="text-xs">IEC 60904-10 · Isc, Voc, Pmax at each temperature point</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-center py-2 pr-3 font-semibold">T (°C)</th>
+                  <th className="text-right py-2 pr-3 font-semibold">Isc (A)</th>
+                  <th className="text-right py-2 pr-3 font-semibold">Isc Fit (A)</th>
+                  <th className="text-right py-2 pr-3 font-semibold">Voc (V)</th>
+                  <th className="text-right py-2 pr-3 font-semibold">Voc Fit (V)</th>
+                  <th className="text-right py-2 pr-3 font-semibold">Pmax (W)</th>
+                  <th className="text-right py-2 font-semibold">Pmax Fit (W)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.map(d => {
+                  const iscFitVal = iscFit.slope * d.temperature + iscFit.intercept
+                  const vocFitVal = vocFit.slope * d.temperature + vocFit.intercept
+                  const pmaxFitVal = pmaxFit.slope * d.temperature + pmaxFit.intercept
+                  return (
+                    <tr key={d.temperature} className={`border-b hover:bg-gray-50 ${d.temperature === 25 ? "bg-green-50" : ""}`}>
+                      <td className="py-1.5 pr-3 text-center font-mono font-semibold">{d.temperature}</td>
+                      <td className="py-1.5 pr-3 text-right font-mono text-blue-600">{d.isc}</td>
+                      <td className="py-1.5 pr-3 text-right font-mono text-muted-foreground">{iscFitVal.toFixed(4)}</td>
+                      <td className="py-1.5 pr-3 text-right font-mono text-red-600">{d.voc}</td>
+                      <td className="py-1.5 pr-3 text-right font-mono text-muted-foreground">{vocFitVal.toFixed(3)}</td>
+                      <td className="py-1.5 pr-3 text-right font-mono text-amber-600">{d.pmax}</td>
+                      <td className="py-1.5 text-right font-mono text-muted-foreground">{pmaxFitVal.toFixed(2)}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-2 text-xs text-muted-foreground">
+            Highlighted row = STC reference point (25°C). Fit values from linear regression.
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Adequacy Analysis */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Adequacy Analysis – Measured vs Datasheet</CardTitle>
+          <CardDescription className="text-xs">Deviation within ±10% of datasheet values is considered acceptable</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {[
+              { label: "α (Isc)", measured: measuredCoeffs.alpha, datasheet: DATASHEET_COEFFS.alpha, dev: deviations.alpha, r2: iscFit.r2, unit: "%/°C", color: "border-l-blue-400" },
+              { label: "β (Voc)", measured: measuredCoeffs.beta, datasheet: DATASHEET_COEFFS.beta, dev: deviations.beta, r2: vocFit.r2, unit: "%/°C", color: "border-l-red-400" },
+              { label: "γ (Pmax)", measured: measuredCoeffs.gamma, datasheet: DATASHEET_COEFFS.gamma, dev: deviations.gamma, r2: pmaxFit.r2, unit: "%/°C", color: "border-l-amber-400" },
+            ].map(({ label, measured, datasheet, dev, r2, unit, color }) => (
+              <div key={label} className={`p-3 border rounded border-l-4 ${color}`}>
+                <div className="text-xs font-semibold text-gray-700 mb-2">{label}</div>
+                <div className="grid grid-cols-2 gap-1 text-xs">
+                  <div className="text-muted-foreground">Measured:</div>
+                  <div className="font-mono font-bold text-right">{measured > 0 ? "+" : ""}{measured} {unit}</div>
+                  <div className="text-muted-foreground">Datasheet:</div>
+                  <div className="font-mono text-right">{datasheet > 0 ? "+" : ""}{datasheet} {unit}</div>
+                  <div className="text-muted-foreground">Deviation:</div>
+                  <div className={`font-mono font-bold text-right ${Math.abs(dev) <= 10 ? "text-green-600" : "text-red-600"}`}>
+                    {dev > 0 ? "+" : ""}{dev}%
+                  </div>
+                  <div className="text-muted-foreground">R²:</div>
+                  <div className="font-mono text-right">{r2}</div>
+                  <div className="text-muted-foreground">Status:</div>
+                  <div className={`font-bold text-right ${Math.abs(dev) <= 10 ? "text-green-600" : "text-red-600"}`}>
+                    {Math.abs(dev) <= 10 ? "ADEQUATE" : "REVIEW"}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* IEC Reference */}
       <Card className="bg-amber-50 border-amber-200">
         <CardContent className="pt-3 pb-3">
@@ -305,7 +388,8 @@ export function TemperatureCoeffAnalysis() {
             Temperature coefficients determined by measuring I-V characteristics at multiple temperatures (15–75°C) under
             constant irradiance (1000 W/m²). Linear regression of Isc, Voc, Pmax vs temperature gives α, β, γ respectively.
             Correction to STC: Isc(25°C) = Isc_meas / [1 + α(T_meas - 25)/100]; Voc(25°C) = Voc_meas - β_abs × (T_meas - 25);
-            Pmax(25°C) = Pmax_meas / [1 + γ(T_meas - 25)/100].
+            Pmax(25°C) = Pmax_meas / [1 + γ(T_meas - 25)/100]. Adequacy analysis compares measured coefficients to
+            manufacturer datasheet values; deviations &gt;10% warrant investigation.
           </div>
         </CardContent>
       </Card>
