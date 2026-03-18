@@ -14,8 +14,10 @@ import { Input } from '@/components/ui/input'
 import {
   ChevronRight, ChevronDown, FileText, BookOpen, ClipboardList, Layers,
   CheckCircle2, AlertTriangle, Clock, Search, Plus, Download, Eye,
-  BarChart3, Shield, Settings, Users, Microscope, FileCheck, Activity
+  BarChart3, Shield, Settings, Users, Microscope, FileCheck, Activity,
+  GitBranch, Briefcase
 } from 'lucide-react'
+import { CAPATrackingDashboard, DocumentRevisionHistory, ManagementReviewDashboard } from '@/components/qms/QMSEnhancements'
 
 // ─── ISO 17025 Document Hierarchy ─────────────────────────────────────────────
 
@@ -524,6 +526,15 @@ export default function QMSDashboard() {
           <TabsTrigger value="capa" className="text-xs">
             <AlertTriangle className="h-3 w-3 mr-1" /> CAPA
           </TabsTrigger>
+          <TabsTrigger value="capa-tracking" className="text-xs">
+            <Activity className="h-3 w-3 mr-1" /> CAPA Tracking
+          </TabsTrigger>
+          <TabsTrigger value="doc-revisions" className="text-xs">
+            <GitBranch className="h-3 w-3 mr-1" /> Revision History
+          </TabsTrigger>
+          <TabsTrigger value="mgmt-review" className="text-xs">
+            <Briefcase className="h-3 w-3 mr-1" /> Management Review
+          </TabsTrigger>
         </TabsList>
 
         {/* ── DASHBOARD TAB ──────────────────────────────────────── */}
@@ -886,6 +897,21 @@ export default function QMSDashboard() {
           <Link href="/qms/capa">
             <Button variant="outline" className="w-full text-xs">View All CAPAs</Button>
           </Link>
+        </TabsContent>
+
+        {/* ── CAPA TRACKING DASHBOARD TAB ─────────────────────────── */}
+        <TabsContent value="capa-tracking" className="space-y-4 mt-4">
+          <CAPATrackingDashboard />
+        </TabsContent>
+
+        {/* ── DOCUMENT REVISION HISTORY TAB ───────────────────────── */}
+        <TabsContent value="doc-revisions" className="space-y-4 mt-4">
+          <DocumentRevisionHistory />
+        </TabsContent>
+
+        {/* ── MANAGEMENT REVIEW DASHBOARD TAB ─────────────────────── */}
+        <TabsContent value="mgmt-review" className="space-y-4 mt-4">
+          <ManagementReviewDashboard />
         </TabsContent>
       </Tabs>
     </div>
