@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import {
   AlertTriangle, CheckCircle2, Clock, ArrowRight, AlertOctagon,
-  FileText, User, Calendar, TrendingUp, TrendingDown, Minus,
+  FileText, User, Users, Calendar, TrendingUp, TrendingDown, Minus,
   ClipboardList, Wrench, MessageSquare, Target, BarChart3, Activity,
   ChevronRight, Eye, GitCommit
 } from 'lucide-react'
