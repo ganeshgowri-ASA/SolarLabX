@@ -11,13 +11,14 @@ import {
 import {
   CheckCircle, XCircle, AlertTriangle, ChevronRight,
   Layers, Shield, Cpu, LayoutGrid, Cable, Square, Frame,
-  Box, Zap, Maximize2, Scaling, Sparkles,
+  Box, Zap, Maximize2, Scaling, Sparkles, ToggleLeft, ToggleRight,
 } from "lucide-react"
 import {
   BOM_COMPONENTS, TEST_DEFINITIONS,
   getRequiredTestsForChanges, getSeverityColor, getMaxSeverity,
   type BomComponent, type ChangeCategory, type Severity,
 } from "@/lib/iec62915-data"
+import { ExplodedModuleView } from "./ExplodedModuleView"
 
 const ICON_MAP: Record<string, any> = {
   Layers, Shield, Cpu, LayoutGrid, Cable, Square, Frame,
@@ -31,10 +32,10 @@ interface DesignChangeWizardProps {
 
 export function DesignChangeWizard({ selectedChanges, onToggleChange }: DesignChangeWizardProps) {
   const [openComponent, setOpenComponent] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<"infographic" | "cards">("infographic")
 
   const activeComponent = BOM_COMPONENTS.find(c => c.id === openComponent)
 
-  // Per-component: how many changes selected, max severity
   const componentSummaries = useMemo(() => {
     return BOM_COMPONENTS.map(comp => {
       const selected = comp.categories.filter(c => selectedChanges.includes(c.id))
@@ -65,9 +66,19 @@ export function DesignChangeWizard({ selectedChanges, onToggleChange }: DesignCh
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Step 1 — Select BoM Components</h3>
-          <p className="text-xs text-muted-foreground mt-1">Click a component card to define specific design changes per IEC TS 62915:2023 Clause 4.2</p>
+          <p className="text-xs text-muted-foreground mt-1">Click a component to define specific design changes per IEC TS 62915:2023 Clause 4.2</p>
         </div>
         <div className="flex items-center gap-3">
+          {/* View toggle */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs gap-1.5"
+            onClick={() => setViewMode(viewMode === "infographic" ? "cards" : "infographic")}
+          >
+            {viewMode === "infographic" ? <ToggleRight className="h-3.5 w-3.5" /> : <ToggleLeft className="h-3.5 w-3.5" />}
+            {viewMode === "infographic" ? "Exploded View" : "Card View"}
+          </Button>
           {totalChanges > 0 && overallSeverity && (
             <Badge className={`${getSeverityColor(overallSeverity).bg} ${getSeverityColor(overallSeverity).text} text-xs`}>
               {getSeverityColor(overallSeverity).label}
@@ -79,60 +90,67 @@ export function DesignChangeWizard({ selectedChanges, onToggleChange }: DesignCh
         </div>
       </div>
 
-      {/* Component Grid — 12 cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-        {componentSummaries.map(comp => {
-          const Icon = ICON_MAP[comp.icon] || Layers
-          const hasChanges = comp.selectedCount > 0
-          const sevColor = comp.severity ? getSeverityColor(comp.severity) : null
+      {/* Exploded Infographic View */}
+      {viewMode === "infographic" && (
+        <ExplodedModuleView selectedChanges={selectedChanges} onToggleChange={onToggleChange} />
+      )}
 
-          return (
-            <Card
-              key={comp.id}
-              className={`cursor-pointer transition-all hover:shadow-md ${
-                hasChanges
-                  ? `${comp.borderColor} border-2 shadow-sm`
-                  : "border hover:border-gray-300"
-              }`}
-              onClick={() => setOpenComponent(comp.id)}
-            >
-              <CardContent className="pt-4 pb-3 px-4">
-                <div className="flex items-start gap-3">
-                  <div className={`p-2 rounded-lg ${comp.bgColor}`}>
-                    <Icon className={`h-5 w-5 ${comp.color}`} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-1">
-                      <span className="text-xs font-mono text-muted-foreground">{comp.clause}</span>
-                      {hasChanges && sevColor && (
-                        <Badge className={`${sevColor.bg} ${sevColor.text} text-[10px] px-1.5 py-0`}>
-                          {comp.selectedCount}
-                        </Badge>
-                      )}
+      {/* Card Grid View */}
+      {viewMode === "cards" && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          {componentSummaries.map(comp => {
+            const Icon = ICON_MAP[comp.icon] || Layers
+            const hasChanges = comp.selectedCount > 0
+            const sevColor = comp.severity ? getSeverityColor(comp.severity) : null
+
+            return (
+              <Card
+                key={comp.id}
+                className={`cursor-pointer transition-all hover:shadow-md ${
+                  hasChanges
+                    ? `${comp.borderColor} border-2 shadow-sm`
+                    : "border hover:border-gray-300"
+                }`}
+                onClick={() => setOpenComponent(comp.id)}
+              >
+                <CardContent className="pt-4 pb-3 px-4">
+                  <div className="flex items-start gap-3">
+                    <div className={`p-2 rounded-lg ${comp.bgColor}`}>
+                      <Icon className={`h-5 w-5 ${comp.color}`} />
                     </div>
-                    <h4 className="text-sm font-semibold mt-0.5 truncate">{comp.name}</h4>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {comp.categories.length} change categories
-                    </p>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-1" />
-                </div>
-                {hasChanges && (
-                  <div className="mt-2 pt-2 border-t">
-                    <div className="flex flex-wrap gap-1">
-                      {comp.categories.filter(c => selectedChanges.includes(c.id)).map(c => (
-                        <span key={c.id} className="text-[10px] bg-gray-100 rounded px-1.5 py-0.5 truncate max-w-[200px]">
-                          {c.label.slice(0, 40)}{c.label.length > 40 ? "…" : ""}
-                        </span>
-                      ))}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="text-xs font-mono text-muted-foreground">{comp.clause}</span>
+                        {hasChanges && sevColor && (
+                          <Badge className={`${sevColor.bg} ${sevColor.text} text-[10px] px-1.5 py-0`}>
+                            {comp.selectedCount}
+                          </Badge>
+                        )}
+                      </div>
+                      <h4 className="text-sm font-semibold mt-0.5 truncate">{comp.name}</h4>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {comp.categories.length} change categories
+                      </p>
                     </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-1" />
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
+                  {hasChanges && (
+                    <div className="mt-2 pt-2 border-t">
+                      <div className="flex flex-wrap gap-1">
+                        {comp.categories.filter(c => selectedChanges.includes(c.id)).map(c => (
+                          <span key={c.id} className="text-[10px] bg-gray-100 rounded px-1.5 py-0.5 truncate max-w-[200px]">
+                            {c.label.slice(0, 40)}{c.label.length > 40 ? "..." : ""}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+      )}
 
       {/* Selected Tests Preview */}
       {requiredTests.length > 0 && (
@@ -160,7 +178,7 @@ export function DesignChangeWizard({ selectedChanges, onToggleChange }: DesignCh
                       isMST ? "border-red-300 text-red-700 bg-red-50" : "border-blue-300 text-blue-700 bg-blue-50"
                     }`}
                   >
-                    {test.mqt || test.mst} – {test.name}
+                    {test.mqt || test.mst} - {test.name}
                   </Badge>
                 )
               })}
@@ -169,7 +187,7 @@ export function DesignChangeWizard({ selectedChanges, onToggleChange }: DesignCh
         </Card>
       )}
 
-      {/* Component Change Detail Dialog */}
+      {/* Component Change Detail Dialog (for card view) */}
       <Dialog open={!!openComponent} onOpenChange={(open) => { if (!open) setOpenComponent(null) }}>
         {activeComponent && (
           <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
@@ -217,7 +235,6 @@ export function DesignChangeWizard({ selectedChanges, onToggleChange }: DesignCh
               })}
             </div>
 
-            {/* Show required tests for THIS component */}
             <div className="mt-4 pt-3 border-t">
               <h4 className="text-xs font-semibold text-muted-foreground mb-2">
                 Required tests for {activeComponent.name} changes:
