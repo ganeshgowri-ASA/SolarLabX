@@ -8,13 +8,16 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import {
   Package, Wand2, ClipboardList, GitBranch, CalendarDays, ShieldCheck,
-  Download, FileText, Printer,
+  Download, FileText, Printer, DollarSign, BarChart3,
 } from "lucide-react"
 import { DesignChangeWizard } from "@/components/iec62915/DesignChangeWizard"
 import { TestPlanMatrix } from "@/components/iec62915/TestPlanMatrix"
 import { SampleFlowChart } from "@/components/iec62915/SampleFlowChart"
 import { BudgetTimeline } from "@/components/iec62915/BudgetTimeline"
 import { MNRECompliance } from "@/components/iec62915/MNRECompliance"
+import { CostingTab } from "@/components/iec62915/CostingTab"
+import { CertificationTimeline } from "@/components/iec62915/CertificationTimeline"
+import { ReportExporter } from "@/components/iec62915/ReportExporter"
 import {
   BOM_COMPONENTS, TEST_DEFINITIONS,
   getRequiredTestsForChanges, getAffectedSequences,
@@ -50,42 +53,6 @@ export default function IEC62915Page() {
     return BOM_COMPONENTS.filter(c => c.categories.some(cat => selectedChanges.includes(cat.id))).length
   }, [selectedChanges])
 
-  // Generate printable report
-  const handleGenerateReport = () => {
-    const tests = requiredTests.map(id => TEST_DEFINITIONS[id]).filter(Boolean)
-    const lines = [
-      "IEC TS 62915:2023 — Design Change Assessment Report",
-      "=" .repeat(55),
-      `Date: ${new Date().toISOString().split("T")[0]}`,
-      `Changes Selected: ${selectedChanges.length}`,
-      `Components Affected: ${componentsAffected}`,
-      `Overall Severity: ${overallSeverity ? getSeverityColor(overallSeverity).label : "None"}`,
-      `Required Tests: ${requiredTests.length}`,
-      `Affected Sequences: ${affectedSequences.join(", ")}`,
-      `Estimated Cost: $${totalCost.toLocaleString()}`,
-      `Modules Needed: ${samples.iec61215} (IEC 61215) + ${samples.iec61730} (IEC 61730)`,
-      "",
-      "SELECTED DESIGN CHANGES",
-      "-".repeat(40),
-    ]
-    for (const comp of BOM_COMPONENTS) {
-      const compChanges = comp.categories.filter(c => selectedChanges.includes(c.id))
-      if (compChanges.length === 0) continue
-      lines.push(`\n[${comp.clause}] ${comp.name}:`)
-      compChanges.forEach(c => lines.push(`  - ${c.label} (${getSeverityColor(c.severity).label})`))
-    }
-    lines.push("", "REQUIRED TESTS", "-".repeat(40))
-    tests.forEach(t => {
-      lines.push(`${t.mqt || t.mst || t.id} | ${t.name} | ${t.standard} | Seq: ${t.sequences.join(",")} | ${t.durationHours}h | $${t.costEstimateUSD}`)
-    })
-
-    const blob = new Blob([lines.join("\n")], { type: "text/plain" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url; a.download = `IEC62915_Assessment_${new Date().toISOString().split("T")[0]}.txt`; a.click()
-    URL.revokeObjectURL(url)
-  }
-
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -101,10 +68,7 @@ export default function IEC62915Page() {
         </div>
         <div className="flex gap-2">
           {selectedChanges.length > 0 && (
-            <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={handleGenerateReport}>
-              <Printer className="h-3.5 w-3.5" />
-              Generate Report
-            </Button>
+            <ReportExporter selectedChanges={selectedChanges} />
           )}
           {selectedChanges.length > 0 && (
             <Button
@@ -163,28 +127,36 @@ export default function IEC62915Page() {
         </div>
       )}
 
-      {/* Main Tabs */}
+      {/* Main Tabs - 7 tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5 h-auto">
-          <TabsTrigger value="wizard" className="text-xs gap-1.5 py-2">
+        <TabsList className="grid w-full grid-cols-7 h-auto">
+          <TabsTrigger value="wizard" className="text-xs gap-1 py-2">
             <Wand2 className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Design Change</span> Wizard
+            <span className="hidden sm:inline">Design</span> Wizard
           </TabsTrigger>
-          <TabsTrigger value="matrix" className="text-xs gap-1.5 py-2">
+          <TabsTrigger value="matrix" className="text-xs gap-1 py-2">
             <ClipboardList className="h-3.5 w-3.5" />
-            Test Plan <span className="hidden sm:inline">Matrix</span>
+            Test <span className="hidden sm:inline">Plan</span>
           </TabsTrigger>
-          <TabsTrigger value="flow" className="text-xs gap-1.5 py-2">
+          <TabsTrigger value="flow" className="text-xs gap-1 py-2">
             <GitBranch className="h-3.5 w-3.5" />
             Sample <span className="hidden sm:inline">Flow</span>
           </TabsTrigger>
-          <TabsTrigger value="budget" className="text-xs gap-1.5 py-2">
-            <CalendarDays className="h-3.5 w-3.5" />
-            Budget <span className="hidden sm:inline">& Timeline</span>
+          <TabsTrigger value="costing" className="text-xs gap-1 py-2">
+            <DollarSign className="h-3.5 w-3.5" />
+            Costing
           </TabsTrigger>
-          <TabsTrigger value="mnre" className="text-xs gap-1.5 py-2">
+          <TabsTrigger value="timeline" className="text-xs gap-1 py-2">
+            <BarChart3 className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Cert</span> Timeline
+          </TabsTrigger>
+          <TabsTrigger value="budget" className="text-xs gap-1 py-2">
+            <CalendarDays className="h-3.5 w-3.5" />
+            Budget
+          </TabsTrigger>
+          <TabsTrigger value="mnre" className="text-xs gap-1 py-2">
             <ShieldCheck className="h-3.5 w-3.5" />
-            MNRE <span className="hidden sm:inline">Compliance</span>
+            MNRE
           </TabsTrigger>
         </TabsList>
 
@@ -198,6 +170,14 @@ export default function IEC62915Page() {
 
         <TabsContent value="flow" className="mt-4">
           <SampleFlowChart selectedChanges={selectedChanges} />
+        </TabsContent>
+
+        <TabsContent value="costing" className="mt-4">
+          <CostingTab selectedChanges={selectedChanges} />
+        </TabsContent>
+
+        <TabsContent value="timeline" className="mt-4">
+          <CertificationTimeline selectedChanges={selectedChanges} />
         </TabsContent>
 
         <TabsContent value="budget" className="mt-4">

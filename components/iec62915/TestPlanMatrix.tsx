@@ -20,10 +20,69 @@ interface TestPlanMatrixProps {
   selectedChanges: string[]
 }
 
-type StatusFilter = "all" | "pending" | "in_progress" | "completed"
+// Supplier/model mapping for equipment
+const EQUIPMENT_SUPPLIERS: Record<string, string> = {
+  "Class A+ Solar Simulator": "Wavelabs SINUS-2100 / Pasan HighLIGHT",
+  "Solar simulator": "Pasan HighLIGHT III-c",
+  "Solar simulator (200 W/m² capable)": "Wavelabs SINUS-2100",
+  "IV Tracer": "Keysight BenchVue IV / Sinton FCT-450",
+  "IV tracer": "Keysight BenchVue IV",
+  "Reference cell": "Fraunhofer ISE certified",
+  "Hipot tester": "Vitrek 95x Series",
+  "Insulation resistance meter": "Megger MIT2500",
+  "Environmental chamber (TC)": "Weiss WK3-1000/70 / Angelantoni DY-1000",
+  "Environmental chamber (HF)": "Weiss WK3-1000/70",
+  "Environmental chamber (DH)": "Angelantoni DY-1500",
+  "Environmental chamber": "CTS C-40/1000",
+  "UV chamber": "Atlas UVTest / Q-Lab QUV",
+  "UV radiometer": "Kipp & Zonen UV-S-AB-T",
+  "Temperature controller": "Eurotherm 3504",
+  "Temperature-controlled chamber": "Weiss WK3-340",
+  "Mechanical load tester": "TUV SUD ML-3600 / Berger MLT-3000",
+  "Dynamic load tester": "Berger MLT-3000 DML",
+  "Pneumatic system": "Festo ADVU series",
+  "Hail gun": "Custom IEC 61215 hail launcher",
+  "Ice ball maker": "Custom mold system",
+  "Velocity sensor": "Photron FASTCAM",
+  "IR camera": "FLIR T1020 / InfraTec HD820",
+  "Thermocouples": "Omega T-type / K-type",
+  "Data logger": "Keysight 34972A / Agilent",
+  "Pyranometer": "Kipp & Zonen CMP11",
+  "Pull/torque tester": "Mecmesin MultiTest-dV",
+  "Force gauge": "Mecmesin AFG-500N",
+  "Power supply": "Keysight N8900 Series",
+  "High-voltage power supply": "Spellman SL Series",
+  "Wet leakage tester": "Custom per IEC 61215",
+  "Wetting agent": "Triton X-100 solution",
+  "Peel tester (180°/90°)": "Instron 5944 / Zwick Z005",
+  "Mechanical stress tester": "Zwick Z100",
+  "Test finger (IEC 61032)": "IEC 61032 standard probe",
+  "Ground bond tester": "Associated Research 3705A",
+  "Impulse voltage generator": "Haefely PSURGE 30",
+  "Thermal chamber": "Weiss WK3-340",
+  "Fire test apparatus": "Custom per IEC 61730-2",
+  "Spreading flame burner": "IEC 61730-2 specified",
+  "Impact tester": "Custom per IEC 61730-2",
+  "Steel ball": "227g steel ball per standard",
+  "Cut tester": "Custom per IEC 61730-2",
+  "Insulation tester": "Megger MIT2500",
+  "Load bank": "Simplex Titan 500kW",
+  "EL camera": "Greateyes GE 1024 1024 BI",
+  "Inspection table": "Lab standard",
+  "Magnifier (10×)": "Standard 10x loupe",
+  "Magnifier": "Standard 10x loupe",
+  "Shading devices": "Custom cell shading masks",
+  "Light soaking system or outdoor rack": "In-house light soaking / Outdoor rack",
+  "Outdoor test rack": "Custom rack per IEC 61215",
+  "Outdoor exposure rack": "Custom rack per IEC 61215",
+  "Pressure gauge": "Ashcroft digital gauge",
+  "Surface resistance meter": "Keithley 6517B",
+  "Surfactant solution": "IEC 61730-2 specified",
+  "Mounting jig": "Lab custom",
+  "Temperature/humidity controller": "Watlow F4T",
+}
 
 export function TestPlanMatrix({ selectedChanges }: TestPlanMatrixProps) {
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
   const [standardFilter, setStandardFilter] = useState<string>("all")
 
   const requiredTestIds = useMemo(() => getRequiredTestsForChanges(selectedChanges), [selectedChanges])
@@ -42,9 +101,8 @@ export function TestPlanMatrix({ selectedChanges }: TestPlanMatrixProps) {
 
   const totalCost = useMemo(() => estimateTotalCost(requiredTestIds), [requiredTestIds])
   const totalPersonnel = useMemo(() => estimatePersonnelHours(requiredTestIds), [requiredTestIds])
-  const totalDuration = useMemo(() => {
-    return tests.reduce((s, t) => s + t.durationHours, 0)
-  }, [tests])
+  const totalDuration = useMemo(() => tests.reduce((s, t) => s + t.durationHours, 0), [tests])
+  const totalEquipHours = useMemo(() => tests.reduce((s, t) => s + t.durationHours, 0), [tests])
 
   if (selectedChanges.length === 0) {
     return (
@@ -61,7 +119,7 @@ export function TestPlanMatrix({ selectedChanges }: TestPlanMatrixProps) {
   return (
     <div className="space-y-4">
       {/* Summary row */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
         <Card className="text-center py-2">
           <CardContent className="pt-3 pb-0">
             <div className="text-2xl font-bold text-blue-600">{tests.length}</div>
@@ -84,6 +142,12 @@ export function TestPlanMatrix({ selectedChanges }: TestPlanMatrixProps) {
           <CardContent className="pt-3 pb-0">
             <div className="text-2xl font-bold text-green-600">{totalPersonnel.toLocaleString()}h</div>
             <div className="text-xs text-muted-foreground">Person-Hours</div>
+          </CardContent>
+        </Card>
+        <Card className="text-center py-2">
+          <CardContent className="pt-3 pb-0">
+            <div className="text-2xl font-bold text-cyan-600">{totalEquipHours.toLocaleString()}h</div>
+            <div className="text-xs text-muted-foreground">Equipment Hours</div>
           </CardContent>
         </Card>
         <Card className="text-center py-2">
@@ -112,13 +176,22 @@ export function TestPlanMatrix({ selectedChanges }: TestPlanMatrixProps) {
         </div>
         <div className="ml-auto">
           <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => {
+            const equipRate = 75
+            const mpRate = 50
             const rows = tests.map(t => [
               t.mqt || t.mst, t.name, t.standard,
               t.sequences.filter(s => affectedSequences.includes(s)).join(", "),
-              t.samplesStandalone, t.samplesCombined,
-              t.equipment.join("; "), t.durationHours, t.personnel, t.description,
+              t.samplesStandalone,
+              t.equipment.join("; "),
+              t.equipment.map(e => EQUIPMENT_SUPPLIERS[e] || "").join("; "),
+              t.personnel,
+              t.durationHours,
+              equipRate, t.durationHours * equipRate,
+              mpRate, t.durationHours * t.personnel * mpRate,
+              t.costEstimateUSD,
+              t.description,
             ])
-            const header = "Test ID,Test Name,Standard,Sequences,Samples (Standalone),Samples (Combined),Equipment,Duration (h),Personnel,Description"
+            const header = "Test ID,Test Name,Standard,Sequences,Samples,Equipment,Supplier/Model,Manpower (technicians),Equipment Hours,Cost/Equip-hr ($/hr),Equipment Cost ($),Cost/Manpower-hr ($/hr),Manpower Cost ($),Total Cost ($),Description"
             const csv = [header, ...rows.map(r => r.map(v => `"${v}"`).join(","))].join("\n")
             const blob = new Blob([csv], { type: "text/csv" })
             const url = URL.createObjectURL(blob)
@@ -131,7 +204,7 @@ export function TestPlanMatrix({ selectedChanges }: TestPlanMatrixProps) {
         </div>
       </div>
 
-      {/* Test Matrix Table */}
+      {/* Test Matrix Table with new columns */}
       <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
@@ -143,9 +216,12 @@ export function TestPlanMatrix({ selectedChanges }: TestPlanMatrixProps) {
                   <th className="text-left py-2.5 px-3 font-semibold w-24">Standard</th>
                   <th className="text-center py-2.5 px-3 font-semibold w-24">Sequence</th>
                   <th className="text-center py-2.5 px-3 font-semibold w-20">Samples</th>
-                  <th className="text-left py-2.5 px-3 font-semibold">Equipment</th>
-                  <th className="text-center py-2.5 px-3 font-semibold w-20">Duration</th>
-                  <th className="text-center py-2.5 px-3 font-semibold w-16">Staff</th>
+                  <th className="text-left py-2.5 px-3 font-semibold">Equipment Name</th>
+                  <th className="text-left py-2.5 px-3 font-semibold">Supplier / Model</th>
+                  <th className="text-center py-2.5 px-3 font-semibold w-16">Manpower</th>
+                  <th className="text-center py-2.5 px-3 font-semibold w-20">Equip Hrs</th>
+                  <th className="text-right py-2.5 px-3 font-semibold w-20">$/Equip-hr</th>
+                  <th className="text-right py-2.5 px-3 font-semibold w-20">$/MP-hr</th>
                   <th className="text-right py-2.5 px-3 font-semibold w-20">Cost</th>
                 </tr>
               </thead>
@@ -153,6 +229,8 @@ export function TestPlanMatrix({ selectedChanges }: TestPlanMatrixProps) {
                 {tests.map(test => {
                   const activeSeqs = test.sequences.filter(s => affectedSequences.includes(s))
                   const isMST = test.id.startsWith("MST")
+                  const equipRate = 75
+                  const mpRate = 50
                   return (
                     <tr key={test.id} className="border-b hover:bg-muted/30 transition-colors">
                       <td className="py-2 px-3">
@@ -182,17 +260,28 @@ export function TestPlanMatrix({ selectedChanges }: TestPlanMatrixProps) {
                       </td>
                       <td className="py-2 px-3 text-center font-mono">{test.samplesStandalone}</td>
                       <td className="py-2 px-3">
-                        <div className="text-[10px] text-muted-foreground max-w-[180px] truncate">
-                          {test.equipment.join(", ")}
+                        <div className="text-[10px] text-muted-foreground max-w-[160px]">
+                          {test.equipment.map((eq, i) => (
+                            <div key={i} className="truncate">{eq}</div>
+                          ))}
                         </div>
                       </td>
+                      <td className="py-2 px-3">
+                        <div className="text-[10px] text-muted-foreground max-w-[160px]">
+                          {test.equipment.map((eq, i) => (
+                            <div key={i} className="truncate">{EQUIPMENT_SUPPLIERS[eq] || "-"}</div>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="py-2 px-3 text-center font-mono">{test.personnel}</td>
                       <td className="py-2 px-3 text-center font-mono">
                         {test.durationHours >= 24
                           ? `${(test.durationHours / 24).toFixed(0)}d`
                           : `${test.durationHours}h`
                         }
                       </td>
-                      <td className="py-2 px-3 text-center font-mono">{test.personnel}</td>
+                      <td className="py-2 px-3 text-right font-mono text-muted-foreground">${equipRate}</td>
+                      <td className="py-2 px-3 text-right font-mono text-muted-foreground">${mpRate}</td>
                       <td className="py-2 px-3 text-right font-mono text-green-700">${test.costEstimateUSD.toLocaleString()}</td>
                     </tr>
                   )
@@ -200,9 +289,10 @@ export function TestPlanMatrix({ selectedChanges }: TestPlanMatrixProps) {
               </tbody>
               <tfoot>
                 <tr className="border-t-2 bg-muted/30 font-semibold">
-                  <td className="py-2.5 px-3" colSpan={6}>TOTAL</td>
-                  <td className="py-2.5 px-3 text-center font-mono">{totalDuration >= 24 ? `${(totalDuration / 24).toFixed(0)}d` : `${totalDuration}h`}</td>
+                  <td className="py-2.5 px-3" colSpan={7}>TOTAL</td>
                   <td className="py-2.5 px-3 text-center font-mono">{totalPersonnel}h</td>
+                  <td className="py-2.5 px-3 text-center font-mono">{totalDuration >= 24 ? `${(totalDuration / 24).toFixed(0)}d` : `${totalDuration}h`}</td>
+                  <td className="py-2.5 px-3" colSpan={2}></td>
                   <td className="py-2.5 px-3 text-right font-mono text-green-700">${totalCost.toLocaleString()}</td>
                 </tr>
               </tfoot>
