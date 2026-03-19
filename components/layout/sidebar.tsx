@@ -28,6 +28,7 @@ import {
   GitBranch,
   ClipboardList,
   Package,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -61,6 +62,7 @@ const iconMap = {
   GitBranch,
   ClipboardList,
   Package,
+  Users,
 } as const;
 
 const navItems = [
@@ -71,6 +73,7 @@ const navItems = [
   { title: "Audit", href: "/audit", icon: "ClipboardCheck" },
   { title: "Projects", href: "/projects", icon: "FolderKanban" },
   { title: "Equipment", href: "/equipment", icon: "Wrench" },
+  { title: "Manpower", href: "/manpower", icon: "Users" },
   { title: "Uncertainty", href: "/uncertainty", icon: "Calculator" },
   { title: "Vision AI", href: "/vision-ai", icon: "ScanEye" },
   { title: "SOP Gen", href: "/sop-gen", icon: "BookOpen" },
