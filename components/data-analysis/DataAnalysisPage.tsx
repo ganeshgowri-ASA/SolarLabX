@@ -76,6 +76,7 @@ import { GelContentAnalysis } from "./GelContentAnalysis"
 import { BifacialityAnalysis } from "./BifacialityAnalysis"
 import { IECStandardCard } from "./IECStandardCard"
 import TestProtocolsManager from "@/components/lims/TestProtocolsManager"
+import { ExportToProtocol } from "./ExportToProtocol"
 import {
   generateMockData,
   calculateStatistics,
@@ -522,6 +523,10 @@ export default function DataAnalysisPage() {
           <TabsTrigger value="protocols" className="text-xs">
             <ClipboardList className="mr-1 h-3 w-3" />
             Test Protocols
+          </TabsTrigger>
+          <TabsTrigger value="export-protocol" className="text-xs">
+            <Download className="mr-1 h-3 w-3" />
+            Export to Protocol
           </TabsTrigger>
         </TabsList>
 
@@ -2051,6 +2056,18 @@ export default function DataAnalysisPage() {
             </p>
           </div>
           <TestProtocolsManager />
+        </TabsContent>
+
+        {/* ===================== TAB: EXPORT TO PROTOCOL ===================== */}
+        <TabsContent value="export-protocol" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Export to Protocol</h2>
+            <p className="text-sm text-muted-foreground">
+              Send analyzed data, graphs, and pass/fail results directly to test protocol reports.
+              PDF/Excel export with embedded charts.
+            </p>
+          </div>
+          <ExportToProtocol />
         </TabsContent>
       </Tabs>
     </div>
