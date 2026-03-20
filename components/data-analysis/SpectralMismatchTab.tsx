@@ -16,6 +16,7 @@ import {
 } from "recharts"
 import { Waves, Calculator, AlertTriangle } from "lucide-react"
 import { IECStandardCard } from "./IECStandardCard"
+import { ExportDropdown } from "./ExportDropdown"
 
 // ─── Spectral Data per IEC 60904-7 ─────────────────────────────────────────
 
@@ -202,6 +203,27 @@ export function SpectralMismatchTab() {
           "M depends on both light source and device technology — different for each combination",
         ]}
       />
+
+      {/* Export */}
+      <div className="flex justify-end">
+        <ExportDropdown
+          config={{
+            data: spectraChartData.map((d) => ({
+              "Wavelength (nm)": d.wl,
+              "AM1.5G Reference": d.am15g,
+              [`Measured (${specProfile.name.split("(")[0].trim()})`]: d.measured,
+              [`SR: ${cellTech.name}`]: d.sr_test,
+              "SR: Ref Cell": d.sr_ref,
+            })),
+            filename: `Spectral_Mismatch_${spectrumId}_${cellTechId}`,
+            title: "Spectral Mismatch Correction Report",
+            standard: "IEC 60904-7:2019",
+            description: `M = ${mFormatted} (${mDeviation > 0 ? "+" : ""}${mDeviation}%) | ${specProfile.name} | ${cellTech.name}`,
+            sheetName: "Spectral Data",
+            orientation: "landscape",
+          }}
+        />
+      </div>
 
       {/* Controls */}
       <Card>
