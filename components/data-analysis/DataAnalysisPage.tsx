@@ -77,6 +77,11 @@ import { BifacialityAnalysis } from "./BifacialityAnalysis"
 import { IECStandardCard } from "./IECStandardCard"
 import TestProtocolsManager from "@/components/lims/TestProtocolsManager"
 import { ExportToProtocol } from "./ExportToProtocol"
+import { EnergyRatingTab } from "./EnergyRatingTab"
+import { IAMTab } from "./IAMTab"
+import { EnergyYieldTab } from "./EnergyYieldTab"
+import { IEC60891Tab } from "./IEC60891Tab"
+import { SpectralMismatchTab } from "./SpectralMismatchTab"
 import {
   generateMockData,
   calculateStatistics,
@@ -527,6 +532,26 @@ export default function DataAnalysisPage() {
           <TabsTrigger value="export-protocol" className="text-xs">
             <Download className="mr-1 h-3 w-3" />
             Export to Protocol
+          </TabsTrigger>
+          <TabsTrigger value="energy-rating" className="text-xs">
+            <Sun className="mr-1 h-3 w-3" />
+            Energy Rating
+          </TabsTrigger>
+          <TabsTrigger value="iam" className="text-xs">
+            <Target className="mr-1 h-3 w-3" />
+            IAM
+          </TabsTrigger>
+          <TabsTrigger value="energy-yield" className="text-xs">
+            <Zap className="mr-1 h-3 w-3" />
+            Energy Yield
+          </TabsTrigger>
+          <TabsTrigger value="iec60891" className="text-xs">
+            <Activity className="mr-1 h-3 w-3" />
+            IEC 60891
+          </TabsTrigger>
+          <TabsTrigger value="spectral-mismatch" className="text-xs">
+            <Layers className="mr-1 h-3 w-3" />
+            Spectral Mismatch
           </TabsTrigger>
         </TabsList>
 
@@ -2068,6 +2093,61 @@ export default function DataAnalysisPage() {
             </p>
           </div>
           <ExportToProtocol />
+        </TabsContent>
+
+        {/* ===================== TAB: ENERGY RATING ===================== */}
+        <TabsContent value="energy-rating" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Energy Rating (IEC 61853)</h2>
+            <p className="text-sm text-muted-foreground">
+              Power matrix at multiple irradiance &amp; temperature conditions, NMOT, climate-specific energy rating
+            </p>
+          </div>
+          <EnergyRatingTab />
+        </TabsContent>
+
+        {/* ===================== TAB: IAM ===================== */}
+        <TabsContent value="iam" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Incidence Angle Modifier (IAM)</h2>
+            <p className="text-sm text-muted-foreground">
+              IEC 61853-2 — Angular response curve, ASHRAE model fitting, IAM loss calculation
+            </p>
+          </div>
+          <IAMTab />
+        </TabsContent>
+
+        {/* ===================== TAB: ENERGY YIELD ===================== */}
+        <TabsContent value="energy-yield" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Energy Yield Simulation</h2>
+            <p className="text-sm text-muted-foreground">
+              Annual energy yield estimation using IEC 61853 data, climate profiles, and loss modeling
+            </p>
+          </div>
+          <EnergyYieldTab />
+        </TabsContent>
+
+        {/* ===================== TAB: IEC 60891 ===================== */}
+        <TabsContent value="iec60891" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">IEC 60891 — I-V Curve Corrections</h2>
+            <p className="text-sm text-muted-foreground">
+              Temperature and irradiance correction procedures for translating measured I-V curves to STC
+            </p>
+          </div>
+          <IEC60891Tab />
+        </TabsContent>
+
+        {/* ===================== TAB: SPECTRAL MISMATCH ===================== */}
+        <TabsContent value="spectral-mismatch" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Spectral Mismatch Corrections</h2>
+            <p className="text-sm text-muted-foreground">
+              IEC 60904-7 — Spectral mismatch factor (M), spectral responsivity analysis, corrected Isc
+            </p>
+          </div>
+          <SpectralMismatchTab />
         </TabsContent>
       </Tabs>
     </div>
