@@ -16,6 +16,7 @@ import {
 } from "recharts"
 import { Globe, Sun, Thermometer, Zap, TrendingUp } from "lucide-react"
 import { IECStandardCard } from "./IECStandardCard"
+import { ExportDropdown } from "./ExportDropdown"
 
 // ─── Location Presets ───────────────────────────────────────────────────────
 
@@ -175,6 +176,32 @@ export function EnergyYieldTab() {
           "IEC 61724-1 defines performance ratio (PR) as a key system metric",
         ]}
       />
+
+      {/* Export */}
+      <div className="flex justify-end">
+        <ExportDropdown
+          config={{
+            data: monthlyData.map((m) => ({
+              Month: m.month,
+              "GHI (kWh/m²)": m.ghi,
+              "Ambient Temp (°C)": m.ambientTemp,
+              "Cell Temp (°C)": m.cellTemp,
+              "Temp Loss (%)": m.tempLoss,
+              "IAM Loss (%)": m.iamLoss,
+              "Spectral Loss (%)": m.spectralLoss,
+              "Energy (kWh)": m.energyKwh,
+              "Specific Yield (kWh/kWp)": m.specificYield,
+              "PR (%)": m.pr,
+            })),
+            filename: `Energy_Yield_${location.name.split(",")[0]}_Tilt${tilt}`,
+            title: "Energy Yield Simulation Report",
+            standard: "IEC 61853 + IEC 61724-1",
+            description: `Location: ${location.name} | Tilt: ${tilt}° | Azimuth: ${azimuth}° | Annual yield: ${annualYield.toFixed(0)} kWh`,
+            sheetName: "Monthly Yield",
+            orientation: "landscape",
+          }}
+        />
+      </div>
 
       {/* Input Parameters */}
       <Card>

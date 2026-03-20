@@ -16,6 +16,7 @@ import {
 } from "recharts"
 import { Aperture, Calculator, BarChart3 } from "lucide-react"
 import { IECStandardCard } from "./IECStandardCard"
+import { ExportDropdown } from "./ExportDropdown"
 
 // ─── IAM Data & Models per IEC 61853-2 ─────────────────────────────────────
 
@@ -170,6 +171,26 @@ export function IAMTab() {
           "IAM is critical for energy yield prediction — accounts for 2–5% annual loss",
         ]}
       />
+
+      {/* Export */}
+      <div className="flex justify-end">
+        <ExportDropdown
+          config={{
+            data: combinedData.map((d) => ({
+              "Angle (°)": d.angle,
+              "Measured IAM": d.measured,
+              "ASHRAE Model": d.ashrae,
+              "Cosine (ideal)": d.cosine,
+              "Residual (%)": residualData.find((r) => r.angle === d.angle)?.residual ?? "",
+            })),
+            filename: `IAM_b0_${b0}`,
+            title: "Incidence Angle Modifier (IAM) Analysis",
+            standard: "IEC 61853-2 Clause 7",
+            description: `ASHRAE b₀ = ${b0} | R² = ${r2}`,
+            sheetName: "IAM Data",
+          }}
+        />
+      </div>
 
       {/* KPI Cards */}
       <div className="grid gap-3 md:grid-cols-4">

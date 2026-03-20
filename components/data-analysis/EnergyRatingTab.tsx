@@ -14,6 +14,7 @@ import {
 } from "recharts"
 import { Sun, Thermometer, Globe, Zap } from "lucide-react"
 import { IECStandardCard } from "./IECStandardCard"
+import { ExportDropdown } from "./ExportDropdown"
 
 // ─── IEC 61853 Power Matrix Data ────────────────────────────────────────────
 
@@ -120,6 +121,26 @@ export function EnergyRatingTab() {
           "NMOT (Nominal Module Operating Temperature) replaces the older NOCT concept",
         ]}
       />
+
+      {/* Export */}
+      <div className="flex justify-end">
+        <ExportDropdown
+          config={{
+            data: matrix.map((r) => ({
+              "Irradiance (W/m²)": r.irradiance,
+              "Temperature (°C)": r.temperature,
+              "Pmax (W)": r.pmax,
+              "Efficiency (%)": r.efficiency,
+            })),
+            filename: "IEC61853_Power_Matrix",
+            title: "IEC 61853 Power Matrix & Energy Rating",
+            standard: "IEC 61853-1/2/3/4",
+            description: "42-point power matrix and climate-specific energy rating data",
+            sheetName: "Power Matrix",
+            orientation: "landscape",
+          }}
+        />
+      </div>
 
       {/* KPI Cards */}
       <div className="grid gap-3 md:grid-cols-4">

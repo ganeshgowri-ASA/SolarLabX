@@ -14,8 +14,8 @@ import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend,
 } from "recharts"
-import { Zap, Calculator, Download, FileSpreadsheet, FileText, ChevronDown, ChevronRight } from "lucide-react"
-import { exportToExcel, exportToCSV } from "@/lib/export-utils"
+import { Zap, Calculator, ChevronDown, ChevronRight } from "lucide-react"
+import { ExportDropdown } from "./ExportDropdown"
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 type ProcedureId = "1" | "2" | "3" | "4"
@@ -169,27 +169,15 @@ export function IEC60891Tab() {
     return { idx, v1: pt.v, i1: pt.i, dI, dV, v2: cpt.v, i2: cpt.i }
   }).filter(Boolean)
 
-  // Export helpers
-  const handleExportExcel = () => {
-    const data = measuredIV.map((m, i) => ({
-      Point: i + 1,
-      "V_meas (V)": m.v, "I_meas (A)": m.i,
-      "V_ref (V)": referenceIV[i]?.v, "I_ref (A)": referenceIV[i]?.i,
-      "V_corr (V)": correctedIV[i]?.v, "I_corr (A)": correctedIV[i]?.i,
-      "P_meas (W)": +(m.v * m.i).toFixed(2),
-      "P_corr (W)": +((correctedIV[i]?.v ?? 0) * (correctedIV[i]?.i ?? 0)).toFixed(2),
-    }))
-    exportToExcel(data, `IEC60891_P${procedure}_G${measG}_T${measT}`, "IV Curves")
-  }
-
-  const handleExportCSV = () => {
-    const data = measuredIV.map((m, i) => ({
-      Point: i + 1,
-      "V_meas (V)": m.v, "I_meas (A)": m.i,
-      "V_corr (V)": correctedIV[i]?.v, "I_corr (A)": correctedIV[i]?.i,
-    }))
-    exportToCSV(data, `IEC60891_P${procedure}_G${measG}_T${measT}`)
-  }
+  // Export data
+  const exportData = measuredIV.map((m, i) => ({
+    Point: i + 1,
+    "V_meas (V)": m.v, "I_meas (A)": m.i,
+    "V_ref (V)": referenceIV[i]?.v, "I_ref (A)": referenceIV[i]?.i,
+    "V_corr (V)": correctedIV[i]?.v, "I_corr (A)": correctedIV[i]?.i,
+    "P_meas (W)": +(m.v * m.i).toFixed(2),
+    "P_corr (W)": +((correctedIV[i]?.v ?? 0) * (correctedIV[i]?.i ?? 0)).toFixed(2),
+  }))
 
   const info = PROC_INFO[procedure]
 
@@ -429,20 +417,19 @@ export function IEC60891Tab() {
         )}
       </Card>
 
-      {/* ── Export buttons ─────────────────────────────────────────────── */}
-      <Card>
-        <CardContent className="pt-4 pb-4 flex flex-wrap gap-3">
-          <Button variant="outline" size="sm" className="text-xs gap-2" onClick={handleExportExcel}>
-            <FileSpreadsheet className="h-3.5 w-3.5" /> Export to Excel
-          </Button>
-          <Button variant="outline" size="sm" className="text-xs gap-2" onClick={handleExportCSV}>
-            <FileText className="h-3.5 w-3.5" /> Export to CSV
-          </Button>
-          <div className="ml-auto text-xs text-muted-foreground flex items-center gap-1">
-            <Download className="h-3 w-3" /> Includes measured, reference & corrected I-V data
-          </div>
-        </CardContent>
-      </Card>
+      {/* Export */}
+      <div className="flex justify-end">
+        <ExportDropdown
+          config={{
+            data: exportData,
+            filename: `IEC60891_P${procedure}_G${measG}_T${measT}`,
+            title: "IEC 60891 I-V Curve Translation",
+            standard: "IEC 60891:2021",
+            description: `Procedure ${procedure} | Measured: ${measG} W/m², ${measT}°C → STC (1000 W/m², 25°C)`,
+            sheetName: "IV Curves",
+          }}
+        />
+      </div>
     </div>
   )
 }
