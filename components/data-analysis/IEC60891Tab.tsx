@@ -12,415 +12,434 @@ import {
 } from "@/components/ui/select"
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ReferenceLine, ScatterChart, Scatter,
+  Tooltip, Legend,
 } from "recharts"
-import { Zap, Calculator, GitCompare, ArrowRight } from "lucide-react"
-import { IECStandardCard } from "./IECStandardCard"
+import { Zap, Calculator, Download, FileSpreadsheet, FileText, ChevronDown, ChevronRight } from "lucide-react"
+import { exportToExcel, exportToCSV } from "@/lib/export-utils"
 
-// ─── IEC 60891 I-V Curve Translation ────────────────────────────────────────
+// ─── Types ──────────────────────────────────────────────────────────────────
+type ProcedureId = "1" | "2" | "3" | "4"
 
-// Module parameters (for a typical 400W module)
-const MODULE = {
-  isc_stc: 10.50,   // A
-  voc_stc: 48.50,   // V
-  impp_stc: 9.90,   // A
-  vmpp_stc: 40.40,  // V
-  pmax_stc: 400,    // W
-  nCells: 72,
-  alpha: 0.048,     // %/°C for Isc
-  beta: -0.29,      // %/°C for Voc
+interface CorrectionParams {
+  Rs: number
+  kappa: number
+  alpha: number
+  beta: number
+  a1: number
+  a2: number
+  b1: number
+  b2: number
 }
 
-// Correction parameters
-const CORRECTION_PARAMS = {
-  Rs: 0.35,       // Ω — Series resistance
-  kappa: 0.0008,  // Ω/°C — Temperature coefficient of Rs
-  alpha_abs: MODULE.isc_stc * MODULE.alpha / 100, // A/°C (absolute)
-  beta_abs: MODULE.voc_stc * MODULE.beta / 100,    // V/°C (absolute)
-  a: 0.0005,      // Polynomial coeff for Procedure 3
-  b: -0.00002,    // Polynomial coeff for Procedure 3
-}
+interface IVPoint { v: number; i: number }
 
-// Generate a measured I-V curve at given G and T
-function generateIVCurve(G: number, T: number, points: number = 50): { v: number; i: number }[] {
-  const gRatio = G / 1000
+// ─── I-V Curve Generation (single-diode model, 20 points) ───────────────────
+function generateIVCurve(G: number, T: number, nPts = 20): IVPoint[] {
+  const gRatio = Math.max(G / 1000, 0.01)
   const dT = T - 25
-
-  // Adjust parameters for conditions
-  const Isc = MODULE.isc_stc * gRatio * (1 + MODULE.alpha / 100 * dT)
-  const Voc = MODULE.voc_stc * (1 + MODULE.beta / 100 * dT) + MODULE.nCells * 0.0259 * (T + 273.15) / 298.15 * Math.log(gRatio > 0 ? gRatio : 0.01)
-  const n = 1.2 // diode ideality factor
-  const Vt = n * 0.0259 * (T + 273.15) / 298.15 * MODULE.nCells
-
-  const curve: { v: number; i: number }[] = []
-  for (let j = 0; j <= points; j++) {
-    const v = (Voc * j) / points
-    // Simplified single-diode model
-    const I = Isc - Isc * (Math.exp((v - (Isc - Isc * j / points) * CORRECTION_PARAMS.Rs) / Vt) - 1) / (Math.exp(Voc / Vt) - 1)
-    const current = Math.max(0, Isc * (1 - (Math.exp((v) / Vt) - 1) / (Math.exp(Voc / Vt) - 1)))
-    curve.push({
-      v: parseFloat(v.toFixed(3)),
-      i: parseFloat(current.toFixed(4)),
-    })
+  const Isc = 10.5 * gRatio * (1 + 0.00048 * dT)
+  const Voc = 48.5 * (1 + -0.0029 * dT) + 72 * 0.0259 * ((T + 273.15) / 298.15) * Math.log(gRatio)
+  const Vt = 1.2 * 0.0259 * ((T + 273.15) / 298.15) * 72
+  const curve: IVPoint[] = []
+  for (let j = 0; j <= nPts; j++) {
+    const v = (Voc * j) / nPts
+    const i = Math.max(0, Isc * (1 - (Math.exp(v / Vt) - 1) / (Math.exp(Voc / Vt) - 1)))
+    curve.push({ v: +v.toFixed(3), i: +i.toFixed(4) })
   }
   return curve
 }
 
-// IEC 60891 Procedure 1: Linear interpolation
-function procedure1(
-  measuredIV: { v: number; i: number }[],
-  G_meas: number, T_meas: number,
-  G_stc: number, T_stc: number
-): { v: number; i: number }[] {
-  const dG = G_stc - G_meas
-  const dT = T_stc - T_meas
-  const Isc_meas = measuredIV[0]?.i || MODULE.isc_stc
-
-  return measuredIV.map((pt) => {
-    const dI = Isc_meas * (dG / G_meas) + CORRECTION_PARAMS.alpha_abs * dT
-    const dV = -CORRECTION_PARAMS.beta_abs * dT - CORRECTION_PARAMS.Rs * dI - CORRECTION_PARAMS.kappa * pt.i * dT
-    return {
-      v: parseFloat((pt.v + dV).toFixed(3)),
-      i: parseFloat((pt.i + dI).toFixed(4)),
-    }
+// ─── IEC 60891 Correction Procedures ────────────────────────────────────────
+function applyProcedure1(iv: IVPoint[], Gm: number, Tm: number, Gt: number, Tt: number, p: CorrectionParams): IVPoint[] {
+  const dT = Tt - Tm
+  const Isc1 = iv[0]?.i || 10.5
+  return iv.map((pt) => {
+    const dI = Isc1 * ((Gt - Gm) / Gm) + p.alpha * dT
+    const dV = -p.beta * dT - p.Rs * dI - p.kappa * pt.i * dT
+    return { v: +(pt.v + dV).toFixed(3), i: +(pt.i + dI).toFixed(4) }
   })
 }
 
-// IEC 60891 Procedure 2: Bilinear interpolation (simplified — correct G first, then T)
-function procedure2(
-  measuredIV: { v: number; i: number }[],
-  G_meas: number, T_meas: number,
-  G_stc: number, T_stc: number
-): { v: number; i: number }[] {
-  // Step 1: Correct for irradiance
-  const gRatio = G_stc / G_meas
-  const gCorrected = measuredIV.map((pt) => ({
-    v: parseFloat((pt.v + CORRECTION_PARAMS.Rs * pt.i * (1 - gRatio)).toFixed(3)),
-    i: parseFloat((pt.i * gRatio).toFixed(4)),
+function applyProcedure2(iv: IVPoint[], Gm: number, Tm: number, Gt: number, Tt: number, p: CorrectionParams): IVPoint[] {
+  const gRatio = Gt / Gm
+  const dT = Tt - Tm
+  const gCorr = iv.map((pt) => ({
+    v: +(pt.v + p.Rs * pt.i * (1 - gRatio) + p.a1 * (Gt - Gm) + p.a2 * (Gt - Gm) ** 2).toFixed(3),
+    i: +(pt.i * gRatio).toFixed(4),
   }))
-
-  // Step 2: Correct for temperature
-  const dT = T_stc - T_meas
-  return gCorrected.map((pt) => ({
-    v: parseFloat((pt.v - CORRECTION_PARAMS.beta_abs * dT - CORRECTION_PARAMS.kappa * pt.i * dT).toFixed(3)),
-    i: parseFloat((pt.i + CORRECTION_PARAMS.alpha_abs * dT).toFixed(4)),
+  return gCorr.map((pt) => ({
+    v: +(pt.v - p.beta * dT - p.kappa * pt.i * dT + p.b1 * dT + p.b2 * dT ** 2).toFixed(3),
+    i: +(pt.i + p.alpha * dT).toFixed(4),
   }))
 }
 
-// IEC 60891 Procedure 3: Polynomial (simplified)
-function procedure3(
-  measuredIV: { v: number; i: number }[],
-  G_meas: number, T_meas: number,
-  G_stc: number, T_stc: number
-): { v: number; i: number }[] {
-  const dT = T_stc - T_meas
-  const gRatio = G_stc / G_meas
-  const Isc_meas = measuredIV[0]?.i || MODULE.isc_stc
-
-  return measuredIV.map((pt) => {
-    const dI = Isc_meas * (gRatio - 1) + CORRECTION_PARAMS.alpha_abs * dT
-    const dV = -CORRECTION_PARAMS.beta_abs * dT
-      - (CORRECTION_PARAMS.Rs + CORRECTION_PARAMS.a * dT) * dI
-      + CORRECTION_PARAMS.b * dT * pt.v
-    return {
-      v: parseFloat((pt.v + dV).toFixed(3)),
-      i: parseFloat((pt.i + dI).toFixed(4)),
-    }
+function applyProcedure3(iv: IVPoint[], Gm: number, Tm: number, Gt: number, Tt: number, p: CorrectionParams): IVPoint[] {
+  const dT = Tt - Tm
+  const gRatio = Gt / Gm
+  const Isc1 = iv[0]?.i || 10.5
+  return iv.map((pt) => {
+    const dI = Isc1 * (gRatio - 1) + p.alpha * dT
+    const dV = -p.beta * dT - (p.Rs + p.a1 * dT) * dI + p.b1 * dT * pt.v
+      + p.a2 * (Gt - Gm) + p.b2 * dT ** 2
+    return { v: +(pt.v + dV).toFixed(3), i: +(pt.i + dI).toFixed(4) }
   })
 }
 
-// Extract Pmax from I-V curve
-function extractPmax(curve: { v: number; i: number }[]): { pmax: number; vmpp: number; impp: number } {
+function applyProcedure4(iv: IVPoint[], Gm: number, Tm: number, Gt: number, Tt: number, p: CorrectionParams): IVPoint[] {
+  // Procedure 4: Extended polynomial with full a1/a2/b1/b2 coupling
+  const dT = Tt - Tm
+  const dG = Gt - Gm
+  const gRatio = Gt / Gm
+  const Isc1 = iv[0]?.i || 10.5
+  return iv.map((pt) => {
+    const dI = Isc1 * (gRatio - 1) + p.alpha * dT + p.a1 * dG * dT
+    const dV = -p.beta * dT - p.Rs * dI - p.kappa * pt.i * dT
+      + p.b1 * dT * pt.v + p.a2 * dG ** 2 / Gm + p.b2 * dT ** 2
+    return { v: +(pt.v + dV).toFixed(3), i: +(pt.i + dI).toFixed(4) }
+  })
+}
+
+function correct(iv: IVPoint[], proc: ProcedureId, Gm: number, Tm: number, Gt: number, Tt: number, p: CorrectionParams): IVPoint[] {
+  const fn = { "1": applyProcedure1, "2": applyProcedure2, "3": applyProcedure3, "4": applyProcedure4 }
+  return fn[proc](iv, Gm, Tm, Gt, Tt, p)
+}
+
+function extractPmax(curve: IVPoint[]) {
   let pmax = 0, vmpp = 0, impp = 0
-  curve.forEach((pt) => {
-    const p = pt.v * pt.i
-    if (p > pmax) { pmax = p; vmpp = pt.v; impp = pt.i }
-  })
-  return { pmax: parseFloat(pmax.toFixed(2)), vmpp: parseFloat(vmpp.toFixed(2)), impp: parseFloat(impp.toFixed(3)) }
+  curve.forEach((pt) => { const pw = pt.v * pt.i; if (pw > pmax) { pmax = pw; vmpp = pt.v; impp = pt.i } })
+  return { pmax: +pmax.toFixed(2), vmpp: +vmpp.toFixed(2), impp: +impp.toFixed(3) }
 }
 
+// ─── Procedure metadata ─────────────────────────────────────────────────────
+const PROC_INFO: Record<ProcedureId, { label: string; formula: string; extras: boolean }> = {
+  "1": { label: "Procedure 1 — Linear interpolation", formula: "I₂ = I₁ + Isc₁·(G₂/G₁ − 1) + α·ΔT\nV₂ = V₁ − β·ΔT − Rs·ΔI − κ·I₁·ΔT", extras: false },
+  "2": { label: "Procedure 2 — Bilinear (G then T)", formula: "Step 1 (G): I' = I₁·(G₂/G₁), V' = V₁ + Rs·I₁·(1−G₂/G₁) + a₁·ΔG + a₂·ΔG²\nStep 2 (T): I₂ = I' + α·ΔT, V₂ = V' − β·ΔT − κ·I'·ΔT + b₁·ΔT + b₂·ΔT²", extras: true },
+  "3": { label: "Procedure 3 — Polynomial", formula: "I₂ = I₁ + Isc₁·(G₂/G₁ − 1) + α·ΔT\nV₂ = V₁ − β·ΔT − (Rs + a₁·ΔT)·ΔI + b₁·ΔT·V₁ + a₂·ΔG + b₂·ΔT²", extras: true },
+  "4": { label: "Procedure 4 — Extended polynomial", formula: "I₂ = I₁ + Isc₁·(G₂/G₁ − 1) + α·ΔT + a₁·ΔG·ΔT\nV₂ = V₁ − β·ΔT − Rs·ΔI − κ·I₁·ΔT + b₁·ΔT·V₁ + a₂·ΔG²/G₁ + b₂·ΔT²", extras: true },
+}
+
+// ─── Component ──────────────────────────────────────────────────────────────
 export function IEC60891Tab() {
-  const [procedure, setProcedure] = useState<"1" | "2" | "3">("1")
+  const [procedure, setProcedure] = useState<ProcedureId>("1")
   const [measG, setMeasG] = useState(800)
   const [measT, setMeasT] = useState(45)
+  const [targG, setTargG] = useState(1000)
+  const [targT, setTargT] = useState(25)
+  const [params, setParams] = useState<CorrectionParams>({
+    Rs: 0.35, kappa: 0.0008, alpha: 0.00504, beta: -0.14065,
+    a1: 0.0005, a2: -0.00002, b1: -0.003, b2: 0.00001,
+  })
+  const [showSteps, setShowSteps] = useState(false)
 
-  // Measured I-V curve at non-STC conditions
+  const setP = (key: keyof CorrectionParams, val: string) =>
+    setParams((prev) => ({ ...prev, [key]: parseFloat(val) || 0 }))
+
+  // Curves
   const measuredIV = useMemo(() => generateIVCurve(measG, measT), [measG, measT])
+  const referenceIV = useMemo(() => generateIVCurve(targG, targT), [targG, targT])
+  const correctedIV = useMemo(
+    () => correct(measuredIV, procedure, measG, measT, targG, targT, params),
+    [measuredIV, procedure, measG, measT, targG, targT, params]
+  )
 
-  // Reference STC I-V curve
-  const stcIV = useMemo(() => generateIVCurve(1000, 25), [])
+  const measP = extractPmax(measuredIV)
+  const refP = extractPmax(referenceIV)
+  const corrP = extractPmax(correctedIV)
+  const deviation = +((corrP.pmax - refP.pmax) / refP.pmax * 100).toFixed(2)
 
-  // Corrected I-V curves
-  const corrected1 = useMemo(() => procedure1(measuredIV, measG, measT, 1000, 25), [measuredIV, measG, measT])
-  const corrected2 = useMemo(() => procedure2(measuredIV, measG, measT, 1000, 25), [measuredIV, measG, measT])
-  const corrected3 = useMemo(() => procedure3(measuredIV, measG, measT, 1000, 25), [measuredIV, measG, measT])
+  // Chart data — merge all 3 curves by index
+  const chartData = useMemo(() =>
+    Array.from({ length: 21 }, (_, i) => ({
+      v_meas: measuredIV[i]?.v ?? 0,
+      i_meas: measuredIV[i]?.i ?? 0,
+      v_ref: referenceIV[i]?.v ?? 0,
+      i_ref: referenceIV[i]?.i ?? 0,
+      v_corr: correctedIV[i]?.v ?? 0,
+      i_corr: correctedIV[i]?.i ?? 0,
+    })), [measuredIV, referenceIV, correctedIV])
 
-  const activeCorrected = procedure === "1" ? corrected1 : procedure === "2" ? corrected2 : corrected3
+  // Step-by-step for first/mid/last point
+  const sampleIndices = [0, 10, 20]
+  const steps = sampleIndices.map((idx) => {
+    const pt = measuredIV[idx]
+    const cpt = correctedIV[idx]
+    if (!pt || !cpt) return null
+    const dI = +(cpt.i - pt.i).toFixed(4)
+    const dV = +(cpt.v - pt.v).toFixed(3)
+    return { idx, v1: pt.v, i1: pt.i, dI, dV, v2: cpt.v, i2: cpt.i }
+  }).filter(Boolean)
 
-  // Extract key parameters
-  const measParams = extractPmax(measuredIV)
-  const stcParams = extractPmax(stcIV)
-  const corrParams = extractPmax(activeCorrected)
-  const corr1Params = extractPmax(corrected1)
-  const corr2Params = extractPmax(corrected2)
-  const corr3Params = extractPmax(corrected3)
-
-  // Deviation of corrected from STC reference
-  const deviation = parseFloat(((corrParams.pmax - stcParams.pmax) / stcParams.pmax * 100).toFixed(2))
-
-  // Chart data: combine all curves
-  const chartData = useMemo(() => {
-    const maxLen = Math.max(measuredIV.length, stcIV.length, activeCorrected.length)
-    return Array.from({ length: maxLen }, (_, i) => ({
-      idx: i,
-      v_meas: measuredIV[i]?.v,
-      i_meas: measuredIV[i]?.i,
-      v_stc: stcIV[i]?.v,
-      i_stc: stcIV[i]?.i,
-      v_corr: activeCorrected[i]?.v,
-      i_corr: activeCorrected[i]?.i,
+  // Export helpers
+  const handleExportExcel = () => {
+    const data = measuredIV.map((m, i) => ({
+      Point: i + 1,
+      "V_meas (V)": m.v, "I_meas (A)": m.i,
+      "V_ref (V)": referenceIV[i]?.v, "I_ref (A)": referenceIV[i]?.i,
+      "V_corr (V)": correctedIV[i]?.v, "I_corr (A)": correctedIV[i]?.i,
+      "P_meas (W)": +(m.v * m.i).toFixed(2),
+      "P_corr (W)": +((correctedIV[i]?.v ?? 0) * (correctedIV[i]?.i ?? 0)).toFixed(2),
     }))
-  }, [measuredIV, stcIV, activeCorrected])
+    exportToExcel(data, `IEC60891_P${procedure}_G${measG}_T${measT}`, "IV Curves")
+  }
 
-  // Power curves
-  const powerData = useMemo(() => {
-    return Array.from({ length: measuredIV.length }, (_, i) => ({
-      v: measuredIV[i]?.v || 0,
-      p_meas: parseFloat(((measuredIV[i]?.v || 0) * (measuredIV[i]?.i || 0)).toFixed(2)),
-      p_stc: parseFloat(((stcIV[i]?.v || 0) * (stcIV[i]?.i || 0)).toFixed(2)),
-      p_corr: parseFloat(((activeCorrected[i]?.v || 0) * (activeCorrected[i]?.i || 0)).toFixed(2)),
+  const handleExportCSV = () => {
+    const data = measuredIV.map((m, i) => ({
+      Point: i + 1,
+      "V_meas (V)": m.v, "I_meas (A)": m.i,
+      "V_corr (V)": correctedIV[i]?.v, "I_corr (A)": correctedIV[i]?.i,
     }))
-  }, [measuredIV, stcIV, activeCorrected])
+    exportToCSV(data, `IEC60891_P${procedure}_G${measG}_T${measT}`)
+  }
+
+  const info = PROC_INFO[procedure]
 
   return (
     <div className="space-y-4">
-      <IECStandardCard
-        standard="IEC 60891:2021"
-        title="Photovoltaic devices — Procedures for temperature and irradiance corrections to measured I-V characteristics"
-        testConditions={[
-          "Input: I-V curve measured at non-STC conditions (G ≠ 1000 W/m², T ≠ 25°C)",
-          "Required parameters: Rs, κ (kappa), α, β from characterization tests",
-          "Output: Translated I-V curve at Standard Test Conditions (STC)",
-          "Three procedures with increasing accuracy and complexity",
-        ]}
-        dosageLevels={[
-          "Procedure 1: Linear interpolation — simplest, single-step correction",
-          "Procedure 2: Bilinear — two-step (G correction then T correction)",
-          "Procedure 3: Polynomial — highest accuracy, uses additional coefficients a, b",
-        ]}
-        passCriteria={[
-          { parameter: "Pmax deviation", requirement: "Corrected Pmax within ±0.5% of reference STC", note: "Validation" },
-          { parameter: "Rs determination", requirement: "Per IEC 60891 Annex A", note: "Ω" },
-          { parameter: "κ (kappa)", requirement: "Temperature coefficient of Rs", note: "Ω/°C" },
-        ]}
-        failCriteria={[
-          { parameter: "Deviation > 1%", requirement: "Re-evaluate correction parameters" },
-          { parameter: "Negative current", requirement: "Non-physical result — check measurement or parameters" },
-        ]}
-        notes={[
-          "Procedure 1 is most widely used; Procedure 3 is most accurate for large G/T deviations",
-          "Rs and κ must be determined experimentally for the specific module type",
-        ]}
-      />
-
-      {/* Input Parameters */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Calculator className="h-4 w-4 text-blue-500" />
-            Measurement & Correction Parameters
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap items-end gap-4">
-            <div className="space-y-1">
-              <Label className="text-xs">Measured G (W/m²)</Label>
-              <Input type="number" min={100} max={1200} step={50} value={measG} onChange={(e) => setMeasG(+e.target.value)} className="w-24 h-8 text-xs" />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Measured T (°C)</Label>
-              <Input type="number" min={10} max={80} step={5} value={measT} onChange={(e) => setMeasT(+e.target.value)} className="w-20 h-8 text-xs" />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Procedure</Label>
-              <Select value={procedure} onValueChange={(v) => setProcedure(v as "1" | "2" | "3")}>
-                <SelectTrigger className="w-[200px] h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1" className="text-xs">Procedure 1 (Linear)</SelectItem>
-                  <SelectItem value="2" className="text-xs">Procedure 2 (Bilinear)</SelectItem>
-                  <SelectItem value="3" className="text-xs">Procedure 3 (Polynomial)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center gap-2 text-xs font-mono bg-muted px-3 py-1.5 rounded">
-              <span>Rs={CORRECTION_PARAMS.Rs}Ω</span>
-              <span>κ={CORRECTION_PARAMS.kappa}Ω/°C</span>
-              <span>α={CORRECTION_PARAMS.alpha_abs.toFixed(4)}A/°C</span>
-              <span>β={CORRECTION_PARAMS.beta_abs.toFixed(3)}V/°C</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* KPI Cards */}
-      <div className="grid gap-3 md:grid-cols-4">
-        <Card className="border-l-4 border-l-gray-400">
-          <CardContent className="pt-4 pb-3">
-            <CardDescription>Measured Pmax ({measG} W/m², {measT}°C)</CardDescription>
-            <div className="text-2xl font-bold font-mono text-gray-600">{measParams.pmax} W</div>
-            <p className="text-xs text-muted-foreground">Vmpp={measParams.vmpp}V Impp={measParams.impp}A</p>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-green-400">
-          <CardContent className="pt-4 pb-3">
-            <CardDescription>STC Reference</CardDescription>
-            <div className="text-2xl font-bold font-mono text-green-600">{stcParams.pmax} W</div>
-            <p className="text-xs text-muted-foreground">Vmpp={stcParams.vmpp}V Impp={stcParams.impp}A</p>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-blue-400">
-          <CardContent className="pt-4 pb-3">
-            <CardDescription>Corrected Pmax (Proc. {procedure})</CardDescription>
-            <div className="text-2xl font-bold font-mono text-blue-600">{corrParams.pmax} W</div>
-            <p className="text-xs text-muted-foreground">Vmpp={corrParams.vmpp}V Impp={corrParams.impp}A</p>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-amber-400">
-          <CardContent className="pt-4 pb-3">
-            <CardDescription>Deviation from STC</CardDescription>
-            <div className={`text-2xl font-bold font-mono ${Math.abs(deviation) <= 0.5 ? "text-green-600" : Math.abs(deviation) <= 1 ? "text-amber-600" : "text-red-600"}`}>
-              {deviation > 0 ? "+" : ""}{deviation}%
-            </div>
-            <p className="text-xs text-muted-foreground">
-              <Badge variant="outline" className="text-xs">
-                {Math.abs(deviation) <= 0.5 ? "Excellent" : Math.abs(deviation) <= 1 ? "Acceptable" : "Review"}
-              </Badge>
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* I-V Curve Comparison */}
+      {/* ── Procedure selector ─────────────────────────────────────────── */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
             <Zap className="h-4 w-4 text-amber-500" />
-            I-V Curve: Measured → Corrected to STC (Procedure {procedure})
+            IEC 60891 — I-V Curve Translation
           </CardTitle>
           <CardDescription className="text-xs">
-            Gray = Measured ({measG} W/m², {measT}°C) | Green = STC Reference | Blue = Corrected
+            Select a correction procedure and adjust parameters below
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={320}>
-            <LineChart>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-              <XAxis dataKey="v" type="number" domain={[0, 55]}
-                label={{ value: "Voltage (V)", position: "insideBottom", offset: -5, fontSize: 9 }} tick={{ fontSize: 10 }} />
-              <YAxis domain={[0, 12]}
-                label={{ value: "Current (A)", angle: -90, position: "insideLeft", fontSize: 9 }} tick={{ fontSize: 10 }} />
-              <Tooltip formatter={(v: number) => v.toFixed(4)} />
-              <Legend wrapperStyle={{ fontSize: 10 }} />
-              <Line data={measuredIV.map((p) => ({ v: p.v, value: p.i }))} dataKey="value" type="monotone" stroke="#9ca3af" strokeWidth={2} dot={false} name={`Measured (${measG}W/m², ${measT}°C)`} />
-              <Line data={stcIV.map((p) => ({ v: p.v, value: p.i }))} dataKey="value" type="monotone" stroke="#22c55e" strokeWidth={2} strokeDasharray="6 3" dot={false} name="STC Reference" />
-              <Line data={activeCorrected.map((p) => ({ v: p.v, value: p.i }))} dataKey="value" type="monotone" stroke="#3b82f6" strokeWidth={2} dot={false} name={`Corrected (Proc. ${procedure})`} />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+        <CardContent className="space-y-4">
+          {/* Procedure select */}
+          <div className="space-y-1">
+            <Label className="text-xs font-semibold">Correction Procedure</Label>
+            <Select value={procedure} onValueChange={(v) => setProcedure(v as ProcedureId)}>
+              <SelectTrigger className="w-full max-w-sm h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1" className="text-xs">Procedure 1 — Linear interpolation</SelectItem>
+                <SelectItem value="2" className="text-xs">Procedure 2 — Bilinear (G then T)</SelectItem>
+                <SelectItem value="3" className="text-xs">Procedure 3 — Polynomial</SelectItem>
+                <SelectItem value="4" className="text-xs">Procedure 4 — Extended polynomial</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-      {/* Power Curve Comparison */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm">P-V Curve Comparison</CardTitle>
-          <CardDescription className="text-xs">Power vs voltage — before and after correction</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={powerData}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-              <XAxis dataKey="v" label={{ value: "Voltage (V)", position: "insideBottom", offset: -5, fontSize: 9 }} tick={{ fontSize: 10 }} />
-              <YAxis label={{ value: "Power (W)", angle: -90, position: "insideLeft", fontSize: 9 }} tick={{ fontSize: 10 }} />
-              <Tooltip />
-              <Legend wrapperStyle={{ fontSize: 10 }} />
-              <Line type="monotone" dataKey="p_meas" stroke="#9ca3af" strokeWidth={2} dot={false} name="Measured" />
-              <Line type="monotone" dataKey="p_stc" stroke="#22c55e" strokeWidth={2} strokeDasharray="6 3" dot={false} name="STC Reference" />
-              <Line type="monotone" dataKey="p_corr" stroke="#3b82f6" strokeWidth={2} dot={false} name={`Corrected (Proc. ${procedure})`} />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+          {/* Measured & Target conditions */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label className="text-xs font-semibold mb-2 block">Measured Conditions</Label>
+              <div className="flex gap-3">
+                <div className="space-y-1">
+                  <Label className="text-[10px] text-muted-foreground">G (W/m²)</Label>
+                  <Input type="number" min={100} max={1300} step={50} value={measG}
+                    onChange={(e) => setMeasG(+e.target.value)} className="w-24 h-8 text-xs" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[10px] text-muted-foreground">T (°C)</Label>
+                  <Input type="number" min={-10} max={85} step={1} value={measT}
+                    onChange={(e) => setMeasT(+e.target.value)} className="w-20 h-8 text-xs" />
+                </div>
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs font-semibold mb-2 block">Target Conditions</Label>
+              <div className="flex gap-3">
+                <div className="space-y-1">
+                  <Label className="text-[10px] text-muted-foreground">G (W/m²)</Label>
+                  <Input type="number" min={100} max={1300} step={50} value={targG}
+                    onChange={(e) => setTargG(+e.target.value)} className="w-24 h-8 text-xs" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[10px] text-muted-foreground">T (°C)</Label>
+                  <Input type="number" min={-10} max={85} step={1} value={targT}
+                    onChange={(e) => setTargT(+e.target.value)} className="w-20 h-8 text-xs" />
+                </div>
+              </div>
+            </div>
+          </div>
 
-      {/* Procedure Comparison Table */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <GitCompare className="h-4 w-4 text-purple-500" />
-            Procedure Comparison — All Three Methods
-          </CardTitle>
-          <CardDescription className="text-xs">
-            Input: {measG} W/m², {measT}°C → Target: 1000 W/m², 25°C (STC)
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b">
-                  <th className="py-2 pr-3 text-left font-semibold">Parameter</th>
-                  <th className="py-2 px-2 text-right font-semibold">Measured</th>
-                  <th className="py-2 px-2 text-right font-semibold">Proc. 1 (Linear)</th>
-                  <th className="py-2 px-2 text-right font-semibold">Proc. 2 (Bilinear)</th>
-                  <th className="py-2 px-2 text-right font-semibold">Proc. 3 (Polynomial)</th>
-                  <th className="py-2 px-2 text-right font-semibold">STC Reference</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  { param: "Pmax (W)", meas: measParams.pmax, p1: corr1Params.pmax, p2: corr2Params.pmax, p3: corr3Params.pmax, stc: stcParams.pmax },
-                  { param: "Vmpp (V)", meas: measParams.vmpp, p1: corr1Params.vmpp, p2: corr2Params.vmpp, p3: corr3Params.vmpp, stc: stcParams.vmpp },
-                  { param: "Impp (A)", meas: measParams.impp, p1: corr1Params.impp, p2: corr2Params.impp, p3: corr3Params.impp, stc: stcParams.impp },
-                ].map((row) => (
-                  <tr key={row.param} className="border-b hover:bg-muted/50">
-                    <td className="py-1.5 pr-3 font-semibold">{row.param}</td>
-                    <td className="py-1.5 px-2 text-right font-mono text-gray-500">{row.meas}</td>
-                    <td className="py-1.5 px-2 text-right font-mono text-blue-600">{row.p1}</td>
-                    <td className="py-1.5 px-2 text-right font-mono text-purple-600">{row.p2}</td>
-                    <td className="py-1.5 px-2 text-right font-mono text-amber-600">{row.p3}</td>
-                    <td className="py-1.5 px-2 text-right font-mono font-bold text-green-700">{row.stc}</td>
-                  </tr>
+          {/* Correction parameters */}
+          <div>
+            <Label className="text-xs font-semibold mb-2 block">Correction Parameters</Label>
+            <div className="flex flex-wrap gap-3">
+              {([
+                { key: "Rs", label: "Rs (Ω)", step: 0.01 },
+                { key: "kappa", label: "κ (Ω/°C)", step: 0.0001 },
+                { key: "alpha", label: "α (A/°C)", step: 0.0001 },
+                { key: "beta", label: "β (V/°C)", step: 0.001 },
+              ] as const).map(({ key, label, step }) => (
+                <div key={key} className="space-y-1">
+                  <Label className="text-[10px] text-muted-foreground">{label}</Label>
+                  <Input type="number" step={step} value={params[key]}
+                    onChange={(e) => setP(key, e.target.value)} className="w-28 h-8 text-xs font-mono" />
+                </div>
+              ))}
+            </div>
+            {info.extras && (
+              <div className="flex flex-wrap gap-3 mt-3">
+                {([
+                  { key: "a1", label: "a₁", step: 0.0001 },
+                  { key: "a2", label: "a₂", step: 0.00001 },
+                  { key: "b1", label: "b₁", step: 0.001 },
+                  { key: "b2", label: "b₂", step: 0.00001 },
+                ] as const).map(({ key, label, step }) => (
+                  <div key={key} className="space-y-1">
+                    <Label className="text-[10px] text-muted-foreground">{label}</Label>
+                    <Input type="number" step={step} value={params[key]}
+                      onChange={(e) => setP(key, e.target.value)} className="w-28 h-8 text-xs font-mono" />
+                  </div>
                 ))}
-                <tr className="border-t-2">
-                  <td className="py-1.5 pr-3 font-semibold">ΔPmax vs STC</td>
-                  <td className="py-1.5 px-2 text-right font-mono text-gray-400">—</td>
-                  {[corr1Params, corr2Params, corr3Params].map((p, i) => {
-                    const dev = ((p.pmax - stcParams.pmax) / stcParams.pmax * 100)
-                    return (
-                      <td key={i} className={`py-1.5 px-2 text-right font-mono font-bold ${Math.abs(dev) <= 0.5 ? "text-green-600" : Math.abs(dev) <= 1 ? "text-amber-600" : "text-red-600"}`}>
-                        {dev > 0 ? "+" : ""}{dev.toFixed(2)}%
-                      </td>
-                    )
-                  })}
-                  <td className="py-1.5 px-2 text-right font-mono font-bold text-green-700">ref</td>
-                </tr>
-              </tbody>
-            </table>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* IEC Reference */}
-      <Card className="bg-amber-50 border-amber-200">
-        <CardContent className="pt-3 pb-3">
-          <div className="text-xs text-amber-800">
-            <span className="font-semibold">IEC 60891:2021:</span>{" "}
-            Defines three procedures for translating I-V curves measured at arbitrary conditions to STC (1000 W/m², 25°C, AM1.5G).
-            <strong> Procedure 1</strong> (linear): I₂ = I₁ + Isc₁(G₂/G₁ − 1) + α(T₂ − T₁); V₂ = V₁ − Rs(I₂ − I₁) − κI₁(T₂ − T₁) + β(T₂ − T₁).
-            <strong> Procedure 2</strong> (bilinear): Two-step — first correct G, then T.
-            <strong> Procedure 3</strong> (polynomial): Adds coefficients a, b for higher accuracy.
-            Rs and κ are determined per Annex A using two I-V curves at same T, different G.
+      {/* ── KPI cards ──────────────────────────────────────────────────── */}
+      <div className="grid gap-3 md:grid-cols-4">
+        <Card className="border-l-4 border-l-orange-400">
+          <CardContent className="pt-4 pb-3">
+            <CardDescription className="text-xs">Measured ({measG} W/m², {measT}°C)</CardDescription>
+            <div className="text-2xl font-bold font-mono text-orange-600">{measP.pmax} W</div>
+            <p className="text-xs text-muted-foreground">Vmpp={measP.vmpp}V Impp={measP.impp}A</p>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-blue-400">
+          <CardContent className="pt-4 pb-3">
+            <CardDescription className="text-xs">Reference ({targG} W/m², {targT}°C)</CardDescription>
+            <div className="text-2xl font-bold font-mono text-blue-600">{refP.pmax} W</div>
+            <p className="text-xs text-muted-foreground">Vmpp={refP.vmpp}V Impp={refP.impp}A</p>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-green-400">
+          <CardContent className="pt-4 pb-3">
+            <CardDescription className="text-xs">Corrected (Proc. {procedure})</CardDescription>
+            <div className="text-2xl font-bold font-mono text-green-600">{corrP.pmax} W</div>
+            <p className="text-xs text-muted-foreground">Vmpp={corrP.vmpp}V Impp={corrP.impp}A</p>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-amber-400">
+          <CardContent className="pt-4 pb-3">
+            <CardDescription className="text-xs">Deviation from Reference</CardDescription>
+            <div className={`text-2xl font-bold font-mono ${Math.abs(deviation) <= 0.5 ? "text-green-600" : Math.abs(deviation) <= 1 ? "text-amber-600" : "text-red-600"}`}>
+              {deviation > 0 ? "+" : ""}{deviation}%
+            </div>
+            <Badge variant="outline" className="text-xs mt-1">
+              {Math.abs(deviation) <= 0.5 ? "Excellent" : Math.abs(deviation) <= 1 ? "Acceptable" : "Review params"}
+            </Badge>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ── I-V Curve Chart ────────────────────────────────────────────── */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Zap className="h-4 w-4 text-amber-500" />
+            I-V Curve Overlay — {info.label}
+          </CardTitle>
+          <CardDescription className="text-xs">
+            Orange dashed = Measured | Blue = Reference | Green = Corrected
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={340}>
+            <LineChart>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+              <XAxis dataKey="v" type="number" domain={[0, "auto"]}
+                label={{ value: "Voltage (V)", position: "insideBottom", offset: -5, fontSize: 10 }} tick={{ fontSize: 10 }} />
+              <YAxis domain={[0, "auto"]}
+                label={{ value: "Current (A)", angle: -90, position: "insideLeft", fontSize: 10 }} tick={{ fontSize: 10 }} />
+              <Tooltip
+                formatter={(v: number, name: string) => [v.toFixed(4) + " A", name]}
+                labelFormatter={(v: number) => `V = ${v} V`}
+              />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Line data={measuredIV.map((p) => ({ v: p.v, value: p.i }))}
+                dataKey="value" type="monotone" stroke="#f97316" strokeWidth={2}
+                strokeDasharray="6 4" dot={{ r: 2, fill: "#f97316" }}
+                name={`Measured (${measG} W/m², ${measT}°C)`} />
+              <Line data={referenceIV.map((p) => ({ v: p.v, value: p.i }))}
+                dataKey="value" type="monotone" stroke="#3b82f6" strokeWidth={2}
+                dot={{ r: 2, fill: "#3b82f6" }}
+                name={`Reference (${targG} W/m², ${targT}°C)`} />
+              <Line data={correctedIV.map((p) => ({ v: p.v, value: p.i }))}
+                dataKey="value" type="monotone" stroke="#22c55e" strokeWidth={2.5}
+                dot={{ r: 2.5, fill: "#22c55e" }}
+                name={`Corrected (Proc. ${procedure})`} />
+            </LineChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* ── Step-by-step calculation ───────────────────────────────────── */}
+      <Card>
+        <CardHeader className="pb-2 cursor-pointer select-none" onClick={() => setShowSteps(!showSteps)}>
+          <CardTitle className="text-sm flex items-center gap-2">
+            {showSteps ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            <Calculator className="h-4 w-4 text-blue-500" />
+            Step-by-Step Calculation ({info.label})
+          </CardTitle>
+        </CardHeader>
+        {showSteps && (
+          <CardContent className="space-y-3">
+            {/* Formula */}
+            <div className="bg-muted rounded p-3">
+              <p className="text-xs font-semibold mb-1">Formula:</p>
+              <pre className="text-xs font-mono whitespace-pre-wrap text-muted-foreground">{info.formula}</pre>
+              <p className="text-xs mt-2 text-muted-foreground">
+                Where ΔT = T₂ − T₁ = {targT} − {measT} = <strong>{targT - measT}°C</strong>,
+                ΔG = G₂ − G₁ = {targG} − {measG} = <strong>{targG - measG} W/m²</strong>,
+                G₂/G₁ = <strong>{(targG / measG).toFixed(4)}</strong>
+              </p>
+            </div>
+            {/* Sample points */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b">
+                    <th className="py-1.5 text-left">Point</th>
+                    <th className="py-1.5 text-right">V₁ (V)</th>
+                    <th className="py-1.5 text-right">I₁ (A)</th>
+                    <th className="py-1.5 text-right">ΔV (V)</th>
+                    <th className="py-1.5 text-right">ΔI (A)</th>
+                    <th className="py-1.5 text-right font-semibold text-green-700">V₂ (V)</th>
+                    <th className="py-1.5 text-right font-semibold text-green-700">I₂ (A)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {steps.map((s) => (
+                    <tr key={s.idx} className="border-b hover:bg-muted/50">
+                      <td className="py-1.5">{s.idx === 0 ? "Isc" : s.idx === 10 ? "Mid" : "Voc"}</td>
+                      <td className="py-1.5 text-right font-mono">{s.v1}</td>
+                      <td className="py-1.5 text-right font-mono">{s.i1}</td>
+                      <td className="py-1.5 text-right font-mono text-blue-600">{s.dV > 0 ? "+" : ""}{s.dV}</td>
+                      <td className="py-1.5 text-right font-mono text-blue-600">{s.dI > 0 ? "+" : ""}{s.dI}</td>
+                      <td className="py-1.5 text-right font-mono font-semibold text-green-700">{s.v2}</td>
+                      <td className="py-1.5 text-right font-mono font-semibold text-green-700">{s.i2}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Corrected Pmax = <strong>{corrP.pmax} W</strong> at Vmpp={corrP.vmpp} V, Impp={corrP.impp} A
+              &nbsp;|&nbsp; Deviation from reference: <strong>{deviation > 0 ? "+" : ""}{deviation}%</strong>
+            </p>
+          </CardContent>
+        )}
+      </Card>
+
+      {/* ── Export buttons ─────────────────────────────────────────────── */}
+      <Card>
+        <CardContent className="pt-4 pb-4 flex flex-wrap gap-3">
+          <Button variant="outline" size="sm" className="text-xs gap-2" onClick={handleExportExcel}>
+            <FileSpreadsheet className="h-3.5 w-3.5" /> Export to Excel
+          </Button>
+          <Button variant="outline" size="sm" className="text-xs gap-2" onClick={handleExportCSV}>
+            <FileText className="h-3.5 w-3.5" /> Export to CSV
+          </Button>
+          <div className="ml-auto text-xs text-muted-foreground flex items-center gap-1">
+            <Download className="h-3 w-3" /> Includes measured, reference & corrected I-V data
           </div>
         </CardContent>
       </Card>
