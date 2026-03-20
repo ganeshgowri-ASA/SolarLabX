@@ -59,6 +59,16 @@ import {
   AlertTriangle,
   RefreshCw,
   Layers,
+  Shield,
+  Droplets,
+  CloudRain,
+  Flame,
+  Snowflake,
+  CircleDot,
+  Scan,
+  Microscope,
+  Waves,
+  Radiation,
 } from "lucide-react"
 import { SPCControlCharts } from "./SPCControlCharts"
 import { StatisticsOverview } from "./StatisticsOverview"
@@ -82,6 +92,21 @@ import { IAMTab } from "./IAMTab"
 import { EnergyYieldTab } from "./EnergyYieldTab"
 import { IEC60891Tab } from "./IEC60891Tab"
 import { SpectralMismatchTab } from "./SpectralMismatchTab"
+import { InsulationResistanceTab } from "./InsulationResistanceTab"
+import { MechanicalLoadTab } from "./MechanicalLoadTab"
+import { HailImpactTab } from "./HailImpactTab"
+import { HotSpotTab } from "./HotSpotTab"
+import { PIDTab } from "./PIDTab"
+import { ELIRImagingTab } from "./ELIRImagingTab"
+import { DampHeatTab } from "./DampHeatTab"
+import { ThermalCyclingTab } from "./ThermalCyclingTab"
+import { HumidityFreezeTab } from "./HumidityFreezeTab"
+import { UVPreconditioningTab } from "./UVPreconditioningTab"
+import { DSCTGAAnalysisTab } from "./DSCTGAAnalysisTab"
+import { SaltMistTab } from "./SaltMistTab"
+import { AmmoniaCorrosionTab } from "./AmmoniaCorrosionTab"
+import { SandDustAbrasionTab } from "./SandDustAbrasionTab"
+import { DielectricBreakdownTab } from "./DielectricBreakdownTab"
 import {
   generateMockData,
   calculateStatistics,
@@ -552,6 +577,66 @@ export default function DataAnalysisPage() {
           <TabsTrigger value="spectral-mismatch" className="text-xs">
             <Layers className="mr-1 h-3 w-3" />
             Spectral Mismatch
+          </TabsTrigger>
+          <TabsTrigger value="insulation-resistance" className="text-xs">
+            <Shield className="mr-1 h-3 w-3" />
+            Insulation Resistance
+          </TabsTrigger>
+          <TabsTrigger value="mechanical-load" className="text-xs">
+            <Activity className="mr-1 h-3 w-3" />
+            Mechanical Load
+          </TabsTrigger>
+          <TabsTrigger value="hail-impact" className="text-xs">
+            <CloudRain className="mr-1 h-3 w-3" />
+            Hail Impact
+          </TabsTrigger>
+          <TabsTrigger value="hot-spot" className="text-xs">
+            <Flame className="mr-1 h-3 w-3" />
+            Hot Spot
+          </TabsTrigger>
+          <TabsTrigger value="pid" className="text-xs">
+            <Zap className="mr-1 h-3 w-3" />
+            PID
+          </TabsTrigger>
+          <TabsTrigger value="el-ir-imaging" className="text-xs">
+            <Scan className="mr-1 h-3 w-3" />
+            EL/IR Imaging
+          </TabsTrigger>
+          <TabsTrigger value="damp-heat" className="text-xs">
+            <Droplets className="mr-1 h-3 w-3" />
+            Damp Heat
+          </TabsTrigger>
+          <TabsTrigger value="thermal-cycling" className="text-xs">
+            <Thermometer className="mr-1 h-3 w-3" />
+            Thermal Cycling
+          </TabsTrigger>
+          <TabsTrigger value="humidity-freeze" className="text-xs">
+            <Snowflake className="mr-1 h-3 w-3" />
+            Humidity Freeze
+          </TabsTrigger>
+          <TabsTrigger value="uv-preconditioning" className="text-xs">
+            <Sun className="mr-1 h-3 w-3" />
+            UV Preconditioning
+          </TabsTrigger>
+          <TabsTrigger value="dsc-tga" className="text-xs">
+            <Microscope className="mr-1 h-3 w-3" />
+            DSC/TGA
+          </TabsTrigger>
+          <TabsTrigger value="salt-mist" className="text-xs">
+            <Waves className="mr-1 h-3 w-3" />
+            Salt Mist
+          </TabsTrigger>
+          <TabsTrigger value="ammonia-corrosion" className="text-xs">
+            <Wind className="mr-1 h-3 w-3" />
+            Ammonia Corrosion
+          </TabsTrigger>
+          <TabsTrigger value="sand-dust" className="text-xs">
+            <CircleDot className="mr-1 h-3 w-3" />
+            Sand/Dust Abrasion
+          </TabsTrigger>
+          <TabsTrigger value="dielectric-breakdown" className="text-xs">
+            <Radiation className="mr-1 h-3 w-3" />
+            Dielectric Breakdown
           </TabsTrigger>
         </TabsList>
 
@@ -2148,6 +2233,171 @@ export default function DataAnalysisPage() {
             </p>
           </div>
           <SpectralMismatchTab />
+        </TabsContent>
+
+        {/* ===================== TAB: INSULATION RESISTANCE ===================== */}
+        <TabsContent value="insulation-resistance" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Insulation Resistance</h2>
+            <p className="text-sm text-muted-foreground">
+              IEC 61215 MQT 15 / IEC 61730 MST 16 — Wet leakage current &amp; dry insulation resistance
+            </p>
+          </div>
+          <InsulationResistanceTab />
+        </TabsContent>
+
+        {/* ===================== TAB: MECHANICAL LOAD ===================== */}
+        <TabsContent value="mechanical-load" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Mechanical Load</h2>
+            <p className="text-sm text-muted-foreground">
+              IEC 61215 MQT 16 — Static &amp; dynamic load testing, deflection measurements, EL comparison
+            </p>
+          </div>
+          <MechanicalLoadTab />
+        </TabsContent>
+
+        {/* ===================== TAB: HAIL IMPACT ===================== */}
+        <TabsContent value="hail-impact" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Hail Impact</h2>
+            <p className="text-sm text-muted-foreground">
+              IEC 61215 MQT 17 — Ice ball impact testing, crack detection, impact location mapping
+            </p>
+          </div>
+          <HailImpactTab />
+        </TabsContent>
+
+        {/* ===================== TAB: HOT SPOT ===================== */}
+        <TabsContent value="hot-spot" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Hot Spot Endurance</h2>
+            <p className="text-sm text-muted-foreground">
+              IEC 61215 MQT 09 — Worst-case cell identification, temperature rise tracking, IR thermography
+            </p>
+          </div>
+          <HotSpotTab />
+        </TabsContent>
+
+        {/* ===================== TAB: PID ===================== */}
+        <TabsContent value="pid" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Potential Induced Degradation (PID)</h2>
+            <p className="text-sm text-muted-foreground">
+              IEC 62804 / TS 62804-1 — Pmax degradation, recovery tracking, leakage current monitoring
+            </p>
+          </div>
+          <PIDTab />
+        </TabsContent>
+
+        {/* ===================== TAB: EL/IR IMAGING ===================== */}
+        <TabsContent value="el-ir-imaging" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">EL/IR Imaging Analysis</h2>
+            <p className="text-sm text-muted-foreground">
+              Electroluminescence &amp; Infrared imaging — Defect classification, before/after comparison, defect mapping
+            </p>
+          </div>
+          <ELIRImagingTab />
+        </TabsContent>
+
+        {/* ===================== TAB: DAMP HEAT ===================== */}
+        <TabsContent value="damp-heat" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Damp Heat (DH 1000)</h2>
+            <p className="text-sm text-muted-foreground">
+              IEC 61215 MQT 13 — 85°C/85%RH, 1000h exposure, power degradation tracking
+            </p>
+          </div>
+          <DampHeatTab />
+        </TabsContent>
+
+        {/* ===================== TAB: THERMAL CYCLING ===================== */}
+        <TabsContent value="thermal-cycling" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Thermal Cycling (TC 200)</h2>
+            <p className="text-sm text-muted-foreground">
+              IEC 61215 MQT 11 — -40°C to +85°C, 200 cycles, power degradation &amp; EL comparison
+            </p>
+          </div>
+          <ThermalCyclingTab />
+        </TabsContent>
+
+        {/* ===================== TAB: HUMIDITY FREEZE ===================== */}
+        <TabsContent value="humidity-freeze" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Humidity Freeze (HF 10)</h2>
+            <p className="text-sm text-muted-foreground">
+              IEC 61215 MQT 12 — -40°C to 85°C/85%RH, 10 cycles, insulation resistance tracking
+            </p>
+          </div>
+          <HumidityFreezeTab />
+        </TabsContent>
+
+        {/* ===================== TAB: UV PRECONDITIONING ===================== */}
+        <TabsContent value="uv-preconditioning" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">UV Preconditioning</h2>
+            <p className="text-sm text-muted-foreground">
+              IEC 61215 MQT 10 — UV dose (15 kWh/m² UVA + 5 kWh/m² UVB), yellowing index, power change
+            </p>
+          </div>
+          <UVPreconditioningTab />
+        </TabsContent>
+
+        {/* ===================== TAB: DSC/TGA ===================== */}
+        <TabsContent value="dsc-tga" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">DSC/TGA Material Analysis</h2>
+            <p className="text-sm text-muted-foreground">
+              IEC 62788 — Glass transition temp, crosslink density, decomposition analysis, encapsulant &amp; backsheet
+            </p>
+          </div>
+          <DSCTGAAnalysisTab />
+        </TabsContent>
+
+        {/* ===================== TAB: SALT MIST ===================== */}
+        <TabsContent value="salt-mist" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Salt Mist Corrosion</h2>
+            <p className="text-sm text-muted-foreground">
+              IEC 61701 — Corrosion severity levels 1–6, power degradation, visual inspection at intervals
+            </p>
+          </div>
+          <SaltMistTab />
+        </TabsContent>
+
+        {/* ===================== TAB: AMMONIA CORROSION ===================== */}
+        <TabsContent value="ammonia-corrosion" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Ammonia Corrosion</h2>
+            <p className="text-sm text-muted-foreground">
+              IEC 62716 — NH₃ concentration exposure, power degradation tracking for agricultural installations
+            </p>
+          </div>
+          <AmmoniaCorrosionTab />
+        </TabsContent>
+
+        {/* ===================== TAB: SAND/DUST ABRASION ===================== */}
+        <TabsContent value="sand-dust" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Sand/Dust Abrasion</h2>
+            <p className="text-sm text-muted-foreground">
+              IEC 62782 (Draft) — Transmittance loss, abrasion cycles vs optical loss for desert installations
+            </p>
+          </div>
+          <SandDustAbrasionTab />
+        </TabsContent>
+
+        {/* ===================== TAB: DIELECTRIC BREAKDOWN ===================== */}
+        <TabsContent value="dielectric-breakdown" className="space-y-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Dielectric Breakdown / Withstand</h2>
+            <p className="text-sm text-muted-foreground">
+              IEC 61730 MST 14/MST 22 — Impulse voltage, dielectric withstand, leakage current measurement
+            </p>
+          </div>
+          <DielectricBreakdownTab />
         </TabsContent>
       </Tabs>
     </div>
