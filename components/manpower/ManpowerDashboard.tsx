@@ -16,6 +16,9 @@ import {
   COMPLEXITY_CONFIG,
 } from "@/lib/data/manpower-data";
 import type { ManpowerTask, TeamMember, TaskComplexity, TaskStatus } from "@/lib/types/manpower";
+import TimesheetMatrix from "@/components/manpower/TimesheetMatrix";
+import TaskReassignmentComponent from "@/components/manpower/TaskReassignment";
+import ShiftRoster from "@/components/manpower/ShiftRoster";
 
 const STATUS_CONFIG: Record<TaskStatus, { label: string; color: string }> = {
   pending: { label: "Pending", color: "bg-gray-100 text-gray-700" },
@@ -123,6 +126,9 @@ export default function ManpowerDashboard() {
           <TabsTrigger value="overview">Team Overview</TabsTrigger>
           <TabsTrigger value="calendar">Calendar</TabsTrigger>
           <TabsTrigger value="tasks">Task Board</TabsTrigger>
+          <TabsTrigger value="timesheet">Timesheet</TabsTrigger>
+          <TabsTrigger value="reassignment">Task Reassignment</TabsTrigger>
+          <TabsTrigger value="shift-roster">Shift Roster</TabsTrigger>
           <TabsTrigger value="skills">Skill Matrix</TabsTrigger>
           <TabsTrigger value="reports">Reports</TabsTrigger>
         </TabsList>
@@ -155,6 +161,21 @@ export default function ManpowerDashboard() {
               );
             }}
           />
+        </TabsContent>
+
+        {/* Timesheet */}
+        <TabsContent value="timesheet" className="space-y-4">
+          <TimesheetMatrix />
+        </TabsContent>
+
+        {/* Task Reassignment */}
+        <TabsContent value="reassignment" className="space-y-4">
+          <TaskReassignmentComponent />
+        </TabsContent>
+
+        {/* Shift Roster */}
+        <TabsContent value="shift-roster" className="space-y-4">
+          <ShiftRoster />
         </TabsContent>
 
         {/* Skill Matrix */}
