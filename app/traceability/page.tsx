@@ -88,7 +88,7 @@ import {
 import type { DocumentType, DocumentRegistryEntry } from "@/lib/document-numbering"
 import type { AuditTrailLogEntry } from "@/lib/traceability-data"
 import { AuditTrailTimeline, LinkedDocumentReferences, ExportToPDF } from "@/components/traceability/TraceabilityEnhancements"
-import { RouteCardOMRTab } from "@/components/traceability/RouteCardOMR"
+import { RouteCardOMRTab } from "@/components/traceability/RouteCardOMRV2"
 
 const CHART_COLORS = ["#3b82f6", "#8b5cf6", "#06b6d4", "#84cc16", "#f97316", "#ef4444", "#ec4899", "#14b8a6", "#eab308"]
 
