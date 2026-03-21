@@ -15,12 +15,15 @@ import {
   ChevronRight, ChevronDown, FileText, BookOpen, ClipboardList, Layers,
   CheckCircle2, AlertTriangle, Clock, Search, Plus, Download, Eye,
   BarChart3, Shield, Settings, Users, Microscope, FileCheck, Activity,
-  GitBranch, Briefcase
+  GitBranch, Briefcase, TrendingUp, MessageSquare
 } from 'lucide-react'
 import { CAPATrackingDashboard, DocumentRevisionHistory, ManagementReviewDashboard } from '@/components/qms/QMSEnhancements'
 import ExternalDocumentsTab from '@/components/qms/ExternalDocumentsTab'
 import InternalDocumentsTab from '@/components/qms/InternalDocumentsTab'
 import QCQATab from '@/components/qms/QCQATab'
+import KaizenTab from '@/components/qms/KaizenTab'
+import RiskRegisterTab from '@/components/qms/RiskRegisterTab'
+import SuggestionTrackerTab from '@/components/qms/SuggestionTrackerTab'
 
 // ─── ISO 17025 Document Hierarchy ─────────────────────────────────────────────
 
@@ -547,6 +550,15 @@ export default function QMSDashboard() {
           <TabsTrigger value="qcqa" className="text-xs">
             <Microscope className="h-3 w-3 mr-1" /> QC / QA
           </TabsTrigger>
+          <TabsTrigger value="kaizen" className="text-xs">
+            <TrendingUp className="h-3 w-3 mr-1" /> Kaizen
+          </TabsTrigger>
+          <TabsTrigger value="risk-register" className="text-xs">
+            <Shield className="h-3 w-3 mr-1" /> Risk Register
+          </TabsTrigger>
+          <TabsTrigger value="suggestions" className="text-xs">
+            <MessageSquare className="h-3 w-3 mr-1" /> Suggestions
+          </TabsTrigger>
         </TabsList>
 
         {/* ── DASHBOARD TAB ──────────────────────────────────────── */}
@@ -939,6 +951,21 @@ export default function QMSDashboard() {
         {/* ── QC / QA TAB ──────────────────────────────────────────── */}
         <TabsContent value="qcqa" className="space-y-4 mt-4">
           <QCQATab />
+        </TabsContent>
+
+        {/* ── KAIZEN TAB (ISO 17025 Clause 8.6) ────────────────────── */}
+        <TabsContent value="kaizen" className="space-y-4 mt-4">
+          <KaizenTab />
+        </TabsContent>
+
+        {/* ── RISK REGISTER TAB (ISO 17025 Clause 8.5) ─────────────── */}
+        <TabsContent value="risk-register" className="space-y-4 mt-4">
+          <RiskRegisterTab />
+        </TabsContent>
+
+        {/* ── SUGGESTION TRACKER TAB ───────────────────────────────── */}
+        <TabsContent value="suggestions" className="space-y-4 mt-4">
+          <SuggestionTrackerTab />
         </TabsContent>
       </Tabs>
     </div>
