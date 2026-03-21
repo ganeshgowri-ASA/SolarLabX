@@ -17,6 +17,7 @@ import {
 } from "@/lib/data/manpower-data";
 import type { ManpowerTask, TeamMember, TaskComplexity, TaskStatus } from "@/lib/types/manpower";
 import TimesheetMatrix from "@/components/manpower/TimesheetMatrix";
+import TimesheetTab from "@/components/manpower/TimesheetTab";
 import TaskReassignmentComponent from "@/components/manpower/TaskReassignment";
 import ShiftRoster from "@/components/manpower/ShiftRoster";
 
@@ -165,7 +166,7 @@ export default function ManpowerDashboard() {
 
         {/* Timesheet */}
         <TabsContent value="timesheet" className="space-y-4">
-          <TimesheetMatrix />
+          <TimesheetTab />
         </TabsContent>
 
         {/* Task Reassignment */}

@@ -18,6 +18,7 @@ import {
   GitBranch, Briefcase
 } from 'lucide-react'
 import { CAPATrackingDashboard, DocumentRevisionHistory, ManagementReviewDashboard } from '@/components/qms/QMSEnhancements'
+import ExternalDocumentsTab from '@/components/qms/ExternalDocumentsTab'
 
 // ─── ISO 17025 Document Hierarchy ─────────────────────────────────────────────
 
@@ -535,6 +536,9 @@ export default function QMSDashboard() {
           <TabsTrigger value="mgmt-review" className="text-xs">
             <Briefcase className="h-3 w-3 mr-1" /> Management Review
           </TabsTrigger>
+          <TabsTrigger value="external-docs" className="text-xs">
+            <BookOpen className="h-3 w-3 mr-1" /> External Documents
+          </TabsTrigger>
         </TabsList>
 
         {/* ── DASHBOARD TAB ──────────────────────────────────────── */}
@@ -912,6 +916,11 @@ export default function QMSDashboard() {
         {/* ── MANAGEMENT REVIEW DASHBOARD TAB ─────────────────────── */}
         <TabsContent value="mgmt-review" className="space-y-4 mt-4">
           <ManagementReviewDashboard />
+        </TabsContent>
+
+        {/* ── EXTERNAL DOCUMENTS TAB (ISO 17025 Clause 8.3) ────────── */}
+        <TabsContent value="external-docs" className="space-y-4 mt-4">
+          <ExternalDocumentsTab />
         </TabsContent>
       </Tabs>
     </div>
