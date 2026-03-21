@@ -23,13 +23,36 @@ interface Risk {
   id: string;
   description: string;
   category: RiskCategory;
-  likelihood: number; // 1-5
-  impact: number;     // 1-5
+  likelihood: number; // 1-5 (maps to Occurrence for RPN)
+  impact: number;     // 1-5 (maps to Severity for RPN)
+  detection: number;  // 1-10 (Detection score for RPN)
   mitigation: string;
   owner: string;
   status: RiskStatus;
   reviewDate: string;
   trend: "up" | "stable" | "down";
+}
+
+// ─── RPN / CPN helpers ──────────────────────────────────────────────────────
+
+/** Map 1-5 likelihood to 1-10 occurrence scale */
+function toOccurrence(likelihood: number): number {
+  return likelihood * 2;
+}
+
+/** Map 1-5 impact to 1-10 severity scale */
+function toSeverity(impact: number): number {
+  return impact * 2;
+}
+
+/** RPN = Severity(1-10) x Occurrence(1-10) x Detection(1-10) */
+function calcRPN(r: Risk): number {
+  return toSeverity(r.impact) * toOccurrence(r.likelihood) * r.detection;
+}
+
+/** CPN = Severity(1-10) x Occurrence(1-10) */
+function calcCPN(r: Risk): number {
+  return toSeverity(r.impact) * toOccurrence(r.likelihood);
 }
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
@@ -41,6 +64,7 @@ const RISKS: Risk[] = [
     category: "Technical",
     likelihood: 3,
     impact: 5,
+    detection: 6,
     mitigation: "Monthly verification against NABL-traceable reference; keep backup calibrated cell",
     owner: "Arvind Nair",
     status: "Open",
@@ -53,6 +77,7 @@ const RISKS: Risk[] = [
     category: "Compliance",
     likelihood: 2,
     impact: 5,
+    detection: 4,
     mitigation: "Internal pre-audit checklist; quarterly management review; corrective action register",
     owner: "Priya Sharma",
     status: "Mitigated",
@@ -65,6 +90,7 @@ const RISKS: Risk[] = [
     category: "Technical",
     likelihood: 4,
     impact: 4,
+    detection: 7,
     mitigation: "Biannual spectral irradiance measurement; lamp replacement schedule at 1500 hr",
     owner: "Meena Pillai",
     status: "Open",
@@ -77,6 +103,7 @@ const RISKS: Risk[] = [
     category: "Operational",
     likelihood: 3,
     impact: 3,
+    detection: 5,
     mitigation: "Cross-training program; documented SOPs; competitive retention package",
     owner: "Rajan Kumar",
     status: "Open",
@@ -89,6 +116,7 @@ const RISKS: Risk[] = [
     category: "Operational",
     likelihood: 2,
     impact: 3,
+    detection: 3,
     mitigation: "Offline paper backup forms; cloud sync; vendor SLA for 4-hour recovery",
     owner: "Suresh Menon",
     status: "Mitigated",
@@ -101,6 +129,7 @@ const RISKS: Risk[] = [
     category: "Financial",
     likelihood: 3,
     impact: 3,
+    detection: 6,
     mitigation: "10% contingency budget; preventive maintenance schedule; annual equipment insurance",
     owner: "Kavya Reddy",
     status: "Open",
@@ -113,6 +142,7 @@ const RISKS: Risk[] = [
     category: "Safety",
     likelihood: 2,
     impact: 4,
+    detection: 3,
     mitigation: "UV-rated PPE mandatory; safety interlock on chamber doors; annual safety training",
     owner: "Arvind Nair",
     status: "Mitigated",
@@ -125,6 +155,7 @@ const RISKS: Risk[] = [
     category: "Compliance",
     likelihood: 1,
     impact: 5,
+    detection: 2,
     mitigation: "Role-based access control; audit logs; encrypted backups; pen-test annually",
     owner: "Priya Sharma",
     status: "Closed",
@@ -137,6 +168,7 @@ const RISKS: Risk[] = [
     category: "Operational",
     likelihood: 4,
     impact: 2,
+    detection: 4,
     mitigation: "Buffer stock agreement; alternate supplier pre-qualified; client communication SOP",
     owner: "Rajan Kumar",
     status: "Open",
@@ -149,6 +181,7 @@ const RISKS: Risk[] = [
     category: "Compliance",
     likelihood: 1,
     impact: 4,
+    detection: 2,
     mitigation: "Password-protected PDFs; secure client portal; staff confidentiality training",
     owner: "Suresh Menon",
     status: "Closed",
@@ -180,7 +213,7 @@ const STATUS_COLORS: Record<RiskStatus, string> = {
   Closed: "bg-green-50 text-green-700 border-green-200",
 };
 
-// ─── Risk Score Cell Color ────────────────────────────────────────────────────
+// ─── Risk Score Cell Color (for 5x5 matrix score) ──────────────────────────
 
 function riskColor(score: number): string {
   if (score >= 15) return "bg-red-600 text-white";
@@ -188,6 +221,15 @@ function riskColor(score: number): string {
   if (score >= 6) return "bg-amber-400 text-black";
   if (score >= 3) return "bg-yellow-300 text-black";
   return "bg-green-200 text-black";
+}
+
+// ─── RPN Color Coding ───────────────────────────────────────────────────────
+
+function rpnColor(rpn: number): string {
+  if (rpn >= 200) return "bg-red-600 text-white";
+  if (rpn >= 100) return "bg-orange-500 text-white";
+  if (rpn >= 50) return "bg-amber-400 text-black";
+  return "bg-green-400 text-black";
 }
 
 function matrixColor(likelihood: number, impact: number): string {
@@ -290,15 +332,16 @@ export default function RiskRegisterTab() {
 
   const openRisks = RISKS.filter((r) => r.status === "Open");
   const top5 = [...RISKS]
-    .sort((a, b) => b.likelihood * b.impact - a.likelihood * a.impact)
+    .sort((a, b) => calcRPN(b) - calcRPN(a))
     .slice(0, 5);
 
   const exportCSV = () => {
     const rows = [
-      ["ID", "Description", "Category", "Likelihood", "Impact", "Risk Score", "Mitigation", "Owner", "Status", "Review Date"],
+      ["ID", "Description", "Category", "Likelihood(Occ)", "Impact(Sev)", "Risk Score", "Severity(1-10)", "Occurrence(1-10)", "Detection", "RPN", "CPN", "Mitigation", "Owner", "Status", "Review Date"],
       ...RISKS.map((r) => [
         r.id, r.description, r.category, r.likelihood, r.impact,
-        r.likelihood * r.impact, r.mitigation, r.owner, r.status, r.reviewDate,
+        r.likelihood * r.impact, toSeverity(r.impact), toOccurrence(r.likelihood),
+        r.detection, calcRPN(r), calcCPN(r), r.mitigation, r.owner, r.status, r.reviewDate,
       ]),
     ];
     const csv = rows.map((row) => row.map((c) => `"${c}"`).join(",")).join("\n");
@@ -343,11 +386,11 @@ export default function RiskRegisterTab() {
         </Card>
         <Card className="border-l-4 border-l-orange-500">
           <CardContent className="pt-4 pb-3">
-            <div className="text-xs text-muted-foreground">High/Critical</div>
+            <div className="text-xs text-muted-foreground">High RPN</div>
             <div className="text-2xl font-bold text-orange-700">
-              {RISKS.filter((r) => r.likelihood * r.impact >= 10).length}
+              {RISKS.filter((r) => calcRPN(r) >= 200).length}
             </div>
-            <div className="text-xs text-muted-foreground">Score ≥10</div>
+            <div className="text-xs text-muted-foreground">RPN ≥200</div>
           </CardContent>
         </Card>
       </div>
@@ -368,29 +411,45 @@ export default function RiskRegisterTab() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-orange-500" /> Top 5 Risks by Score
+              <AlertTriangle className="h-4 w-4 text-orange-500" /> Top 5 Risks by RPN
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {top5.map((r, i) => {
-              const score = r.likelihood * r.impact;
+              const rpn = calcRPN(r);
+              const cpn = calcCPN(r);
               return (
                 <div key={r.id} className="flex items-center gap-3">
                   <span className="text-xs text-muted-foreground w-5 text-right">{i + 1}.</span>
                   <div className="flex-1 min-w-0">
                     <div className="text-xs font-medium truncate">{r.description}</div>
-                    <div className="text-[10px] text-muted-foreground">{r.id} · {r.category} · {r.owner}</div>
+                    <div className="text-[10px] text-muted-foreground">{r.id} · {r.category} · {r.owner} · CPN: {cpn}</div>
                   </div>
                   <span
-                    className={`text-xs font-bold px-2 py-1 rounded ${riskColor(score)}`}
+                    className={`text-xs font-bold px-2 py-1 rounded ${rpnColor(rpn)}`}
                   >
-                    {score}
+                    RPN {rpn}
                   </span>
                 </div>
               );
             })}
           </CardContent>
         </Card>
+      </div>
+
+      {/* RPN Legend */}
+      <div className="flex gap-3 text-xs flex-wrap px-1">
+        <span className="text-muted-foreground font-medium">RPN Scale:</span>
+        {[
+          { label: "Critical (≥200)", cls: "bg-red-600 text-white" },
+          { label: "High (100-199)", cls: "bg-orange-500 text-white" },
+          { label: "Medium (50-99)", cls: "bg-amber-400 text-black" },
+          { label: "Low (<50)", cls: "bg-green-400 text-black" },
+        ].map((l) => (
+          <span key={l.label} className={`flex items-center gap-1 px-2 py-0.5 rounded ${l.cls}`}>
+            {l.label}
+          </span>
+        ))}
       </div>
 
       {/* Risk Trend */}
@@ -464,9 +523,13 @@ export default function RiskRegisterTab() {
                 <th className="text-left py-2 px-3 font-medium">ID</th>
                 <th className="text-left py-2 px-3 font-medium">Description</th>
                 <th className="text-left py-2 px-3 font-medium">Category</th>
-                <th className="text-center py-2 px-3 font-medium">L</th>
-                <th className="text-center py-2 px-3 font-medium">I</th>
-                <th className="text-center py-2 px-3 font-medium">Score</th>
+                <th className="text-center py-2 px-3 font-medium" title="Likelihood (1-5) / Occurrence">L</th>
+                <th className="text-center py-2 px-3 font-medium" title="Impact (1-5) / Severity">I</th>
+                <th className="text-center py-2 px-3 font-medium" title="Risk Score = L × I">Score</th>
+                <th className="text-center py-2 px-3 font-medium" title="Severity (1-10) = Impact × 2">Sev</th>
+                <th className="text-center py-2 px-3 font-medium" title="Detection (1-10)">Det</th>
+                <th className="text-center py-2 px-3 font-medium" title="RPN = Severity × Occurrence × Detection">RPN</th>
+                <th className="text-center py-2 px-3 font-medium" title="CPN = Severity × Occurrence">CPN</th>
                 <th className="text-left py-2 px-3 font-medium">Owner</th>
                 <th className="text-left py-2 px-3 font-medium">Mitigation</th>
                 <th className="text-left py-2 px-3 font-medium">Status</th>
@@ -476,6 +539,9 @@ export default function RiskRegisterTab() {
             <tbody>
               {filtered.map((r, i) => {
                 const score = r.likelihood * r.impact;
+                const rpn = calcRPN(r);
+                const cpn = calcCPN(r);
+                const severity10 = toSeverity(r.impact);
                 return (
                   <tr key={r.id} className={`border-b hover:bg-muted/30 ${i % 2 === 0 ? "" : "bg-muted/10"}`}>
                     <td className="py-2 px-3 font-mono text-red-700">{r.id}</td>
@@ -497,6 +563,18 @@ export default function RiskRegisterTab() {
                         {score}
                       </span>
                     </td>
+                    <td className="py-2 px-3 text-center font-bold">{severity10}</td>
+                    <td className="py-2 px-3 text-center font-bold">{r.detection}</td>
+                    <td className="py-2 px-3 text-center">
+                      <span className={`px-2 py-0.5 rounded font-bold text-xs ${rpnColor(rpn)}`}>
+                        {rpn}
+                      </span>
+                    </td>
+                    <td className="py-2 px-3 text-center">
+                      <span className="px-2 py-0.5 rounded font-bold text-xs bg-blue-100 text-blue-800">
+                        {cpn}
+                      </span>
+                    </td>
                     <td className="py-2 px-3">{r.owner}</td>
                     <td className="py-2 px-3 max-w-[180px]">
                       <p className="truncate text-muted-foreground" title={r.mitigation}>{r.mitigation}</p>
@@ -512,7 +590,7 @@ export default function RiskRegisterTab() {
               })}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="py-8 text-center text-muted-foreground">
+                  <td colSpan={14} className="py-8 text-center text-muted-foreground">
                     No risks match your filters.
                   </td>
                 </tr>

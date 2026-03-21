@@ -10,11 +10,12 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import {
   CheckCircle2, AlertTriangle, Clock, TrendingUp, TrendingDown,
-  BarChart3, Activity, FlaskConical, Microscope, Settings, Zap, Download
+  BarChart3, Activity, FlaskConical, Microscope, Settings, Zap, Download,
+  Target, Copy, EyeOff, GitCompare
 } from "lucide-react";
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ReferenceLine, ResponsiveContainer, ScatterChart, Scatter
+  Tooltip, Legend, ReferenceLine, ResponsiveContainer, ScatterChart, Scatter, Cell
 } from "recharts";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -554,6 +555,445 @@ function NCSection() {
   );
 }
 
+// ─── Z-Score Analysis Sub-Tab ────────────────────────────────────────────────
+
+const Z_SCORE_EXTENDED = [
+  { round: "2022-R1", Isc: 0.8, Voc: -0.3, Pmax: 1.1 },
+  { round: "2022-R2", Isc: -0.5, Voc: 0.2, Pmax: -0.4 },
+  { round: "2023-R1", Isc: 0.2, Voc: -0.5, Pmax: 0.8 },
+  { round: "2023-R2", Isc: -0.3, Voc: -0.8, Pmax: 0.3 },
+  { round: "2024-R1", Isc: 0.6, Voc: -1.1, Pmax: 1.2 },
+  { round: "2024-R2", Isc: -0.1, Voc: -0.9, Pmax: 0.5 },
+  { round: "2025-R1", Isc: 0.45, Voc: -1.20, Pmax: 0.89 },
+  { round: "2025-R2", Isc: -0.2, Voc: -1.5, Pmax: 0.6 },
+];
+
+const PARAM_ZSCORE_SUMMARY = [
+  { param: "Isc", meanZ: 0.13, stdZ: 0.43, withinLimits: 100, latestZ: -0.2 },
+  { param: "Voc", meanZ: -0.76, stdZ: 0.49, withinLimits: 100, latestZ: -1.5 },
+  { param: "Pmax", meanZ: 0.62, stdZ: 0.47, withinLimits: 100, latestZ: 0.6 },
+  { param: "ΔPmax (TC)", meanZ: -2.15, stdZ: 0, withinLimits: 0, latestZ: -2.15 },
+  { param: "Insul. Res.", meanZ: 0.12, stdZ: 0, withinLimits: 100, latestZ: 0.12 },
+  { param: "Spectral Irr.", meanZ: 3.20, stdZ: 0, withinLimits: 0, latestZ: 3.20 },
+];
+
+function ZScoreAnalysisTab() {
+  const allZScores = PT_RECORDS.map(r => r.zScore);
+  const meanZ = allZScores.reduce((a, b) => a + b, 0) / allZScores.length;
+  const stdZ = Math.sqrt(allZScores.reduce((a, b) => a + (b - meanZ) ** 2, 0) / allZScores.length);
+  const withinTwo = allZScores.filter(z => Math.abs(z) <= 2).length;
+  const withinThree = allZScores.filter(z => Math.abs(z) <= 3).length;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-800">
+        <Target className="h-4 w-4 shrink-0 mt-0.5" />
+        <span><strong>ISO 17025 Clause 7.7.2:</strong> z-score evaluation — |z| ≤ 2: Satisfactory (green), 2 &lt; |z| ≤ 3: Questionable (amber), |z| &gt; 3: Unsatisfactory (red). En ≤ 1: Satisfactory.</span>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="border-l-4 border-l-blue-500">
+          <CardContent className="pt-4 pb-3">
+            <div className="text-xs text-muted-foreground">Mean z-Score</div>
+            <div className="text-2xl font-bold text-blue-600">{meanZ.toFixed(2)}</div>
+            <div className="text-xs text-muted-foreground">All parameters</div>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-purple-500">
+          <CardContent className="pt-4 pb-3">
+            <div className="text-xs text-muted-foreground">Std Dev (z)</div>
+            <div className="text-2xl font-bold text-purple-600">{stdZ.toFixed(2)}</div>
+            <div className="text-xs text-muted-foreground">Across PT records</div>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-green-500">
+          <CardContent className="pt-4 pb-3">
+            <div className="text-xs text-muted-foreground">Within |z| ≤ 2</div>
+            <div className="text-2xl font-bold text-green-600">{Math.round((withinTwo / allZScores.length) * 100)}%</div>
+            <div className="text-xs text-muted-foreground">{withinTwo}/{allZScores.length} parameters</div>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-amber-500">
+          <CardContent className="pt-4 pb-3">
+            <div className="text-xs text-muted-foreground">Within |z| ≤ 3</div>
+            <div className="text-2xl font-bold text-amber-600">{Math.round((withinThree / allZScores.length) * 100)}%</div>
+            <div className="text-xs text-muted-foreground">{withinThree}/{allZScores.length} parameters</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Historical z-Score Trend */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-blue-600" /> Historical z-Score Trend (2022–2025)
+          </CardTitle>
+          <CardDescription className="text-xs">Color zones: Green |z|≤2, Amber 2&lt;|z|≤3, Red |z|&gt;3</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={Z_SCORE_EXTENDED} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="round" tick={{ fontSize: 10 }} />
+              <YAxis tick={{ fontSize: 10 }} domain={[-4, 4]} />
+              <Tooltip contentStyle={{ fontSize: 11 }} />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <ReferenceLine y={2} stroke="#f59e0b" strokeDasharray="4 4" label={{ value: "+2σ", fontSize: 9, position: "right" }} />
+              <ReferenceLine y={-2} stroke="#f59e0b" strokeDasharray="4 4" label={{ value: "-2σ", fontSize: 9, position: "right" }} />
+              <ReferenceLine y={3} stroke="#ef4444" strokeDasharray="4 4" label={{ value: "+3σ", fontSize: 9, position: "right" }} />
+              <ReferenceLine y={-3} stroke="#ef4444" strokeDasharray="4 4" label={{ value: "-3σ", fontSize: 9, position: "right" }} />
+              <ReferenceLine y={0} stroke="#6b7280" strokeDasharray="2 2" />
+              <Line type="monotone" dataKey="Isc" stroke="#3b82f6" dot={{ r: 4 }} strokeWidth={2} />
+              <Line type="monotone" dataKey="Voc" stroke="#8b5cf6" dot={{ r: 4 }} strokeWidth={2} />
+              <Line type="monotone" dataKey="Pmax" stroke="#10b981" dot={{ r: 4 }} strokeWidth={2} />
+            </LineChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* Parameter-wise z-Score Bar Chart */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Parameter-wise Latest z-Scores & En Numbers</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={PT_RECORDS.map(r => ({ name: r.parameter.split(" ")[0], zScore: r.zScore, En: r.enNumber ?? 0 }))} margin={{ top: 4, right: 20, left: -10, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+              <YAxis tick={{ fontSize: 10 }} />
+              <Tooltip contentStyle={{ fontSize: 11 }} />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <ReferenceLine y={2} stroke="#f59e0b" strokeDasharray="4 4" />
+              <ReferenceLine y={-2} stroke="#f59e0b" strokeDasharray="4 4" />
+              <Bar dataKey="zScore" name="z-Score" fill="#3b82f6" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="En" name="En Number" fill="#8b5cf6" radius={[3, 3, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* Summary Table */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Parameter Summary Statistics</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  {["Parameter", "Latest z", "Mean z", "Std Dev", "% Within Limits", "Status"].map(h => (
+                    <th key={h} className="text-left px-3 py-2 font-semibold text-muted-foreground">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {PARAM_ZSCORE_SUMMARY.map((p, i) => (
+                  <tr key={p.param} className={`border-b hover:bg-muted/30 ${i % 2 !== 0 ? 'bg-muted/10' : ''}`}>
+                    <td className="px-3 py-2 font-medium">{p.param}</td>
+                    <td className={cn("px-3 py-2 font-mono font-bold", zScoreColor(p.latestZ))}>{p.latestZ > 0 ? "+" : ""}{p.latestZ.toFixed(2)}</td>
+                    <td className="px-3 py-2 font-mono">{p.meanZ.toFixed(2)}</td>
+                    <td className="px-3 py-2 font-mono">{p.stdZ.toFixed(2)}</td>
+                    <td className={cn("px-3 py-2 font-bold", p.withinLimits === 100 ? "text-green-600" : p.withinLimits >= 80 ? "text-amber-600" : "text-red-600")}>{p.withinLimits}%</td>
+                    <td className="px-3 py-2">
+                      <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-bold",
+                        Math.abs(p.latestZ) <= 2 ? "bg-green-50 text-green-700" : Math.abs(p.latestZ) <= 3 ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700"
+                      )}>
+                        {Math.abs(p.latestZ) <= 2 ? "Pass" : Math.abs(p.latestZ) <= 3 ? "Questionable" : "Unsatisfactory"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ─── Replicate Testing Sub-Tab ──────────────────────────────────────────────
+
+interface ReplicateRecord {
+  id: string; parameter: string; unit: string; sampleId: string;
+  measurements: number[]; mean: number; stdDev: number; rsd: number;
+}
+
+const REPLICATE_RECORDS: ReplicateRecord[] = [
+  { id: "REP-001", parameter: "Pmax", unit: "W", sampleId: "MOD-2026-042", measurements: [400.2, 400.5, 399.8, 400.1, 400.3], mean: 400.18, stdDev: 0.25, rsd: 0.062 },
+  { id: "REP-002", parameter: "Isc", unit: "A", sampleId: "MOD-2026-042", measurements: [9.82, 9.85, 9.81, 9.83, 9.84], mean: 9.83, stdDev: 0.016, rsd: 0.163 },
+  { id: "REP-003", parameter: "Voc", unit: "V", sampleId: "MOD-2026-042", measurements: [46.3, 46.2, 46.4, 46.3, 46.2], mean: 46.28, stdDev: 0.084, rsd: 0.181 },
+  { id: "REP-004", parameter: "Pmax", unit: "W", sampleId: "MOD-2026-055", measurements: [385.1, 385.8, 384.9, 386.2, 385.5], mean: 385.50, stdDev: 0.52, rsd: 0.135 },
+  { id: "REP-005", parameter: "Isc", unit: "A", sampleId: "MOD-2026-055", measurements: [9.55, 9.58, 9.53, 9.60, 9.56], mean: 9.564, stdDev: 0.027, rsd: 0.282 },
+  { id: "REP-006", parameter: "Voc", unit: "V", sampleId: "MOD-2026-055", measurements: [45.1, 45.0, 45.3, 45.1, 45.2], mean: 45.14, stdDev: 0.114, rsd: 0.253 },
+  { id: "REP-007", parameter: "FF", unit: "%", sampleId: "MOD-2026-042", measurements: [78.5, 78.3, 78.6, 78.4, 78.5], mean: 78.46, stdDev: 0.114, rsd: 0.145 },
+  { id: "REP-008", parameter: "Efficiency", unit: "%", sampleId: "MOD-2026-042", measurements: [21.2, 21.3, 21.1, 21.2, 21.3], mean: 21.22, stdDev: 0.084, rsd: 0.396 },
+];
+
+function rsdColor(rsd: number) {
+  if (rsd < 1) return "text-green-700";
+  if (rsd < 2) return "text-amber-700";
+  return "text-red-700";
+}
+
+function ReplicateTestingTab() {
+  const rsdData = REPLICATE_RECORDS.map(r => ({ name: `${r.parameter} (${r.sampleId.slice(-3)})`, rsd: r.rsd }));
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-start gap-2 p-3 rounded-lg bg-green-50 border border-green-200 text-xs text-green-800">
+        <Copy className="h-4 w-4 shrink-0 mt-0.5" />
+        <span><strong>ISO 17025 Clause 7.7.1:</strong> Replicate testing monitors measurement repeatability. %RSD &lt; 1%: Excellent, 1-2%: Acceptable, &gt; 2%: Investigation required.</span>
+      </div>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">%RSD by Parameter</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={rsdData} margin={{ top: 4, right: 20, left: -10, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+              <YAxis tick={{ fontSize: 10 }} />
+              <Tooltip contentStyle={{ fontSize: 11 }} />
+              <ReferenceLine y={1} stroke="#f59e0b" strokeDasharray="4 4" label={{ value: "1%", fontSize: 9 }} />
+              <ReferenceLine y={2} stroke="#ef4444" strokeDasharray="4 4" label={{ value: "2%", fontSize: 9 }} />
+              <Bar dataKey="rsd" name="%RSD" fill="#10b981" radius={[3, 3, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Replicate Measurements Log</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  {["ID", "Sample", "Parameter", "Measurements", "Mean", "Std Dev", "%RSD", "Status"].map(h => (
+                    <th key={h} className="text-left px-3 py-2 font-semibold text-muted-foreground">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {REPLICATE_RECORDS.map((r, i) => (
+                  <tr key={r.id} className={`border-b hover:bg-muted/30 ${i % 2 !== 0 ? 'bg-muted/10' : ''}`}>
+                    <td className="px-3 py-2 font-mono text-blue-700">{r.id}</td>
+                    <td className="px-3 py-2 font-mono text-muted-foreground">{r.sampleId}</td>
+                    <td className="px-3 py-2 font-medium">{r.parameter} ({r.unit})</td>
+                    <td className="px-3 py-2 font-mono text-muted-foreground">{r.measurements.join(", ")}</td>
+                    <td className="px-3 py-2 font-mono font-bold">{r.mean.toFixed(2)}</td>
+                    <td className="px-3 py-2 font-mono">{r.stdDev.toFixed(3)}</td>
+                    <td className={cn("px-3 py-2 font-mono font-bold", rsdColor(r.rsd))}>{r.rsd.toFixed(3)}%</td>
+                    <td className="px-3 py-2">
+                      <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-bold",
+                        r.rsd < 1 ? "bg-green-50 text-green-700" : r.rsd < 2 ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700"
+                      )}>
+                        {r.rsd < 1 ? "Excellent" : r.rsd < 2 ? "Acceptable" : "Investigate"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ─── Blind Testing Sub-Tab ──────────────────────────────────────────────────
+
+interface BlindRecord {
+  id: string; sampleId: string; parameter: string; unit: string;
+  trueValue: number; measuredValue: number; bias: number; pctBias: number; acceptableLimit: number; status: "Pass" | "Fail";
+}
+
+const BLIND_RECORDS: BlindRecord[] = [
+  { id: "BLD-001", sampleId: "BLD-PV-001", parameter: "Pmax", unit: "W", trueValue: 400.0, measuredValue: 400.8, bias: 0.8, pctBias: 0.20, acceptableLimit: 1.0, status: "Pass" },
+  { id: "BLD-002", sampleId: "BLD-PV-001", parameter: "Isc", unit: "A", trueValue: 9.80, measuredValue: 9.83, bias: 0.03, pctBias: 0.31, acceptableLimit: 1.0, status: "Pass" },
+  { id: "BLD-003", sampleId: "BLD-PV-002", parameter: "Pmax", unit: "W", trueValue: 385.0, measuredValue: 386.5, bias: 1.5, pctBias: 0.39, acceptableLimit: 1.0, status: "Pass" },
+  { id: "BLD-004", sampleId: "BLD-PV-002", parameter: "Voc", unit: "V", trueValue: 45.50, measuredValue: 45.02, bias: -0.48, pctBias: -1.05, acceptableLimit: 1.0, status: "Fail" },
+  { id: "BLD-005", sampleId: "BLD-PV-003", parameter: "Pmax", unit: "W", trueValue: 410.0, measuredValue: 410.3, bias: 0.3, pctBias: 0.07, acceptableLimit: 1.0, status: "Pass" },
+  { id: "BLD-006", sampleId: "BLD-PV-003", parameter: "Efficiency", unit: "%", trueValue: 21.50, measuredValue: 21.45, bias: -0.05, pctBias: -0.23, acceptableLimit: 1.0, status: "Pass" },
+];
+
+function BlindTestingTab() {
+  const passCount = BLIND_RECORDS.filter(r => r.status === "Pass").length;
+  const chartData = BLIND_RECORDS.map(r => ({
+    name: `${r.parameter} (${r.sampleId.slice(-3)})`,
+    True: r.trueValue,
+    Measured: r.measuredValue,
+  }));
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-start gap-2 p-3 rounded-lg bg-purple-50 border border-purple-200 text-xs text-purple-800">
+        <EyeOff className="h-4 w-4 shrink-0 mt-0.5" />
+        <span><strong>Blind Testing (ISO 17025 Clause 7.7.1):</strong> Samples tested without knowledge of true values. %Bias within ±{BLIND_RECORDS[0]?.acceptableLimit}% is acceptable. {passCount}/{BLIND_RECORDS.length} passed.</span>
+      </div>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">True vs Measured Values</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={chartData} margin={{ top: 4, right: 20, left: -10, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+              <YAxis tick={{ fontSize: 10 }} />
+              <Tooltip contentStyle={{ fontSize: 11 }} />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Bar dataKey="True" fill="#6366f1" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="Measured" fill="#10b981" radius={[3, 3, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Blind Sample Results</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  {["ID", "Sample", "Parameter", "True Value", "Measured", "Bias", "%Bias", "Limit", "Status"].map(h => (
+                    <th key={h} className="text-left px-3 py-2 font-semibold text-muted-foreground">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {BLIND_RECORDS.map((r, i) => (
+                  <tr key={r.id} className={cn("border-b hover:bg-muted/30", i % 2 !== 0 ? "bg-muted/10" : "", r.status === "Fail" ? "bg-red-50/50" : "")}>
+                    <td className="px-3 py-2 font-mono text-purple-700">{r.id}</td>
+                    <td className="px-3 py-2 font-mono text-muted-foreground">{r.sampleId}</td>
+                    <td className="px-3 py-2 font-medium">{r.parameter} ({r.unit})</td>
+                    <td className="px-3 py-2 font-mono">{r.trueValue}</td>
+                    <td className="px-3 py-2 font-mono">{r.measuredValue}</td>
+                    <td className={cn("px-3 py-2 font-mono font-bold", r.bias >= 0 ? "text-blue-700" : "text-red-700")}>{r.bias > 0 ? "+" : ""}{r.bias.toFixed(2)}</td>
+                    <td className={cn("px-3 py-2 font-mono font-bold", Math.abs(r.pctBias) <= r.acceptableLimit ? "text-green-700" : "text-red-700")}>{r.pctBias > 0 ? "+" : ""}{r.pctBias.toFixed(2)}%</td>
+                    <td className="px-3 py-2 font-mono text-muted-foreground">±{r.acceptableLimit}%</td>
+                    <td className="px-3 py-2">
+                      <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-bold", r.status === "Pass" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700")}>{r.status}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ─── Alternative Method Testing Sub-Tab ─────────────────────────────────────
+
+interface AltMethodRecord {
+  id: string; parameter: string; unit: string;
+  method1: string; method2: string;
+  value1: number; value2: number; difference: number; average: number;
+  r2: number; status: "Equivalent" | "Significant Diff.";
+}
+
+const ALT_METHOD_RECORDS: AltMethodRecord[] = [
+  { id: "ALT-001", parameter: "Pmax", unit: "W", method1: "Simulator AAA+ (IEC 60904-1)", method2: "Outdoor STC (IEC 60904-3)", value1: 400.2, value2: 399.5, difference: 0.7, average: 399.85, r2: 0.9987, status: "Equivalent" },
+  { id: "ALT-002", parameter: "Isc", unit: "A", method1: "Simulator AAA+ (IEC 60904-1)", method2: "Outdoor STC (IEC 60904-3)", value1: 9.82, value2: 9.78, difference: 0.04, average: 9.80, r2: 0.9992, status: "Equivalent" },
+  { id: "ALT-003", parameter: "Voc", unit: "V", method1: "Simulator AAA+ (IEC 60904-1)", method2: "Outdoor STC (IEC 60904-3)", value1: 46.3, value2: 45.8, difference: 0.5, average: 46.05, r2: 0.9945, status: "Equivalent" },
+  { id: "ALT-004", parameter: "Efficiency", unit: "%", method1: "IV Curve + Area (IEC 60904-1)", method2: "Calorimetric (IEC 61853-1)", value1: 21.3, value2: 20.8, difference: 0.5, average: 21.05, r2: 0.9820, status: "Significant Diff." },
+  { id: "ALT-005", parameter: "Insulation Res.", unit: "MΩ", method1: "Megger (IEC 61730)", method2: "Hi-Pot Tester (IEC 61730)", value1: 1850, value2: 1840, difference: 10, average: 1845, r2: 0.9978, status: "Equivalent" },
+];
+
+function AltMethodTestingTab() {
+  const meanDiff = ALT_METHOD_RECORDS.reduce((a, r) => a + r.difference, 0) / ALT_METHOD_RECORDS.length;
+  const sdDiff = Math.sqrt(ALT_METHOD_RECORDS.reduce((a, r) => a + (r.difference - meanDiff) ** 2, 0) / ALT_METHOD_RECORDS.length);
+  const blandAltmanData = ALT_METHOD_RECORDS.map(r => ({ x: r.average, y: r.difference, name: r.parameter }));
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-start gap-2 p-3 rounded-lg bg-cyan-50 border border-cyan-200 text-xs text-cyan-800">
+        <GitCompare className="h-4 w-4 shrink-0 mt-0.5" />
+        <span><strong>ISO 17025 Clause 7.7.1:</strong> Method comparison studies verify equivalence between alternative test methods. R² ≥ 0.99 and differences within ±1.96 SD indicate acceptable agreement.</span>
+      </div>
+
+      {/* Bland-Altman Plot */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Bland-Altman Plot (Difference vs Average)</CardTitle>
+          <CardDescription className="text-xs">Mean diff: {meanDiff.toFixed(2)} | ±1.96 SD limits: [{(meanDiff - 1.96 * sdDiff).toFixed(2)}, {(meanDiff + 1.96 * sdDiff).toFixed(2)}]</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={250}>
+            <ScatterChart margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis type="number" dataKey="x" name="Average" tick={{ fontSize: 10 }} label={{ value: "Average of Methods", fontSize: 10, position: "bottom" }} />
+              <YAxis type="number" dataKey="y" name="Difference" tick={{ fontSize: 10 }} label={{ value: "Difference", fontSize: 10, angle: -90, position: "insideLeft" }} />
+              <Tooltip contentStyle={{ fontSize: 11 }} cursor={{ strokeDasharray: "3 3" }} />
+              <ReferenceLine y={meanDiff} stroke="#3b82f6" strokeDasharray="4 4" label={{ value: "Mean", fontSize: 9 }} />
+              <ReferenceLine y={meanDiff + 1.96 * sdDiff} stroke="#ef4444" strokeDasharray="4 4" label={{ value: "+1.96SD", fontSize: 9 }} />
+              <ReferenceLine y={meanDiff - 1.96 * sdDiff} stroke="#ef4444" strokeDasharray="4 4" label={{ value: "-1.96SD", fontSize: 9 }} />
+              <Scatter data={blandAltmanData} fill="#6366f1">
+                {blandAltmanData.map((_, i) => (
+                  <Cell key={i} fill={ALT_METHOD_RECORDS[i].status === "Equivalent" ? "#10b981" : "#ef4444"} />
+                ))}
+              </Scatter>
+            </ScatterChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Method Comparison Results</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  {["ID", "Parameter", "Method 1", "Method 2", "Value 1", "Value 2", "Diff", "R²", "Status"].map(h => (
+                    <th key={h} className="text-left px-3 py-2 font-semibold text-muted-foreground">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {ALT_METHOD_RECORDS.map((r, i) => (
+                  <tr key={r.id} className={cn("border-b hover:bg-muted/30", i % 2 !== 0 ? "bg-muted/10" : "")}>
+                    <td className="px-3 py-2 font-mono text-cyan-700">{r.id}</td>
+                    <td className="px-3 py-2 font-medium">{r.parameter} ({r.unit})</td>
+                    <td className="px-3 py-2 text-muted-foreground max-w-[160px] truncate" title={r.method1}>{r.method1}</td>
+                    <td className="px-3 py-2 text-muted-foreground max-w-[160px] truncate" title={r.method2}>{r.method2}</td>
+                    <td className="px-3 py-2 font-mono">{r.value1}</td>
+                    <td className="px-3 py-2 font-mono">{r.value2}</td>
+                    <td className={cn("px-3 py-2 font-mono font-bold", Math.abs(r.difference) < 1 ? "text-green-700" : "text-amber-700")}>{r.difference > 0 ? "+" : ""}{r.difference.toFixed(2)}</td>
+                    <td className={cn("px-3 py-2 font-mono font-bold", r.r2 >= 0.99 ? "text-green-700" : r.r2 >= 0.98 ? "text-amber-700" : "text-red-700")}>{r.r2.toFixed(4)}</td>
+                    <td className="px-3 py-2">
+                      <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-bold",
+                        r.status === "Equivalent" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
+                      )}>{r.status}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function QCQATab() {
@@ -625,6 +1065,18 @@ export default function QCQATab() {
           <TabsTrigger value="nc" className="text-xs">
             <AlertTriangle className="h-3 w-3 mr-1" /> Non-Conformances
           </TabsTrigger>
+          <TabsTrigger value="zscore" className="text-xs">
+            <Target className="h-3 w-3 mr-1" /> Z-Score Analysis
+          </TabsTrigger>
+          <TabsTrigger value="replicate" className="text-xs">
+            <Copy className="h-3 w-3 mr-1" /> Replicate Testing
+          </TabsTrigger>
+          <TabsTrigger value="blind" className="text-xs">
+            <EyeOff className="h-3 w-3 mr-1" /> Blind Testing
+          </TabsTrigger>
+          <TabsTrigger value="alt-method" className="text-xs">
+            <GitCompare className="h-3 w-3 mr-1" /> Alt. Method Testing
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="pt" className="mt-4"><ProficiencyTestingTab /></TabsContent>
@@ -632,6 +1084,10 @@ export default function QCQATab() {
         <TabsContent value="mv" className="mt-4"><MethodValidationTab /></TabsContent>
         <TabsContent value="eq" className="mt-4"><EquipmentQualificationTab /></TabsContent>
         <TabsContent value="nc" className="mt-4"><NCSection /></TabsContent>
+        <TabsContent value="zscore" className="mt-4"><ZScoreAnalysisTab /></TabsContent>
+        <TabsContent value="replicate" className="mt-4"><ReplicateTestingTab /></TabsContent>
+        <TabsContent value="blind" className="mt-4"><BlindTestingTab /></TabsContent>
+        <TabsContent value="alt-method" className="mt-4"><AltMethodTestingTab /></TabsContent>
       </Tabs>
     </div>
   );
