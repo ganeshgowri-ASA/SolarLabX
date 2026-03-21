@@ -11,11 +11,13 @@ import { cn } from "@/lib/utils";
 import {
   CheckCircle2, AlertTriangle, Clock, TrendingUp, TrendingDown,
   BarChart3, Activity, FlaskConical, Microscope, Settings, Zap, Download,
-  Target, Copy, EyeOff, GitCompare
+  Target, Copy, EyeOff, GitCompare, Printer, FileText, ClipboardList, Shield, Users,
 } from "lucide-react";
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ReferenceLine, ResponsiveContainer, ScatterChart, Scatter, Cell
+  Tooltip, Legend, ReferenceLine, ResponsiveContainer, ScatterChart, Scatter, Cell,
+  PieChart, Pie, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
+  AreaChart, Area,
 } from "recharts";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -288,9 +290,30 @@ function ProficiencyTestingTab() {
   );
 }
 
+const labZScores = [
+  { lab: "Lab A", zScore: 0.3, enNumber: 0.25 },
+  { lab: "Lab B", zScore: -0.8, enNumber: 0.62 },
+  { lab: "Lab C (This Lab)", zScore: 0.45, enNumber: 0.47 },
+  { lab: "Lab D", zScore: 1.5, enNumber: 1.1 },
+  { lab: "Lab E", zScore: -2.3, enNumber: 1.8 },
+  { lab: "Lab F", zScore: 0.1, enNumber: 0.08 },
+];
+
+const youdenData = [
+  { x: 400.2, y: 9.85, lab: "Lab A" },
+  { x: 399.1, y: 9.78, lab: "Lab B" },
+  { x: 399.5, y: 9.83, lab: "Lab C" },
+  { x: 401.5, y: 9.90, lab: "Lab D" },
+  { x: 397.8, y: 9.72, lab: "Lab E" },
+  { x: 400.0, y: 9.82, lab: "Lab F" },
+];
+
+const labRankingByEn = [...labZScores].sort((a, b) => a.enNumber - b.enNumber);
+
 function InterLabComparisonTab() {
   return (
     <div className="space-y-4">
+      {/* Results Table */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm">Inter-Laboratory Comparison Results</CardTitle>
@@ -330,22 +353,156 @@ function InterLabComparisonTab() {
         </CardContent>
       </Card>
 
-      {/* ILC Bar Chart */}
+      {/* z-Score Comparison: Horizontal Bar per Lab */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm">En Numbers – ILC Summary</CardTitle>
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Users className="h-4 w-4 text-indigo-600" /> z-Score Comparison by Lab
+          </CardTitle>
+          <CardDescription className="text-xs">|z| ≤ 2: Satisfactory (green) · 2 &lt; |z| ≤ 3: Questionable (amber) · |z| &gt; 3: Unsatisfactory (red)</CardDescription>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={ILC_RECORDS.map(r => ({ name: r.parameter.split(" ")[0], En: r.enNumber }))}>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={labZScores} layout="vertical" margin={{ top: 4, right: 30, left: 60, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis type="number" tick={{ fontSize: 10 }} domain={[-3, 3]} />
+              <YAxis type="category" dataKey="lab" tick={{ fontSize: 10 }} width={100} />
+              <Tooltip contentStyle={{ fontSize: 11 }} />
+              <ReferenceLine x={2} stroke="#f59e0b" strokeDasharray="4 4" />
+              <ReferenceLine x={-2} stroke="#f59e0b" strokeDasharray="4 4" />
+              <ReferenceLine x={3} stroke="#ef4444" strokeDasharray="4 4" />
+              <ReferenceLine x={-3} stroke="#ef4444" strokeDasharray="4 4" />
+              <ReferenceLine x={0} stroke="#6b7280" strokeWidth={1} />
+              <Bar dataKey="zScore" name="z-Score" radius={[0, 3, 3, 0]}>
+                {labZScores.map((entry, i) => (
+                  <Cell key={i} fill={Math.abs(entry.zScore) <= 2 ? "#10b981" : Math.abs(entry.zScore) <= 3 ? "#f59e0b" : "#ef4444"} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Youden Plot */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Youden Plot (Pmax vs Isc)</CardTitle>
+            <CardDescription className="text-xs">Paired measurements &mdash; systematic lab biases appear as clusters away from center</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={280}>
+              <ScatterChart margin={{ top: 10, right: 20, left: 10, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis type="number" dataKey="x" name="Pmax (W)" tick={{ fontSize: 10 }} domain={[396, 403]} label={{ value: "Pmax (W)", fontSize: 10, position: "bottom", offset: 5 }} />
+                <YAxis type="number" dataKey="y" name="Isc (A)" tick={{ fontSize: 10 }} domain={[9.7, 9.95]} label={{ value: "Isc (A)", fontSize: 10, angle: -90, position: "insideLeft" }} />
+                <Tooltip contentStyle={{ fontSize: 11 }} cursor={{ strokeDasharray: "3 3" }} formatter={(value: number, name: string) => [value.toFixed(2), name]} />
+                <ReferenceLine x={400.1} stroke="#6b7280" strokeDasharray="4 4" label={{ value: "Mean Pmax", fontSize: 8 }} />
+                <ReferenceLine y={9.82} stroke="#6b7280" strokeDasharray="4 4" label={{ value: "Mean Isc", fontSize: 8 }} />
+                <Scatter data={youdenData} fill="#6366f1">
+                  {youdenData.map((_, i) => (
+                    <Cell key={i} fill={["#3b82f6", "#8b5cf6", "#f59e0b", "#ef4444", "#10b981", "#6366f1"][i]} />
+                  ))}
+                </Scatter>
+              </ScatterChart>
+            </ResponsiveContainer>
+            <div className="flex flex-wrap gap-2 mt-1">
+              {youdenData.map((d, i) => (
+                <span key={d.lab} className="text-[10px] flex items-center gap-1">
+                  <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: ["#3b82f6", "#8b5cf6", "#f59e0b", "#ef4444", "#10b981", "#6366f1"][i] }} />
+                  {d.lab}
+                </span>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Lab Performance Ranking by En */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Lab Performance Ranking (En Number)</CardTitle>
+            <CardDescription className="text-xs">Sorted by En number &mdash; lower is better. En ≤ 1: Satisfactory</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={labRankingByEn} margin={{ top: 4, right: 20, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="lab" tick={{ fontSize: 9 }} />
+                <YAxis tick={{ fontSize: 10 }} domain={[0, 2]} />
+                <Tooltip contentStyle={{ fontSize: 11 }} />
+                <ReferenceLine y={1} stroke="#ef4444" strokeDasharray="4 4" label={{ value: "En=1 limit", fontSize: 9 }} />
+                <Bar dataKey="enNumber" name="En Number" radius={[3, 3, 0, 0]}>
+                  {labRankingByEn.map((entry, i) => (
+                    <Cell key={i} fill={entry.enNumber <= 1 ? "#10b981" : "#ef4444"} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ILC En Bar Chart */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">En Numbers &mdash; ILC Parameter Summary</CardTitle>
+          <CardDescription className="text-xs">Consensus values with En evaluation per parameter</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={ILC_RECORDS.map(r => ({ name: r.parameter.split(" ")[0], En: r.enNumber, labValue: r.labValue, mean: r.meanValue }))}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="name" tick={{ fontSize: 10 }} />
               <YAxis tick={{ fontSize: 10 }} domain={[0, 2]} />
               <Tooltip contentStyle={{ fontSize: 11 }} />
+              <Legend wrapperStyle={{ fontSize: 10 }} />
               <ReferenceLine y={1} stroke="#ef4444" strokeDasharray="4 4" label={{ value: "En=1", fontSize: 9 }} />
-              <Bar dataKey="En" fill="#6366f1" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="En" name="En Number" fill="#6366f1" radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* Report */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm flex items-center gap-2"><FileText className="h-4 w-4 text-indigo-600" /> ILC Participation Report</CardTitle>
+            <Button size="sm" variant="outline" className="gap-1 text-xs h-7"><Download className="h-3 w-3" /> Export PDF</Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="border rounded-lg p-3 bg-muted/20 text-xs text-center">
+            <p className="font-bold text-foreground">SolarLabX PV Testing Laboratory</p>
+            <p className="text-muted-foreground">ILC Participation Report &mdash; RPT-ILC-2026-001 | Round: 2025-R1</p>
+          </div>
+          <div className="grid grid-cols-3 gap-3 text-xs">
+            <div className="border rounded p-2 text-center">
+              <p className="text-muted-foreground">Parameters Tested</p>
+              <p className="text-xl font-bold text-blue-600">3</p>
+            </div>
+            <div className="border rounded p-2 text-center">
+              <p className="text-muted-foreground">All En ≤ 1</p>
+              <p className="text-xl font-bold text-green-600">Yes</p>
+            </div>
+            <div className="border rounded p-2 text-center">
+              <p className="text-muted-foreground">Participating Labs</p>
+              <p className="text-xl font-bold text-purple-600">5</p>
+            </div>
+          </div>
+          <div className="text-xs text-muted-foreground">
+            <p className="font-semibold text-foreground mb-1">Conclusions &amp; Corrective Actions:</p>
+            <p>All three parameters (Pmax, Efficiency, FF) achieved satisfactory En numbers (all &lt; 1.0). Lab performance is within acceptable limits for all measured quantities. No corrective actions required. Lab D (En=1.1) and Lab E (En=1.8) show unsatisfactory performance &mdash; shared with those labs for their corrective action.</p>
+          </div>
+          <div className="grid grid-cols-3 gap-4 border-t pt-3">
+            {[{ role: "Prepared By", name: "S. Rao" }, { role: "Reviewed By", name: "A. Mehta" }, { role: "Approved By", name: "Dr. S. Kumar" }].map(s => (
+              <div key={s.role} className="text-xs space-y-1">
+                <p className="font-semibold text-foreground">{s.role}</p>
+                <div className="border-b border-dashed border-muted-foreground/50 h-6" />
+                <p className="text-muted-foreground">{s.name}</p>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
     </div>
@@ -710,6 +867,103 @@ function ZScoreAnalysisTab() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Enhanced: Radar Chart + Waterfall */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Radar/Spider Chart */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Parameter-wise z-Score Radar Chart</CardTitle>
+            <CardDescription className="text-xs">|z| values plotted on radar &mdash; smaller area = better performance</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <RadarChart data={PARAM_ZSCORE_SUMMARY.map(p => ({ param: p.param, z: Math.abs(p.latestZ) }))}>
+                <PolarGrid stroke="#e5e7eb" />
+                <PolarAngleAxis dataKey="param" tick={{ fontSize: 10 }} />
+                <PolarRadiusAxis angle={90} domain={[0, 4]} tick={{ fontSize: 9 }} />
+                <Radar name="|z-Score|" dataKey="z" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.3} strokeWidth={2} />
+                <Tooltip contentStyle={{ fontSize: 11 }} />
+                <Legend wrapperStyle={{ fontSize: 10 }} />
+              </RadarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Waterfall / Historical z-Score Area Chart */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">z-Score History Area Chart (Pmax)</CardTitle>
+            <CardDescription className="text-xs">Visualizing z-score magnitude evolution over PT rounds</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={Z_SCORE_EXTENDED} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="round" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} domain={[-4, 4]} />
+                <Tooltip contentStyle={{ fontSize: 11 }} />
+                <ReferenceLine y={2} stroke="#f59e0b" strokeDasharray="4 4" />
+                <ReferenceLine y={-2} stroke="#f59e0b" strokeDasharray="4 4" />
+                <ReferenceLine y={3} stroke="#ef4444" strokeDasharray="4 4" />
+                <ReferenceLine y={-3} stroke="#ef4444" strokeDasharray="4 4" />
+                <ReferenceLine y={0} stroke="#6b7280" strokeDasharray="2 2" />
+                <Area type="monotone" dataKey="Pmax" stroke="#10b981" fill="#10b981" fillOpacity={0.2} strokeWidth={2} />
+                <Area type="monotone" dataKey="Isc" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.1} strokeWidth={2} />
+                <Area type="monotone" dataKey="Voc" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.1} strokeWidth={2} />
+                <Legend wrapperStyle={{ fontSize: 10 }} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Downloadable Report Template */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm flex items-center gap-2"><FileText className="h-4 w-4 text-blue-600" /> z-Score Analysis Report</CardTitle>
+            <Button size="sm" variant="outline" className="gap-1 text-xs h-7"><Download className="h-3 w-3" /> Download Report</Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="border rounded-lg p-3 bg-muted/20 text-xs text-center">
+            <p className="font-bold text-foreground">SolarLabX PV Testing Laboratory</p>
+            <p className="text-muted-foreground">z-Score Analysis Report &mdash; RPT-ZSC-2026-001</p>
+          </div>
+          <div className="grid grid-cols-4 gap-3 text-xs">
+            <div className="border rounded p-2 text-center">
+              <p className="text-muted-foreground">Mean |z|</p>
+              <p className="text-lg font-bold text-blue-600">{(allZScores.reduce((a, b) => a + Math.abs(b), 0) / allZScores.length).toFixed(2)}</p>
+            </div>
+            <div className="border rounded p-2 text-center">
+              <p className="text-muted-foreground">Within ±2σ</p>
+              <p className="text-lg font-bold text-green-600">{Math.round((withinTwo / allZScores.length) * 100)}%</p>
+            </div>
+            <div className="border rounded p-2 text-center">
+              <p className="text-muted-foreground">Unsatisfactory</p>
+              <p className="text-lg font-bold text-red-600">{allZScores.filter(z => Math.abs(z) > 3).length}</p>
+            </div>
+            <div className="border rounded p-2 text-center">
+              <p className="text-muted-foreground">PT Rounds</p>
+              <p className="text-lg font-bold text-purple-600">{Z_SCORE_EXTENDED.length}</p>
+            </div>
+          </div>
+          <div className="text-xs text-muted-foreground">
+            <p className="font-semibold text-foreground mb-1">Summary &amp; Actions:</p>
+            <p>{Math.round((withinTwo / allZScores.length) * 100)}% of z-scores fall within |z| ≤ 2 (satisfactory). Spectral Irradiance measurement (z=3.20) requires immediate corrective action. Voc shows slight negative bias trend &mdash; monitor in next round. All other parameters stable and within control limits.</p>
+          </div>
+          <div className="grid grid-cols-3 gap-4 border-t pt-3">
+            {[{ role: "Prepared By", name: "S. Rao" }, { role: "Reviewed By", name: "A. Mehta" }, { role: "Approved By", name: "Dr. S. Kumar" }].map(s => (
+              <div key={s.role} className="text-xs space-y-1">
+                <p className="font-semibold text-foreground">{s.role}</p>
+                <div className="border-b border-dashed border-muted-foreground/50 h-6" />
+                <p className="text-muted-foreground">{s.name}</p>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -738,6 +992,24 @@ function rsdColor(rsd: number) {
   return "text-red-700";
 }
 
+const repeatabilityTrend = [
+  { month: "Oct-25", Pmax: 0.06, Isc: 0.15, Voc: 0.18 },
+  { month: "Nov-25", Pmax: 0.07, Isc: 0.17, Voc: 0.16 },
+  { month: "Dec-25", Pmax: 0.05, Isc: 0.14, Voc: 0.20 },
+  { month: "Jan-26", Pmax: 0.08, Isc: 0.16, Voc: 0.19 },
+  { month: "Feb-26", Pmax: 0.06, Isc: 0.18, Voc: 0.17 },
+  { month: "Mar-26", Pmax: 0.062, Isc: 0.163, Voc: 0.181 },
+];
+
+const boxPlotData = REPLICATE_RECORDS.filter(r => r.sampleId === "MOD-2026-042").map(r => ({
+  name: r.parameter,
+  min: Math.min(...r.measurements),
+  max: Math.max(...r.measurements),
+  mean: r.mean,
+  q1: r.mean - r.stdDev,
+  q3: r.mean + r.stdDev,
+}));
+
 function ReplicateTestingTab() {
   const rsdData = REPLICATE_RECORDS.map(r => ({ name: `${r.parameter} (${r.sampleId.slice(-3)})`, rsd: r.rsd }));
 
@@ -748,6 +1020,42 @@ function ReplicateTestingTab() {
         <span><strong>ISO 17025 Clause 7.7.1:</strong> Replicate testing monitors measurement repeatability. %RSD &lt; 1%: Excellent, 1-2%: Acceptable, &gt; 2%: Investigation required.</span>
       </div>
 
+      {/* Protocol / Checklist */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <ClipboardList className="h-4 w-4 text-green-600" /> Replicate Testing Protocol
+          </CardTitle>
+          <CardDescription className="text-xs">Standard operating procedure for replicate measurements per ISO 17025</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs border rounded-lg p-3 bg-muted/20">
+            <div><span className="text-muted-foreground">Sample ID:</span> <span className="font-mono font-bold text-foreground">MOD-2026-042</span></div>
+            <div><span className="text-muted-foreground">Test Method:</span> <span className="font-medium text-foreground">IEC 60904-1</span></div>
+            <div><span className="text-muted-foreground">No. of Replicates:</span> <span className="font-bold text-foreground">5</span></div>
+            <div><span className="text-muted-foreground">Acceptance:</span> <span className="font-bold text-green-600">%RSD &lt; 2%</span></div>
+          </div>
+          <div className="text-xs space-y-1.5">
+            <p className="font-semibold text-foreground">Procedure Checklist:</p>
+            {[
+              "Verify equipment calibration status before testing",
+              "Condition sample at STC (25°C ± 2°C) for minimum 30 minutes",
+              "Perform 5 consecutive IV curve measurements",
+              "Record ambient conditions (irradiance, temperature, humidity)",
+              "Calculate mean, std dev, and %RSD for each parameter",
+              "Compare %RSD against acceptance thresholds",
+              "Document results and sign off",
+            ].map((step, i) => (
+              <div key={i} className="flex items-start gap-2">
+                <div className="w-4 h-4 border-2 border-green-400 rounded shrink-0 mt-0.5" />
+                <span className="text-muted-foreground">{i + 1}. {step}</span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* %RSD Bar Chart */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm">%RSD by Parameter</CardTitle>
@@ -761,12 +1069,98 @@ function ReplicateTestingTab() {
               <Tooltip contentStyle={{ fontSize: 11 }} />
               <ReferenceLine y={1} stroke="#f59e0b" strokeDasharray="4 4" label={{ value: "1%", fontSize: 9 }} />
               <ReferenceLine y={2} stroke="#ef4444" strokeDasharray="4 4" label={{ value: "2%", fontSize: 9 }} />
-              <Bar dataKey="rsd" name="%RSD" fill="#10b981" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="rsd" name="%RSD" fill="#10b981" radius={[3, 3, 0, 0]}>
+                {rsdData.map((entry, i) => (
+                  <Cell key={i} fill={entry.rsd < 1 ? "#10b981" : entry.rsd < 2 ? "#f59e0b" : "#ef4444"} />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
 
+      {/* Enhanced Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Box-and-Whisker Style (Min/Mean/Max bars) */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Measurement Distribution (MOD-2026-042)</CardTitle>
+            <CardDescription className="text-xs">Min/Mean/Max range per parameter</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={boxPlotData} margin={{ top: 4, right: 20, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} />
+                <Tooltip contentStyle={{ fontSize: 11 }} />
+                <Legend wrapperStyle={{ fontSize: 10 }} />
+                <Bar dataKey="min" name="Min" fill="#3b82f6" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="mean" name="Mean" fill="#10b981" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="max" name="Max" fill="#f59e0b" radius={[3, 3, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Repeatability Trend */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Repeatability Trend (%RSD over Time)</CardTitle>
+            <CardDescription className="text-xs">Monthly %RSD tracking for key parameters</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={220}>
+              <LineChart data={repeatabilityTrend} margin={{ top: 4, right: 20, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} domain={[0, 0.3]} />
+                <Tooltip contentStyle={{ fontSize: 11 }} />
+                <Legend wrapperStyle={{ fontSize: 10 }} />
+                <ReferenceLine y={0.2} stroke="#f59e0b" strokeDasharray="4 4" label={{ value: "Warning", fontSize: 9 }} />
+                <Line type="monotone" dataKey="Pmax" stroke="#10b981" dot={{ r: 3 }} strokeWidth={2} />
+                <Line type="monotone" dataKey="Isc" stroke="#3b82f6" dot={{ r: 3 }} strokeWidth={2} />
+                <Line type="monotone" dataKey="Voc" stroke="#8b5cf6" dot={{ r: 3 }} strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* %RSD Gauge Zones */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">%RSD Zone Classification</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {REPLICATE_RECORDS.filter((_, i) => i < 4).map(r => (
+              <div key={r.id} className="flex items-center gap-3 text-xs">
+                <span className="w-32 font-medium text-foreground truncate">{r.parameter} ({r.sampleId.slice(-3)})</span>
+                <div className="flex-1 h-5 rounded-full overflow-hidden bg-muted relative">
+                  <div className="absolute inset-0 flex">
+                    <div className="bg-green-500/20 flex-[1]" />
+                    <div className="bg-amber-500/20 flex-[1]" />
+                    <div className="bg-red-500/20 flex-[1]" />
+                  </div>
+                  <div className="absolute top-0 h-full w-1 bg-foreground rounded" style={{ left: `${Math.min(r.rsd / 3 * 100, 100)}%` }} />
+                </div>
+                <span className={cn("w-16 text-right font-mono font-bold", rsdColor(r.rsd))}>{r.rsd.toFixed(3)}%</span>
+                <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-bold", r.rsd < 1 ? "bg-green-50 text-green-700" : r.rsd < 2 ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700")}>
+                  {r.rsd < 1 ? "Excellent" : r.rsd < 2 ? "Acceptable" : "Investigate"}
+                </span>
+              </div>
+            ))}
+            <div className="flex items-center gap-4 text-[10px] mt-2 text-muted-foreground">
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-green-500/30 inline-block" /> Excellent (&lt;1%)</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-500/30 inline-block" /> Acceptable (1-2%)</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-500/30 inline-block" /> Investigation (&gt;2%)</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Measurements Log Table */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm">Replicate Measurements Log</CardTitle>
@@ -805,6 +1199,42 @@ function ReplicateTestingTab() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Report Format */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm flex items-center gap-2"><FileText className="h-4 w-4 text-green-600" /> Replicate Testing Report</CardTitle>
+            <Button size="sm" variant="outline" className="gap-1 text-xs h-7"><Download className="h-3 w-3" /> Export PDF</Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="border rounded-lg p-3 bg-muted/20 text-xs">
+            <div className="text-center mb-2">
+              <p className="font-bold text-foreground">SolarLabX PV Testing Laboratory</p>
+              <p className="text-muted-foreground">Replicate Testing Report &mdash; RPT-REP-2026-008</p>
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-[10px]">
+              <div><span className="text-muted-foreground">Date:</span> 21-Mar-2026</div>
+              <div><span className="text-muted-foreground">Method:</span> IEC 60904-1</div>
+              <div><span className="text-muted-foreground">Replicates:</span> 5</div>
+            </div>
+          </div>
+          <div className="text-xs text-muted-foreground">
+            <p className="font-semibold text-foreground mb-1">Conclusions:</p>
+            <p>All parameters tested show %RSD well below the 2% investigation threshold. Measurement repeatability is confirmed satisfactory for Pmax (0.062%), Isc (0.163%), Voc (0.181%), FF (0.145%), and Efficiency (0.396%). No corrective actions required.</p>
+          </div>
+          <div className="grid grid-cols-3 gap-4 border-t pt-3">
+            {[{ role: "Tested By", name: "S. Patel" }, { role: "Reviewed By", name: "A. Mehta" }, { role: "Approved By", name: "Dr. S. Kumar" }].map(s => (
+              <div key={s.role} className="text-xs space-y-1">
+                <p className="font-semibold text-foreground">{s.role}</p>
+                <div className="border-b border-dashed border-muted-foreground/50 h-6" />
+                <p className="text-muted-foreground">{s.name}</p>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -825,6 +1255,16 @@ const BLIND_RECORDS: BlindRecord[] = [
   { id: "BLD-006", sampleId: "BLD-PV-003", parameter: "Efficiency", unit: "%", trueValue: 21.50, measuredValue: 21.45, bias: -0.05, pctBias: -0.23, acceptableLimit: 1.0, status: "Pass" },
 ];
 
+const biasHistogramData = [
+  { range: "-1.5 to -1.0", count: 1 },
+  { range: "-1.0 to -0.5", count: 0 },
+  { range: "-0.5 to 0.0", count: 1 },
+  { range: "0.0 to 0.5", count: 3 },
+  { range: "0.5 to 1.0", count: 1 },
+];
+
+const biasPerParam = BLIND_RECORDS.map(r => ({ name: `${r.parameter} (${r.sampleId.slice(-3)})`, pctBias: r.pctBias }));
+
 function BlindTestingTab() {
   const passCount = BLIND_RECORDS.filter(r => r.status === "Pass").length;
   const chartData = BLIND_RECORDS.map(r => ({
@@ -840,10 +1280,40 @@ function BlindTestingTab() {
         <span><strong>Blind Testing (ISO 17025 Clause 7.7.1):</strong> Samples tested without knowledge of true values. %Bias within ±{BLIND_RECORDS[0]?.acceptableLimit}% is acceptable. {passCount}/{BLIND_RECORDS.length} passed.</span>
       </div>
 
+      {/* Protocol */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm">True vs Measured Values</CardTitle>
+          <CardTitle className="text-sm flex items-center gap-2"><Shield className="h-4 w-4 text-purple-600" /> Blind Sample Management Protocol</CardTitle>
         </CardHeader>
+        <CardContent className="space-y-3 text-xs">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <p className="font-semibold text-foreground">Sample Coding Procedure:</p>
+              <ol className="list-decimal pl-4 space-y-1 text-muted-foreground">
+                <li>Quality Manager assigns unique blind code (BLD-PV-XXX)</li>
+                <li>True values sealed in envelope, stored securely</li>
+                <li>Samples submitted to lab with blind code only</li>
+                <li>Operator performs routine testing per standard SOP</li>
+                <li>Results recorded against blind code</li>
+                <li>Quality Manager decodes and calculates bias</li>
+              </ol>
+            </div>
+            <div className="space-y-2">
+              <p className="font-semibold text-foreground">Bias Detection Methodology:</p>
+              <ul className="list-disc pl-4 space-y-1 text-muted-foreground">
+                <li>%Bias = (Measured - True) / True × 100</li>
+                <li>Acceptance: |%Bias| ≤ 1.0% for electrical parameters</li>
+                <li>Systematic bias: &gt;3 consecutive same-sign biases</li>
+                <li>Failed samples trigger CAPA investigation</li>
+              </ul>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Existing chart */}
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-sm">True vs Measured Values</CardTitle></CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={chartData} margin={{ top: 4, right: 20, left: -10, bottom: 0 }}>
@@ -859,10 +1329,81 @@ function BlindTestingTab() {
         </CardContent>
       </Card>
 
+      {/* Enhanced Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Scatter: True vs Measured with 1:1 line */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">True vs Measured Scatter (1:1 Reference)</CardTitle>
+            <CardDescription className="text-xs">Points on the diagonal indicate zero bias</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={250}>
+              <ScatterChart margin={{ top: 10, right: 20, left: 10, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis type="number" dataKey="x" name="True Value" tick={{ fontSize: 10 }} label={{ value: "True Value", fontSize: 10, position: "bottom", offset: 5 }} />
+                <YAxis type="number" dataKey="y" name="Measured" tick={{ fontSize: 10 }} label={{ value: "Measured", fontSize: 10, angle: -90, position: "insideLeft" }} />
+                <Tooltip contentStyle={{ fontSize: 11 }} cursor={{ strokeDasharray: "3 3" }} />
+                <ReferenceLine segment={[{ x: 0, y: 0 }, { x: 500, y: 500 }]} stroke="#6b7280" strokeDasharray="4 4" />
+                <Scatter data={BLIND_RECORDS.map(r => ({ x: r.trueValue, y: r.measuredValue, name: r.parameter }))} fill="#8b5cf6">
+                  {BLIND_RECORDS.map((r, i) => (
+                    <Cell key={i} fill={r.status === "Pass" ? "#10b981" : "#ef4444"} />
+                  ))}
+                </Scatter>
+              </ScatterChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* %Bias Bar per Parameter */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">%Bias per Parameter</CardTitle>
+            <CardDescription className="text-xs">Green: within ±1%, Red: outside limits</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={biasPerParam} layout="vertical" margin={{ top: 4, right: 20, left: 40, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis type="number" tick={{ fontSize: 10 }} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 9 }} width={100} />
+                <Tooltip contentStyle={{ fontSize: 11 }} />
+                <ReferenceLine x={1} stroke="#ef4444" strokeDasharray="4 4" />
+                <ReferenceLine x={-1} stroke="#ef4444" strokeDasharray="4 4" />
+                <ReferenceLine x={0} stroke="#6b7280" strokeWidth={1} />
+                <Bar dataKey="pctBias" name="%Bias" radius={[0, 3, 3, 0]}>
+                  {biasPerParam.map((entry, i) => (
+                    <Cell key={i} fill={Math.abs(entry.pctBias) <= 1 ? "#10b981" : "#ef4444"} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Bias Histogram */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Blind Sample Results</CardTitle>
+          <CardTitle className="text-sm">Bias Distribution Histogram</CardTitle>
+          <CardDescription className="text-xs">Distribution of %Bias values across all blind samples</CardDescription>
         </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={biasHistogramData} margin={{ top: 4, right: 20, left: -10, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="range" tick={{ fontSize: 9 }} />
+              <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
+              <Tooltip contentStyle={{ fontSize: 11 }} />
+              <Bar dataKey="count" name="Frequency" fill="#8b5cf6" radius={[3, 3, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* Results Table */}
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-sm">Blind Sample Results</CardTitle></CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
@@ -894,6 +1435,35 @@ function BlindTestingTab() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Report */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm flex items-center gap-2"><FileText className="h-4 w-4 text-purple-600" /> Blind Testing Evaluation Report</CardTitle>
+            <Button size="sm" variant="outline" className="gap-1 text-xs h-7"><Download className="h-3 w-3" /> Export PDF</Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="border rounded-lg p-3 bg-muted/20 text-xs text-center">
+            <p className="font-bold text-foreground">SolarLabX PV Testing Laboratory</p>
+            <p className="text-muted-foreground">Blind Testing Evaluation Report &mdash; RPT-BLD-2026-003</p>
+          </div>
+          <div className="text-xs text-muted-foreground">
+            <p className="font-semibold text-foreground mb-1">Bias Analysis Conclusions:</p>
+            <p>{passCount} of {BLIND_RECORDS.length} blind samples passed within ±1.0% bias acceptance criteria. One Voc measurement (BLD-PV-002) showed -1.05% bias exceeding the limit &mdash; CAPA investigation initiated for potential systematic offset in voltage measurement channel.</p>
+          </div>
+          <div className="grid grid-cols-3 gap-4 border-t pt-3">
+            {[{ role: "Tested By", name: "R. Kumar" }, { role: "Reviewed By", name: "A. Mehta" }, { role: "Approved By", name: "Dr. S. Kumar" }].map(s => (
+              <div key={s.role} className="text-xs space-y-1">
+                <p className="font-semibold text-foreground">{s.role}</p>
+                <div className="border-b border-dashed border-muted-foreground/50 h-6" />
+                <p className="text-muted-foreground">{s.name}</p>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -919,6 +1489,7 @@ function AltMethodTestingTab() {
   const meanDiff = ALT_METHOD_RECORDS.reduce((a, r) => a + r.difference, 0) / ALT_METHOD_RECORDS.length;
   const sdDiff = Math.sqrt(ALT_METHOD_RECORDS.reduce((a, r) => a + (r.difference - meanDiff) ** 2, 0) / ALT_METHOD_RECORDS.length);
   const blandAltmanData = ALT_METHOD_RECORDS.map(r => ({ x: r.average, y: r.difference, name: r.parameter }));
+  const r2BarData = ALT_METHOD_RECORDS.map(r => ({ name: r.parameter, r2: r.r2 }));
 
   return (
     <div className="space-y-4">
@@ -927,22 +1498,42 @@ function AltMethodTestingTab() {
         <span><strong>ISO 17025 Clause 7.7.1:</strong> Method comparison studies verify equivalence between alternative test methods. R² ≥ 0.99 and differences within ±1.96 SD indicate acceptable agreement.</span>
       </div>
 
-      {/* Bland-Altman Plot */}
+      {/* Protocol */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Bland-Altman Plot (Difference vs Average)</CardTitle>
-          <CardDescription className="text-xs">Mean diff: {meanDiff.toFixed(2)} | ±1.96 SD limits: [{(meanDiff - 1.96 * sdDiff).toFixed(2)}, {(meanDiff + 1.96 * sdDiff).toFixed(2)}]</CardDescription>
+          <CardTitle className="text-sm flex items-center gap-2"><ClipboardList className="h-4 w-4 text-cyan-600" /> Method Comparison Protocol</CardTitle>
+        </CardHeader>
+        <CardContent className="text-xs space-y-2">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 border rounded-lg p-3 bg-muted/20">
+            <div><span className="text-muted-foreground">Primary Method:</span> <span className="font-medium text-foreground">IEC 60904-1 Indoor</span></div>
+            <div><span className="text-muted-foreground">Alt. Method:</span> <span className="font-medium text-foreground">IEC 60904-3 Outdoor</span></div>
+            <div><span className="text-muted-foreground">Sample Set:</span> <span className="font-bold text-foreground">5 modules</span></div>
+            <div><span className="text-muted-foreground">Acceptance:</span> <span className="font-bold text-green-600">R² ≥ 0.99</span></div>
+          </div>
+          <div className="text-muted-foreground">
+            <p className="font-semibold text-foreground mb-1">Procedure:</p>
+            <p>Test identical samples using both methods under controlled conditions. Calculate Bland-Altman difference statistics, regression R², slope, and intercept. Methods are considered equivalent if R² ≥ 0.99, slope within 0.98-1.02, and all differences fall within ±1.96 SD limits of agreement.</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Enhanced Bland-Altman Plot */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Enhanced Bland-Altman Plot</CardTitle>
+          <CardDescription className="text-xs">Mean diff: {meanDiff.toFixed(2)} | Limits of Agreement: [{(meanDiff - 1.96 * sdDiff).toFixed(2)}, {(meanDiff + 1.96 * sdDiff).toFixed(2)}] | SD: {sdDiff.toFixed(3)}</CardDescription>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={250}>
-            <ScatterChart margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
+          <ResponsiveContainer width="100%" height={280}>
+            <ScatterChart margin={{ top: 10, right: 20, left: 10, bottom: 20 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis type="number" dataKey="x" name="Average" tick={{ fontSize: 10 }} label={{ value: "Average of Methods", fontSize: 10, position: "bottom" }} />
-              <YAxis type="number" dataKey="y" name="Difference" tick={{ fontSize: 10 }} label={{ value: "Difference", fontSize: 10, angle: -90, position: "insideLeft" }} />
+              <XAxis type="number" dataKey="x" name="Average" tick={{ fontSize: 10 }} label={{ value: "Average of Methods", fontSize: 10, position: "bottom", offset: 5 }} />
+              <YAxis type="number" dataKey="y" name="Difference" tick={{ fontSize: 10 }} label={{ value: "Difference (M1 - M2)", fontSize: 10, angle: -90, position: "insideLeft" }} />
               <Tooltip contentStyle={{ fontSize: 11 }} cursor={{ strokeDasharray: "3 3" }} />
-              <ReferenceLine y={meanDiff} stroke="#3b82f6" strokeDasharray="4 4" label={{ value: "Mean", fontSize: 9 }} />
-              <ReferenceLine y={meanDiff + 1.96 * sdDiff} stroke="#ef4444" strokeDasharray="4 4" label={{ value: "+1.96SD", fontSize: 9 }} />
-              <ReferenceLine y={meanDiff - 1.96 * sdDiff} stroke="#ef4444" strokeDasharray="4 4" label={{ value: "-1.96SD", fontSize: 9 }} />
+              <ReferenceLine y={meanDiff} stroke="#3b82f6" strokeDasharray="4 4" label={{ value: `Mean=${meanDiff.toFixed(2)}`, fontSize: 9, position: "right" }} />
+              <ReferenceLine y={meanDiff + 1.96 * sdDiff} stroke="#ef4444" strokeDasharray="4 4" label={{ value: `+1.96SD=${(meanDiff + 1.96 * sdDiff).toFixed(2)}`, fontSize: 9, position: "right" }} />
+              <ReferenceLine y={meanDiff - 1.96 * sdDiff} stroke="#ef4444" strokeDasharray="4 4" label={{ value: `-1.96SD=${(meanDiff - 1.96 * sdDiff).toFixed(2)}`, fontSize: 9, position: "right" }} />
+              <ReferenceLine y={0} stroke="#6b7280" strokeWidth={1} />
               <Scatter data={blandAltmanData} fill="#6366f1">
                 {blandAltmanData.map((_, i) => (
                   <Cell key={i} fill={ALT_METHOD_RECORDS[i].status === "Equivalent" ? "#10b981" : "#ef4444"} />
@@ -953,10 +1544,60 @@ function AltMethodTestingTab() {
         </CardContent>
       </Card>
 
+      {/* Enhanced Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Regression Plot */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Regression: Method 1 vs Method 2</CardTitle>
+            <CardDescription className="text-xs">Overall R² = 0.9978 | Slope = 0.999 | Intercept = 0.12</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={250}>
+              <ScatterChart margin={{ top: 10, right: 20, left: 10, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis type="number" dataKey="x" name="Method 1" tick={{ fontSize: 10 }} label={{ value: "Method 1", fontSize: 10, position: "bottom", offset: 5 }} />
+                <YAxis type="number" dataKey="y" name="Method 2" tick={{ fontSize: 10 }} label={{ value: "Method 2", fontSize: 10, angle: -90, position: "insideLeft" }} />
+                <Tooltip contentStyle={{ fontSize: 11 }} cursor={{ strokeDasharray: "3 3" }} />
+                <Scatter data={ALT_METHOD_RECORDS.map(r => ({ x: r.value1, y: r.value2, name: r.parameter }))} fill="#3b82f6">
+                  {ALT_METHOD_RECORDS.map((r, i) => (
+                    <Cell key={i} fill={r.r2 >= 0.99 ? "#10b981" : "#ef4444"} />
+                  ))}
+                </Scatter>
+              </ScatterChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* R² Bar Chart */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">R² per Parameter</CardTitle>
+            <CardDescription className="text-xs">Threshold: R² ≥ 0.99 (green), R² ≥ 0.98 (amber), R² &lt; 0.98 (red)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={r2BarData} margin={{ top: 4, right: 20, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+                <YAxis tick={{ fontSize: 10 }} domain={[0.97, 1.0]} />
+                <Tooltip contentStyle={{ fontSize: 11 }} />
+                <ReferenceLine y={0.99} stroke="#10b981" strokeDasharray="4 4" label={{ value: "R²=0.99", fontSize: 9 }} />
+                <ReferenceLine y={0.98} stroke="#f59e0b" strokeDasharray="4 4" label={{ value: "R²=0.98", fontSize: 9 }} />
+                <Bar dataKey="r2" name="R²" radius={[3, 3, 0, 0]}>
+                  {r2BarData.map((entry, i) => (
+                    <Cell key={i} fill={entry.r2 >= 0.99 ? "#10b981" : entry.r2 >= 0.98 ? "#f59e0b" : "#ef4444"} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Results Table */}
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Method Comparison Results</CardTitle>
-        </CardHeader>
+        <CardHeader className="pb-2"><CardTitle className="text-sm">Method Comparison Results</CardTitle></CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
@@ -979,14 +1620,41 @@ function AltMethodTestingTab() {
                     <td className={cn("px-3 py-2 font-mono font-bold", Math.abs(r.difference) < 1 ? "text-green-700" : "text-amber-700")}>{r.difference > 0 ? "+" : ""}{r.difference.toFixed(2)}</td>
                     <td className={cn("px-3 py-2 font-mono font-bold", r.r2 >= 0.99 ? "text-green-700" : r.r2 >= 0.98 ? "text-amber-700" : "text-red-700")}>{r.r2.toFixed(4)}</td>
                     <td className="px-3 py-2">
-                      <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-bold",
-                        r.status === "Equivalent" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
-                      )}>{r.status}</span>
+                      <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-bold", r.status === "Equivalent" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700")}>{r.status}</span>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Report */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm flex items-center gap-2"><FileText className="h-4 w-4 text-cyan-600" /> Method Comparison Report</CardTitle>
+            <Button size="sm" variant="outline" className="gap-1 text-xs h-7"><Download className="h-3 w-3" /> Export PDF</Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="border rounded-lg p-3 bg-muted/20 text-xs text-center">
+            <p className="font-bold text-foreground">SolarLabX PV Testing Laboratory</p>
+            <p className="text-muted-foreground">Alternative Method Comparison Report &mdash; RPT-ALT-2026-002</p>
+          </div>
+          <div className="text-xs text-muted-foreground">
+            <p className="font-semibold text-foreground mb-1">Conclusions:</p>
+            <p>4 of 5 parameters demonstrate method equivalence (R² ≥ 0.99, differences within LoA). Efficiency measurement by calorimetric method (IEC 61853-1) shows significant systematic difference (R²=0.982) compared to IV curve method &mdash; calorimetric method not recommended as alternative for efficiency reporting without correction factor.</p>
+          </div>
+          <div className="grid grid-cols-3 gap-4 border-t pt-3">
+            {[{ role: "Tested By", name: "S. Rao" }, { role: "Reviewed By", name: "A. Mehta" }, { role: "Approved By", name: "Dr. S. Kumar" }].map(s => (
+              <div key={s.role} className="text-xs space-y-1">
+                <p className="font-semibold text-foreground">{s.role}</p>
+                <div className="border-b border-dashed border-muted-foreground/50 h-6" />
+                <p className="text-muted-foreground">{s.name}</p>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>

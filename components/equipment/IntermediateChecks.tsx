@@ -17,6 +17,11 @@ import {
   Legend,
   ReferenceLine,
   ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  ScatterChart,
+  Scatter,
 } from "recharts";
 import {
   CheckCircle2,
@@ -31,6 +36,10 @@ import {
   Minus,
   ShieldCheck,
   ClipboardList,
+  Printer,
+  FileText,
+  FlaskConical,
+  Download,
 } from "lucide-react";
 
 // --- Mock Data ---
@@ -238,6 +247,48 @@ const chamberTempTrendData = [
   { date: "Mar 10", value: 1.5, ucl: 2.0, lcl: 0.0 },
   { date: "Mar 17", value: 1.6, ucl: 2.0, lcl: 0.0 },
 ];
+
+// --- Checklist Template Data ---
+const checklistTemplate = [
+  { equipmentId: "EQ-SS-01", parameter: "Irradiance Uniformity", criteria: "±2% of 1000 W/m²", method: "Reference cell mapping (9-point)", frequency: "Weekly", band: "green" as const },
+  { equipmentId: "EQ-SS-01", parameter: "Spectral Match", criteria: "Class A+ (0.75–1.25)", method: "Spectroradiometer scan", frequency: "Monthly", band: "green" as const },
+  { equipmentId: "EQ-RC-01", parameter: "Short-Circuit Current", criteria: "±0.5% of cal. value", method: "Direct measurement vs certificate", frequency: "Daily", band: "green" as const },
+  { equipmentId: "EQ-CC-01", parameter: "Temperature Uniformity", criteria: "±2°C across volume", method: "9-thermocouple survey", frequency: "Weekly", band: "amber" as const },
+  { equipmentId: "EQ-CC-01", parameter: "Humidity Accuracy", criteria: "±3% RH at 85% RH", method: "Reference hygrometer comparison", frequency: "Weekly", band: "red" as const },
+  { equipmentId: "EQ-EL-01", parameter: "Pixel Response", criteria: "<0.1% dead pixels", method: "Uniform illumination test", frequency: "Monthly", band: "green" as const },
+  { equipmentId: "EQ-IV-01", parameter: "Zero Offset", criteria: "±0.05 V, ±0.5 mA", method: "Short/open circuit measurement", frequency: "Daily", band: "green" as const },
+  { equipmentId: "EQ-SR-01", parameter: "Wavelength Accuracy", criteria: "±0.5 nm", method: "Hg lamp emission lines", frequency: "Monthly", band: "green" as const },
+];
+
+// --- Pass/Fail Pie Data ---
+const passFailPieData = [
+  { name: "Pass", value: 8, fill: "#10b981" },
+  { name: "Fail", value: 1, fill: "#ef4444" },
+  { name: "Pending", value: 1, fill: "#f59e0b" },
+];
+
+// --- Alternative Instrumentation Data ---
+const altInstrumentData = [
+  { id: "ALT-001", primaryInstrument: "Solar Simulator SS-01", altInstrument: "Outdoor STC Station", parameter: "Irradiance (W/m²)", primaryReading: 1000, altReading: 998, rSquared: 0.9992, bias: 0.2, slope: 0.998 },
+  { id: "ALT-002", primaryInstrument: "I-V Tracer IV-01", altInstrument: "I-V Tracer IV-02 (Backup)", parameter: "Pmax (W)", primaryReading: 310.2, altReading: 309.8, rSquared: 0.9998, bias: -0.13, slope: 1.001 },
+  { id: "ALT-003", primaryInstrument: "Reference Cell RC-01", altInstrument: "Reference Cell RC-02", parameter: "Isc (mA)", primaryReading: 142.30, altReading: 142.15, rSquared: 0.9996, bias: -0.11, slope: 0.999 },
+  { id: "ALT-004", primaryInstrument: "Spectroradiometer SR-01", altInstrument: "Spectroradiometer SR-02", parameter: "Spectral Irradiance", primaryReading: 1.02, altReading: 1.01, rSquared: 0.9988, bias: -0.01, slope: 0.997 },
+  { id: "ALT-005", primaryInstrument: "Climate Chamber CC-01", altInstrument: "Climate Chamber CC-02", parameter: "Temperature (°C)", primaryReading: 85.0, altReading: 85.3, rSquared: 0.9995, bias: 0.35, slope: 1.002 },
+];
+
+const correlationScatterData = [
+  { primary: 995, alt: 993 },
+  { primary: 1000, alt: 998 },
+  { primary: 1005, alt: 1003 },
+  { primary: 308, alt: 307.5 },
+  { primary: 310.2, alt: 309.8 },
+  { primary: 312, alt: 311.8 },
+  { primary: 141.5, alt: 141.3 },
+  { primary: 142.3, alt: 142.15 },
+  { primary: 143.0, alt: 142.8 },
+];
+
+const BAND_COLORS = { green: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400", amber: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400", red: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" };
 
 // --- Status Styling ---
 
@@ -695,6 +746,336 @@ export default function IntermediateChecks() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ══════════ CHECKLIST & CRITERIA SECTION ══════════ */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-sm flex items-center gap-2">
+                <ClipboardList className="h-4 w-4 text-blue-600" />
+                Intermediate Check Checklist &amp; Criteria
+              </CardTitle>
+              <CardDescription className="text-xs">Printable checklist template per ISO 17025 Clause 6.4.10 with color-coded acceptance bands</CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" className="gap-1 text-xs h-8">
+                <FileText className="h-3.5 w-3.5" />
+                Generate Checklist
+              </Button>
+              <Button size="sm" variant="outline" className="gap-1 text-xs h-8" onClick={() => window.print()}>
+                <Printer className="h-3.5 w-3.5" />
+                Print Checklist
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="px-4 pb-3 flex items-center gap-4 text-[10px]">
+            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-green-500 inline-block" /> Pass</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-500 inline-block" /> Marginal</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-500 inline-block" /> Fail</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-t bg-muted/50">
+                  <th className="text-left p-3 font-medium text-muted-foreground">Equipment ID</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">Parameter</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">Acceptance Criteria</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">Method of Check</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">Frequency</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">Band</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">Checked By</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">Date</th>
+                  <th className="text-center p-3 font-medium text-muted-foreground">Pass</th>
+                  <th className="text-center p-3 font-medium text-muted-foreground">Fail</th>
+                </tr>
+              </thead>
+              <tbody>
+                {checklistTemplate.map((item, idx) => (
+                  <tr key={idx} className="border-t hover:bg-muted/30 transition-colors">
+                    <td className="p-3 font-mono text-foreground">{item.equipmentId}</td>
+                    <td className="p-3 text-foreground font-medium">{item.parameter}</td>
+                    <td className="p-3 text-muted-foreground">{item.criteria}</td>
+                    <td className="p-3 text-muted-foreground">{item.method}</td>
+                    <td className="p-3">
+                      <Badge className={cn("text-[10px]", frequencyConfig[item.frequency as keyof typeof frequencyConfig]?.color || "bg-gray-100 text-gray-700")}>
+                        {item.frequency}
+                      </Badge>
+                    </td>
+                    <td className="p-3">
+                      <Badge className={cn("text-[10px]", BAND_COLORS[item.band])}>
+                        {item.band === "green" ? "Pass" : item.band === "amber" ? "Marginal" : "Fail"}
+                      </Badge>
+                    </td>
+                    <td className="p-3 text-muted-foreground">__________</td>
+                    <td className="p-3 text-muted-foreground">____/____/____</td>
+                    <td className="p-3 text-center"><div className="w-4 h-4 border-2 border-green-500 rounded mx-auto" /></td>
+                    <td className="p-3 text-center"><div className="w-4 h-4 border-2 border-red-500 rounded mx-auto" /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ══════════ REPORT FORMAT SECTION ══════════ */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-sm flex items-center gap-2">
+                <FileText className="h-4 w-4 text-indigo-600" />
+                Intermediate Check Report
+              </CardTitle>
+              <CardDescription className="text-xs">Professional report format for accreditation documentation</CardDescription>
+            </div>
+            <Button size="sm" className="gap-1 text-xs h-8">
+              <Download className="h-3.5 w-3.5" />
+              Export PDF
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Report Header */}
+          <div className="border rounded-lg p-4 bg-muted/20">
+            <div className="text-center mb-3">
+              <h3 className="text-base font-bold text-foreground">SolarLabX PV Testing Laboratory</h3>
+              <p className="text-xs text-muted-foreground">ISO/IEC 17025:2017 Accredited Laboratory</p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+              <div><span className="text-muted-foreground">Report No:</span> <span className="font-mono font-bold text-foreground">IC-RPT-2026-012</span></div>
+              <div><span className="text-muted-foreground">Date:</span> <span className="font-medium text-foreground">21-Mar-2026</span></div>
+              <div><span className="text-muted-foreground">Period:</span> <span className="font-medium text-foreground">14-Mar to 21-Mar-2026</span></div>
+              <div><span className="text-muted-foreground">Revision:</span> <span className="font-medium text-foreground">Rev 0</span></div>
+            </div>
+          </div>
+
+          {/* Summary Table */}
+          <div>
+            <h4 className="text-xs font-semibold text-foreground mb-2">Check Summary</h4>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs border">
+                <thead>
+                  <tr className="bg-muted/50 border-b">
+                    <th className="text-left p-2 font-medium text-muted-foreground">Equipment</th>
+                    <th className="text-left p-2 font-medium text-muted-foreground">Parameter</th>
+                    <th className="text-left p-2 font-medium text-muted-foreground">Result</th>
+                    <th className="text-left p-2 font-medium text-muted-foreground">Value</th>
+                    <th className="text-left p-2 font-medium text-muted-foreground">Criteria</th>
+                    <th className="text-left p-2 font-medium text-muted-foreground">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {checkSchedule.slice(0, 6).map((item) => (
+                    <tr key={item.id} className="border-b hover:bg-muted/20">
+                      <td className="p-2 font-medium text-foreground">{item.equipment}</td>
+                      <td className="p-2 text-muted-foreground">{item.checkParameter}</td>
+                      <td className="p-2"><Badge className={cn("text-[10px]", resultConfig[item.lastResult].color)}>{item.lastResult}</Badge></td>
+                      <td className="p-2 font-mono text-foreground">{item.lastValue}</td>
+                      <td className="p-2 text-muted-foreground">{item.acceptanceCriteria}</td>
+                      <td className="p-2"><Badge className={cn("text-[10px]", statusConfig[item.status].color)}>{item.status}</Badge></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Charts Row: Pie + Control Chart */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Pass/Fail Pie */}
+            <div>
+              <h4 className="text-xs font-semibold text-foreground mb-2">Pass/Fail Statistics</h4>
+              <ResponsiveContainer width="100%" height={220}>
+                <PieChart>
+                  <Pie data={passFailPieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                    {passFailPieData.map((entry, i) => (
+                      <Cell key={i} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8 }} />
+                  <Legend wrapperStyle={{ fontSize: 10 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Control Chart */}
+            <div>
+              <h4 className="text-xs font-semibold text-foreground mb-2">Trend Analysis &mdash; Ref Cell Isc Control Chart</h4>
+              <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={refCellTrendData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                  <YAxis domain={[141.4, 143.2]} tick={{ fontSize: 10 }} tickFormatter={(v) => `${v.toFixed(1)}`} />
+                  <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8 }} formatter={(value: number) => [`${value.toFixed(2)} mA`, "Isc"]} />
+                  <ReferenceLine y={143.01} stroke="#ef4444" strokeDasharray="5 5" label={{ value: "UCL", position: "right", fill: "#ef4444", fontSize: 9 }} />
+                  <ReferenceLine y={141.59} stroke="#ef4444" strokeDasharray="5 5" label={{ value: "LCL", position: "right", fill: "#ef4444", fontSize: 9 }} />
+                  <ReferenceLine y={142.30} stroke="#3b82f6" strokeDasharray="2 2" label={{ value: "CL", position: "right", fill: "#3b82f6", fontSize: 9 }} />
+                  <Line type="monotone" dataKey="value" stroke="#10b981" strokeWidth={2} dot={{ r: 3, fill: "#10b981" }} name="Isc (mA)" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Corrective Action for Failed Items */}
+          <div>
+            <h4 className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1">
+              <AlertTriangle className="h-3.5 w-3.5 text-red-500" /> Corrective Actions for Failed Items
+            </h4>
+            <div className="border rounded-lg overflow-hidden">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-red-50/50 dark:bg-red-950/20 border-b">
+                    <th className="text-left p-2 font-medium text-muted-foreground">Equipment</th>
+                    <th className="text-left p-2 font-medium text-muted-foreground">Parameter</th>
+                    <th className="text-left p-2 font-medium text-muted-foreground">Deviation</th>
+                    <th className="text-left p-2 font-medium text-muted-foreground">Root Cause</th>
+                    <th className="text-left p-2 font-medium text-muted-foreground">Corrective Action</th>
+                    <th className="text-left p-2 font-medium text-muted-foreground">CAPA Ref</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b hover:bg-muted/20">
+                    <td className="p-2 font-medium text-foreground">Climate Chamber CC-01</td>
+                    <td className="p-2 text-muted-foreground">Humidity Accuracy</td>
+                    <td className="p-2 text-red-600 font-mono">3.8% RH (limit: ±3%)</td>
+                    <td className="p-2 text-muted-foreground">Humidity sensor drift suspected</td>
+                    <td className="p-2 text-muted-foreground">Sensor recalibration scheduled; replace if drift persists</td>
+                    <td className="p-2 font-mono text-blue-700">CAPA-2026-018</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Digital Signature Fields */}
+          <div className="border rounded-lg p-4 bg-muted/10">
+            <h4 className="text-xs font-semibold text-foreground mb-3">Authorization Signatures</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[
+                { role: "Checked By", name: "R. Kumar", title: "Lab Technician", date: "21-Mar-2026" },
+                { role: "Reviewed By", name: "A. Mehta", title: "Quality Manager", date: "" },
+                { role: "Approved By", name: "Dr. S. Kumar", title: "Lab Director", date: "" },
+              ].map((sig) => (
+                <div key={sig.role} className="text-xs space-y-2">
+                  <p className="font-semibold text-foreground">{sig.role}</p>
+                  <div className="border-b border-dashed border-muted-foreground/50 h-8" />
+                  <p className="text-muted-foreground">Name: {sig.name}</p>
+                  <p className="text-muted-foreground">Title: {sig.title}</p>
+                  <p className="text-muted-foreground">Date: {sig.date || "____/____/____"}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ══════════ ALTERNATIVE INSTRUMENTATION SECTION ══════════ */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <FlaskConical className="h-4 w-4 text-purple-600" />
+            Alternative Instrumentation Comparison
+          </CardTitle>
+          <CardDescription className="text-xs">
+            ISO 17025 Clause 6.4 &mdash; Comparison of primary vs alternative instruments to ensure measurement equivalence
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Comparison Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-t bg-muted/50">
+                  <th className="text-left p-3 font-medium text-muted-foreground">ID</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">Primary Instrument</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">Alternative Instrument</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">Parameter</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">Primary</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">Alt.</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">R²</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">Bias (%)</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">Slope</th>
+                </tr>
+              </thead>
+              <tbody>
+                {altInstrumentData.map((item, idx) => (
+                  <tr key={item.id} className={cn("border-t hover:bg-muted/30 transition-colors", idx % 2 !== 0 && "bg-muted/10")}>
+                    <td className="p-3 font-mono text-purple-700">{item.id}</td>
+                    <td className="p-3 font-medium text-foreground">{item.primaryInstrument}</td>
+                    <td className="p-3 text-muted-foreground">{item.altInstrument}</td>
+                    <td className="p-3 text-foreground">{item.parameter}</td>
+                    <td className="p-3 font-mono text-foreground">{item.primaryReading}</td>
+                    <td className="p-3 font-mono text-foreground">{item.altReading}</td>
+                    <td className={cn("p-3 font-mono font-bold", item.rSquared >= 0.999 ? "text-green-700" : item.rSquared >= 0.995 ? "text-amber-700" : "text-red-700")}>{item.rSquared.toFixed(4)}</td>
+                    <td className={cn("p-3 font-mono font-bold", Math.abs(item.bias) < 0.5 ? "text-green-700" : "text-amber-700")}>{item.bias > 0 ? "+" : ""}{item.bias.toFixed(2)}</td>
+                    <td className="p-3 font-mono text-foreground">{item.slope.toFixed(3)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Charts Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Correlation Scatter Plot */}
+            <div>
+              <h4 className="text-xs font-semibold text-foreground mb-2">Correlation Analysis: Primary vs Alternative Readings</h4>
+              <ResponsiveContainer width="100%" height={280}>
+                <ScatterChart margin={{ top: 10, right: 20, left: 10, bottom: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis type="number" dataKey="primary" name="Primary" tick={{ fontSize: 10 }} label={{ value: "Primary Instrument Reading", fontSize: 10, position: "bottom", offset: 5 }} />
+                  <YAxis type="number" dataKey="alt" name="Alternative" tick={{ fontSize: 10 }} label={{ value: "Alternative Reading", fontSize: 10, angle: -90, position: "insideLeft" }} />
+                  <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8 }} cursor={{ strokeDasharray: "3 3" }} />
+                  <Scatter data={correlationScatterData} fill="#8b5cf6">
+                    {correlationScatterData.map((_, i) => (
+                      <Cell key={i} fill={i < 3 ? "#f59e0b" : i < 6 ? "#10b981" : "#3b82f6"} />
+                    ))}
+                  </Scatter>
+                </ScatterChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Method Comparison Statistics */}
+            <div>
+              <h4 className="text-xs font-semibold text-foreground mb-2">Method Comparison Statistics</h4>
+              <div className="space-y-3">
+                {altInstrumentData.map((item) => (
+                  <div key={item.id} className="border rounded-lg p-3 bg-muted/10">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-medium text-foreground">{item.parameter}</span>
+                      <Badge className={cn("text-[10px]", item.rSquared >= 0.999 ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700")}>
+                        {item.rSquared >= 0.999 ? "Excellent" : "Acceptable"}
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-[10px]">
+                      <div>
+                        <span className="text-muted-foreground">R²: </span>
+                        <span className={cn("font-bold font-mono", item.rSquared >= 0.999 ? "text-green-600" : "text-amber-600")}>{item.rSquared.toFixed(4)}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Bias: </span>
+                        <span className="font-bold font-mono text-foreground">{item.bias > 0 ? "+" : ""}{item.bias.toFixed(2)}%</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Slope: </span>
+                        <span className="font-bold font-mono text-foreground">{item.slope.toFixed(3)}</span>
+                      </div>
+                    </div>
+                    {/* Visual R² bar */}
+                    <div className="mt-2 h-2 bg-muted rounded-full overflow-hidden">
+                      <div className={cn("h-full rounded-full", item.rSquared >= 0.999 ? "bg-green-500" : "bg-amber-500")} style={{ width: `${item.rSquared * 100}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
