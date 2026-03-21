@@ -84,6 +84,7 @@ const navItems = [
   { title: "Test Flow", href: "/test-flow", icon: "GitBranch" },
   { title: "Traceability", href: "/traceability", icon: "GitBranch" },
   { title: "RCA", href: "/rca", icon: "SearchCheck" },
+  { title: "Customer Mgmt", href: "/customer", icon: "Users" },
   { title: "Complaints", href: "/complaints", icon: "MessageSquareWarning" },
   { title: "Chatbot", href: "/chatbot", icon: "MessageCircle" },
   { title: "Sun Simulator", href: "/sun-simulator", icon: "Sun" },
