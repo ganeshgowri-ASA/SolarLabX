@@ -56,6 +56,7 @@ export default function EquipmentDashboardClient() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null);
   const [statusChangeId, setStatusChangeId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("registry");
   const reportRef = useRef<HTMLDivElement>(null);
 
   // KPI computations
@@ -157,8 +158,8 @@ export default function EquipmentDashboardClient() {
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div ref={reportRef} className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 print:grid-cols-7">
+      {/* Summary Cards - hidden when Intermediate Checks tab is active */}
+      {activeTab !== "intermediate-checks" && <div ref={reportRef} className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 print:grid-cols-7">
         <Card>
           <CardContent className="p-3">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Total Equipment</p>
@@ -201,10 +202,10 @@ export default function EquipmentDashboardClient() {
             <p className="text-xl font-bold text-foreground mt-0.5">{stats.avgAvail}%</p>
           </CardContent>
         </Card>
-      </div>
+      </div>}
 
       {/* Availability Rate KPIs per Category */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {activeTab !== "intermediate-checks" && <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold">Equipment Utilization by Category</CardTitle>
@@ -280,10 +281,10 @@ export default function EquipmentDashboardClient() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </div>}
 
       {/* Availability Rate per Category */}
-      <Card className="print:break-before-page">
+      {activeTab !== "intermediate-checks" && <Card className="print:break-before-page">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-semibold">Availability Rate by Equipment Category</CardTitle>
         </CardHeader>
@@ -303,10 +304,10 @@ export default function EquipmentDashboardClient() {
             ))}
           </div>
         </CardContent>
-      </Card>
+      </Card>}
 
       {/* Tabs */}
-      <Tabs defaultValue="registry" className="space-y-4 print:hidden">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 print:hidden">
         <TabsList>
           <TabsTrigger value="registry">Equipment Registry</TabsTrigger>
           <TabsTrigger value="calendar">Equipment Calendar</TabsTrigger>
