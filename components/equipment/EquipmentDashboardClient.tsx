@@ -21,6 +21,7 @@ import EquipmentFormDialog from "@/components/equipment/EquipmentFormDialog";
 import EquipmentCalendarView from "@/components/equipment/EquipmentCalendarView";
 import CalibrationCertificates from "@/components/equipment/CalibrationCertificates";
 import ChamberTestsManager from "@/components/chamber-tests/ChamberTestsManager";
+import IntermediateChecks from "@/components/equipment/IntermediateChecks";
 import { chamberTests } from "@/lib/data/chamber-tests-data";
 
 const categories = [
@@ -315,6 +316,7 @@ export default function EquipmentDashboardClient() {
           <TabsTrigger value="outdoor">Outdoor Testbed ({occupiedPositions}/72)</TabsTrigger>
           <TabsTrigger value="flow">Test Flow</TabsTrigger>
           <TabsTrigger value="manpower">Manpower</TabsTrigger>
+          <TabsTrigger value="intermediate-checks">Intermediate Checks</TabsTrigger>
         </TabsList>
 
         <TabsContent value="registry">
@@ -366,6 +368,10 @@ export default function EquipmentDashboardClient() {
 
         <TabsContent value="manpower">
           <TechnicianView technicians={technicians} />
+        </TabsContent>
+
+        <TabsContent value="intermediate-checks">
+          <IntermediateChecks />
         </TabsContent>
       </Tabs>
 

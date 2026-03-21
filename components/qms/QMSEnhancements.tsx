@@ -10,7 +10,7 @@ import {
   AlertTriangle, CheckCircle2, Clock, ArrowRight, AlertOctagon,
   FileText, User, Users, Calendar, TrendingUp, TrendingDown, Minus,
   ClipboardList, Wrench, MessageSquare, Target, BarChart3, Activity,
-  ChevronRight, Eye, GitCommit
+  ChevronRight, ChevronDown, Eye, GitCommit, XCircle, PenLine
 } from 'lucide-react'
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -515,11 +515,85 @@ const trendIcons = {
   stable: Minus,
 }
 
+// ─── MRM Minutes Data ────────────────────────────────────────────────────────
+
+interface AgendaItem {
+  id: string
+  topic: string
+  discussion: string
+  decision: string
+  responsible: string
+}
+
+const MRM_AGENDA_ITEMS: AgendaItem[] = [
+  { id: 'AG-01', topic: 'Review of Proficiency Testing Results (2025 Cycle)', discussion: 'PT results for IEC 60904-1 parameters (Isc, Voc, Pmax) reviewed. z-scores within ±2 for all except spectral irradiance (z=3.2). Root cause investigation initiated.', decision: 'Initiate CAPA for spectral irradiance deviation. Re-calibrate spectroradiometer and participate in next EPTIS round.', responsible: 'Dr. Priya Sharma' },
+  { id: 'AG-02', topic: 'CAPA Status Update', discussion: '10 active CAPAs reviewed. 3 overdue items flagged – TC-03 temperature deviation, data integrity issue, UV lamp replacement. Aging analysis shows 2 items >14 days in current stage.', decision: 'Escalate overdue CAPAs to Director. Weekly status calls until resolved. UV lamp procurement to be fast-tracked.', responsible: 'Suresh Nair' },
+  { id: 'AG-03', topic: 'Resource Adequacy & Training', discussion: 'Current headcount: 50 staff, 47 with current competency records. 3 new hires pending IEC 61215:2021 amendment training. Equipment utilization at 78% avg.', decision: 'Schedule training batch for new hires by Feb 2026. Approve hiring of 1 additional test engineer for EL imaging.', responsible: 'Vikram Singh' },
+  { id: 'AG-04', topic: 'Customer Feedback Analysis', discussion: '2 complaints received in Q4: 1 report delay (resolved, root cause: ERP downtime), 1 calibration uncertainty query (clarified). Customer satisfaction survey score: 4.2/5.0.', decision: 'Implement automated report progress notifications to clients. Add uncertainty budget summary to all reports.', responsible: 'Anita Verma' },
+  { id: 'AG-05', topic: 'Risk Register Review', discussion: 'Risk register has 10 entries; 5 open, 3 mitigated, 2 closed. Top risk: UV lamp aging causing spectral mismatch (RSK-003, score 16). New risk identified: delayed vendor delivery impacting schedules.', decision: 'Add vendor delivery risk to register. Review RSK-003 mitigation quarterly. Update risk matrix in QMS.', responsible: 'Meena Kumari' },
+  { id: 'AG-06', topic: 'Next Cycle Planning & NABL Assessment Prep', discussion: 'NABL surveillance assessment scheduled for June 2026. Scope extension for IEC 61853-1 energy rating in progress. Internal audit of Clause 7.7 needed before assessment.', decision: 'Complete IEC 61853-1 validation by March. Schedule internal audit for April. Prepare assessment readiness checklist.', responsible: 'Rajesh Patel' },
+]
+
+// ─── Previous Topics Data ────────────────────────────────────────────────────
+
+interface PreviousTopic {
+  topic: string
+  sourceMRM: string
+  status: 'Open' | 'Closed' | 'Carry-Forward'
+  linkedDecision: string
+  followUpAction: string
+  targetDate: string
+}
+
+const PREVIOUS_TOPICS: PreviousTopic[] = [
+  { topic: 'Upgrade EL imaging system firmware', sourceMRM: 'MR-2025-Q3', status: 'Closed', linkedDecision: 'Approved firmware v3.2 upgrade', followUpAction: 'Firmware installed, IQ/OQ completed', targetDate: '2025-11-30' },
+  { topic: 'Implement barcode-based sample tracking', sourceMRM: 'MR-2025-Q3', status: 'Closed', linkedDecision: 'Approved procurement of barcode scanners', followUpAction: 'System live since Dec 2025, error rate reduced 97%', targetDate: '2025-12-15' },
+  { topic: 'Address PT failure in thermal cycling ΔPmax', sourceMRM: 'MR-2025-Q3', status: 'Carry-Forward', linkedDecision: 'Root cause: thermocouple placement inconsistency', followUpAction: 'New placement SOP drafted, awaiting validation', targetDate: '2026-02-28' },
+  { topic: 'Annual management review of quality policy', sourceMRM: 'MR-2025-Q4', status: 'Closed', linkedDecision: 'Policy reaffirmed with minor wording updates', followUpAction: 'QM-4.1 Rev B published', targetDate: '2026-01-15' },
+  { topic: 'Budget approval for new climate chamber', sourceMRM: 'MR-2025-Q4', status: 'Open', linkedDecision: 'Approved ₹45L budget, RFQ to be floated', followUpAction: 'RFQ sent to 3 vendors, TBE pending', targetDate: '2026-03-31' },
+  { topic: 'Cross-training program for sun simulator operators', sourceMRM: 'MR-2025-Q4', status: 'Carry-Forward', linkedDecision: 'Train 3 additional operators by Q1 2026', followUpAction: '1 of 3 completed, 2 in progress', targetDate: '2026-03-15' },
+  { topic: 'Review external calibration lab performance', sourceMRM: 'MR-2025-Q4', status: 'Closed', linkedDecision: 'Retain current NABL-accredited lab; negotiate bulk pricing', followUpAction: 'Contract renewed with 20% discount', targetDate: '2026-01-01' },
+  { topic: 'Digital signature implementation for reports', sourceMRM: 'MR-2025-Q4', status: 'Open', linkedDecision: 'Evaluate e-signature solutions; pilot by Q2 2026', followUpAction: 'Vendor shortlisted, pilot setup pending', targetDate: '2026-05-30' },
+]
+
+const topicStatusColors: Record<string, string> = {
+  Open: 'bg-blue-50 text-blue-700 border-blue-200',
+  Closed: 'bg-green-50 text-green-700 border-green-200',
+  'Carry-Forward': 'bg-amber-50 text-amber-700 border-amber-200',
+}
+
+// ─── Attendance Data ─────────────────────────────────────────────────────────
+
+interface Attendee {
+  name: string
+  designation: string
+  department: string
+  present: boolean
+  signatureStatus: 'Signed' | 'Pending'
+}
+
+const MRM_ATTENDEES: Attendee[] = [
+  { name: 'R. Krishnan', designation: 'Director', department: 'Management', present: true, signatureStatus: 'Signed' },
+  { name: 'Dr. Priya Sharma', designation: 'Quality Manager', department: 'Quality Assurance', present: true, signatureStatus: 'Signed' },
+  { name: 'Rajesh Patel', designation: 'Lab Manager', department: 'Testing Operations', present: true, signatureStatus: 'Signed' },
+  { name: 'Vikram Singh', designation: 'Calibration Officer', department: 'Metrology', present: true, signatureStatus: 'Signed' },
+  { name: 'Anita Verma', designation: 'Senior Test Engineer', department: 'Testing Operations', present: true, signatureStatus: 'Signed' },
+  { name: 'Suresh Nair', designation: 'Test Engineer', department: 'Testing Operations', present: true, signatureStatus: 'Signed' },
+  { name: 'Meena Kumari', designation: 'Sample Coordinator', department: 'Sample Management', present: false, signatureStatus: 'Pending' },
+  { name: 'Deepak Joshi', designation: 'Test Engineer', department: 'Testing Operations', present: true, signatureStatus: 'Signed' },
+  { name: 'Kavya Reddy', designation: 'Procurement Officer', department: 'Procurement', present: true, signatureStatus: 'Pending' },
+  { name: 'Arvind Nair', designation: 'Safety Officer', department: 'HSE', present: false, signatureStatus: 'Pending' },
+]
+
 export function ManagementReviewDashboard() {
   const completedCount = MOCK_ACTION_ITEMS.filter(a => a.status === 'completed').length
   const overdueCount = MOCK_ACTION_ITEMS.filter(a => a.status === 'overdue').length
   const totalItems = MOCK_ACTION_ITEMS.length
   const completionPercent = Math.round((completedCount / totalItems) * 100)
+  const [minutesExpanded, setMinutesExpanded] = useState(true)
+  const [expandedAgenda, setExpandedAgenda] = useState<string | null>('AG-01')
+  const [attendanceExpanded, setAttendanceExpanded] = useState(false)
+  const [prevTopicsExpanded, setPrevTopicsExpanded] = useState(false)
 
   return (
     <div className="space-y-4">
@@ -635,6 +709,157 @@ export function ManagementReviewDashboard() {
             )
           })}
         </CardContent>
+      </Card>
+
+      {/* ═══ MRM Minutes & Decisions ═══ */}
+      <Card>
+        <CardHeader className="pb-2 cursor-pointer" onClick={() => setMinutesExpanded(!minutesExpanded)}>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm flex items-center gap-2">
+              {minutesExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              <FileText className="h-4 w-4 text-amber-600" />
+              MRM Minutes & Decisions — MR-2026-Q1
+            </CardTitle>
+            <Badge variant="outline" className="text-[10px]">{MRM_AGENDA_ITEMS.length} agenda items</Badge>
+          </div>
+          <CardDescription className="text-xs">15 January 2026 | Conference Room A | Duration: 2h 15m</CardDescription>
+        </CardHeader>
+        {minutesExpanded && (
+          <CardContent className="space-y-2 pt-0">
+            {MRM_AGENDA_ITEMS.map(item => {
+              const isOpen = expandedAgenda === item.id
+              return (
+                <div key={item.id} className="border rounded-lg">
+                  <button
+                    onClick={() => setExpandedAgenda(isOpen ? null : item.id)}
+                    className="w-full flex items-center gap-2 p-3 text-left hover:bg-muted/30 transition-colors"
+                  >
+                    {isOpen ? <ChevronDown className="h-3 w-3 flex-shrink-0" /> : <ChevronRight className="h-3 w-3 flex-shrink-0" />}
+                    <span className="text-xs font-mono text-amber-700 font-bold">{item.id}</span>
+                    <span className="text-xs font-medium flex-1">{item.topic}</span>
+                    <span className="text-[10px] text-muted-foreground flex items-center gap-1"><User className="h-2.5 w-2.5" />{item.responsible}</span>
+                  </button>
+                  {isOpen && (
+                    <div className="px-3 pb-3 space-y-2 border-t bg-muted/10">
+                      <div className="pt-2">
+                        <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Discussion</div>
+                        <p className="text-xs leading-relaxed">{item.discussion}</p>
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-semibold text-emerald-700 uppercase tracking-wider mb-1">Decision</div>
+                        <p className="text-xs leading-relaxed text-emerald-800 bg-emerald-50 rounded p-2 border border-emerald-200">{item.decision}</p>
+                      </div>
+                      <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+                        <User className="h-2.5 w-2.5" /> Responsible: <strong>{item.responsible}</strong>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </CardContent>
+        )}
+      </Card>
+
+      {/* ═══ Previous Topics Tracking ═══ */}
+      <Card>
+        <CardHeader className="pb-2 cursor-pointer" onClick={() => setPrevTopicsExpanded(!prevTopicsExpanded)}>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm flex items-center gap-2">
+              {prevTopicsExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              <ClipboardList className="h-4 w-4 text-blue-600" />
+              Previous MRM Topics Tracking
+            </CardTitle>
+            <div className="flex gap-2">
+              <Badge variant="outline" className="text-[10px] border-blue-200 text-blue-700">{PREVIOUS_TOPICS.filter(t => t.status === 'Open').length} Open</Badge>
+              <Badge variant="outline" className="text-[10px] border-amber-200 text-amber-700">{PREVIOUS_TOPICS.filter(t => t.status === 'Carry-Forward').length} Carry-Forward</Badge>
+              <Badge variant="outline" className="text-[10px] border-green-200 text-green-700">{PREVIOUS_TOPICS.filter(t => t.status === 'Closed').length} Closed</Badge>
+            </div>
+          </div>
+        </CardHeader>
+        {prevTopicsExpanded && (
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    {['Topic', 'Source MRM', 'Status', 'Linked Decision', 'Follow-up Action', 'Target Date'].map(h => (
+                      <th key={h} className="text-left px-3 py-2 font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {PREVIOUS_TOPICS.map((t, i) => (
+                    <tr key={i} className={`border-b hover:bg-muted/30 ${i % 2 !== 0 ? 'bg-muted/10' : ''}`}>
+                      <td className="px-3 py-2 font-medium max-w-[200px]"><p className="truncate" title={t.topic}>{t.topic}</p></td>
+                      <td className="px-3 py-2 font-mono text-muted-foreground">{t.sourceMRM}</td>
+                      <td className="px-3 py-2">
+                        <span className={`px-2 py-0.5 rounded-full border text-[10px] font-medium ${topicStatusColors[t.status]}`}>{t.status}</span>
+                      </td>
+                      <td className="px-3 py-2 max-w-[180px]"><p className="truncate text-muted-foreground" title={t.linkedDecision}>{t.linkedDecision}</p></td>
+                      <td className="px-3 py-2 max-w-[200px]"><p className="truncate" title={t.followUpAction}>{t.followUpAction}</p></td>
+                      <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{t.targetDate}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        )}
+      </Card>
+
+      {/* ═══ Meeting Attendance Register ═══ */}
+      <Card>
+        <CardHeader className="pb-2 cursor-pointer" onClick={() => setAttendanceExpanded(!attendanceExpanded)}>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm flex items-center gap-2">
+              {attendanceExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              <Users className="h-4 w-4 text-purple-600" />
+              Meeting Attendance Register
+            </CardTitle>
+            <div className="flex gap-2">
+              <Badge variant="outline" className="text-[10px] border-green-200 text-green-700">{MRM_ATTENDEES.filter(a => a.present).length} Present</Badge>
+              <Badge variant="outline" className="text-[10px] border-red-200 text-red-700">{MRM_ATTENDEES.filter(a => !a.present).length} Absent</Badge>
+            </div>
+          </div>
+          <CardDescription className="text-xs">MR-2026-Q1 | 15 January 2026</CardDescription>
+        </CardHeader>
+        {attendanceExpanded && (
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    {['Name', 'Designation', 'Department', 'Present', 'Signature'].map(h => (
+                      <th key={h} className="text-left px-3 py-2 font-semibold text-muted-foreground">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {MRM_ATTENDEES.map((a, i) => (
+                    <tr key={i} className={`border-b hover:bg-muted/30 ${i % 2 !== 0 ? 'bg-muted/10' : ''}`}>
+                      <td className="px-3 py-2 font-medium">{a.name}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{a.designation}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{a.department}</td>
+                      <td className="px-3 py-2">
+                        {a.present
+                          ? <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          : <XCircle className="h-4 w-4 text-red-500" />
+                        }
+                      </td>
+                      <td className="px-3 py-2">
+                        {a.signatureStatus === 'Signed'
+                          ? <span className="flex items-center gap-1 text-green-700"><PenLine className="h-3 w-3" /> Signed</span>
+                          : <span className="flex items-center gap-1 text-amber-600"><Clock className="h-3 w-3" /> Pending</span>
+                        }
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        )}
       </Card>
     </div>
   )
