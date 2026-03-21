@@ -1,0 +1,638 @@
+// @ts-nocheck
+"use client";
+
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
+import {
+  CheckCircle2, AlertTriangle, Clock, TrendingUp, TrendingDown,
+  BarChart3, Activity, FlaskConical, Microscope, Settings, Zap, Download
+} from "lucide-react";
+import {
+  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip, Legend, ReferenceLine, ResponsiveContainer, ScatterChart, Scatter
+} from "recharts";
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+type PTStatus = "Pass" | "Satisfactory" | "Questionable" | "Unsatisfactory";
+type MVStatus = "Validated" | "In Progress" | "Pending" | "Failed";
+type EQStatus = "Qualified" | "Requalification Due" | "In Progress" | "Failed";
+
+interface PTRecord {
+  id: string;
+  ptProvider: string;
+  parameter: string;
+  round: string;
+  date: string;
+  zScore: number;
+  enNumber?: number;
+  assignedValue: number;
+  labValue: number;
+  unit: string;
+  status: PTStatus;
+  standard: string;
+}
+
+interface ILCRecord {
+  id: string;
+  parameter: string;
+  labs: string[];
+  labValue: number;
+  meanValue: number;
+  stdDev: number;
+  enNumber: number;
+  date: string;
+  status: PTStatus;
+}
+
+interface MVRecord {
+  id: string;
+  method: string;
+  standard: string;
+  parameter: string;
+  accuracy: number;
+  precision: number;
+  lod: number;
+  loq: number;
+  linearityR2: number;
+  repeatability: number;
+  reproducibility: number;
+  status: MVStatus;
+  validatedBy: string;
+  date: string;
+}
+
+interface EQRecord {
+  id: string;
+  equipment: string;
+  equipmentId: string;
+  standard: string;
+  iqStatus: EQStatus;
+  oqStatus: EQStatus;
+  pqStatus: EQStatus;
+  iqDate: string;
+  oqDate: string;
+  pqDate: string;
+  nextRequalification: string;
+  qualifiedBy: string;
+}
+
+interface NCRecord {
+  id: string;
+  ncRef: string;
+  description: string;
+  source: string;
+  severity: "Critical" | "Major" | "Minor";
+  status: "Open" | "In Progress" | "Closed";
+  capaRef?: string;
+  date: string;
+}
+
+// ─── Seed Data ────────────────────────────────────────────────────────────────
+
+const PT_RECORDS: PTRecord[] = [
+  { id: "1", ptProvider: "EPTIS / NABL PT", parameter: "Isc (Short-circuit current)", round: "2025-R1", date: "2025-01-20", zScore: 0.45, enNumber: 0.38, assignedValue: 9.82, labValue: 9.87, unit: "A", status: "Pass", standard: "IEC 60904-1" },
+  { id: "2", ptProvider: "EPTIS / NABL PT", parameter: "Voc (Open-circuit voltage)", round: "2025-R1", date: "2025-01-20", zScore: -1.20, enNumber: 0.82, assignedValue: 46.3, labValue: 45.8, unit: "V", status: "Satisfactory", standard: "IEC 60904-1" },
+  { id: "3", ptProvider: "EPTIS / NABL PT", parameter: "Pmax (Maximum power)", round: "2025-R1", date: "2025-01-20", zScore: 0.89, enNumber: 0.61, assignedValue: 400.2, labValue: 401.8, unit: "W", status: "Pass", standard: "IEC 60904-1" },
+  { id: "4", ptProvider: "NABL PT – Thermal", parameter: "Thermal Cycling – ΔPmax", round: "2024-R2", date: "2024-09-15", zScore: -2.15, enNumber: 1.42, assignedValue: -1.2, labValue: -1.6, unit: "%", status: "Questionable", standard: "IEC 61215-1" },
+  { id: "5", ptProvider: "NABL PT – Thermal", parameter: "Damp Heat – Insulation Resistance", round: "2024-R2", date: "2024-09-15", zScore: 0.12, enNumber: 0.09, assignedValue: 1850, labValue: 1860, unit: "MΩ", status: "Pass", standard: "IEC 61215-1" },
+  { id: "6", ptProvider: "EPTIS – Spectral", parameter: "AM1.5G Spectral Irradiance", round: "2025-R1", date: "2025-02-10", zScore: 3.20, enNumber: 2.1, assignedValue: 1000, labValue: 1012, unit: "W/m²", status: "Unsatisfactory", standard: "IEC 60904-3" },
+];
+
+const ILC_RECORDS: ILCRecord[] = [
+  { id: "1", parameter: "Pmax @ STC", labs: ["Lab A", "Lab B", "Lab C (this lab)", "Lab D", "Lab E"], labValue: 399.5, meanValue: 400.1, stdDev: 1.8, enNumber: 0.47, date: "2025-01-30", status: "Pass" },
+  { id: "2", parameter: "Efficiency (%)", labs: ["Lab A", "Lab B", "Lab C (this lab)", "Lab D"], labValue: 21.3, meanValue: 21.5, stdDev: 0.4, enNumber: 0.71, date: "2025-01-30", status: "Satisfactory" },
+  { id: "3", parameter: "FF (Fill Factor)", labs: ["Lab A", "Lab B", "Lab C (this lab)", "Lab D", "Lab E"], labValue: 0.785, meanValue: 0.791, stdDev: 0.010, enNumber: 0.84, date: "2025-01-30", status: "Satisfactory" },
+];
+
+const MV_RECORDS: MVRecord[] = [
+  { id: "1", method: "IV Curve Measurement at STC", standard: "IEC 60904-1", parameter: "Pmax, Isc, Voc, FF", accuracy: 0.4, precision: 0.2, lod: 0.01, loq: 0.05, linearityR2: 0.9998, repeatability: 0.15, reproducibility: 0.32, status: "Validated", validatedBy: "Dr. S. Kumar", date: "2024-11-01" },
+  { id: "2", method: "Spectral Responsivity Measurement", standard: "IEC 60904-8", parameter: "SR(λ), EQE(λ)", accuracy: 0.8, precision: 0.5, lod: 0.001, loq: 0.005, linearityR2: 0.9994, repeatability: 0.40, reproducibility: 0.72, status: "Validated", validatedBy: "S. Rao", date: "2024-10-15" },
+  { id: "3", method: "Thermal Cycling Performance", standard: "IEC 61215-1", parameter: "ΔPmax, ΔIsc, ΔVoc", accuracy: 0.3, precision: 0.2, lod: 0.01, loq: 0.05, linearityR2: 0.9995, repeatability: 0.10, reproducibility: 0.25, status: "Validated", validatedBy: "A. Mehta", date: "2024-09-01" },
+  { id: "4", method: "EL Imaging Defect Detection", standard: "IEC 60904-13", parameter: "Crack area %, defect classification", accuracy: 2.1, precision: 1.8, lod: 0.5, loq: 2.0, linearityR2: 0.9810, repeatability: 1.50, reproducibility: 2.80, status: "In Progress", validatedBy: "K. Iyer", date: "2026-02-01" },
+  { id: "5", method: "IR Thermography", standard: "IEC 62446-3", parameter: "ΔT hotspot (K)", accuracy: 1.5, precision: 0.8, lod: 0.5, loq: 2.0, linearityR2: 0.9920, repeatability: 0.60, reproducibility: 1.20, status: "Pending", validatedBy: "—", date: "—" },
+];
+
+const EQ_RECORDS: EQRecord[] = [
+  { id: "1", equipment: "Solar Simulator AAA+", equipmentId: "SS-001", standard: "IEC 60904-9 Ed.3", iqStatus: "Qualified", oqStatus: "Qualified", pqStatus: "Qualified", iqDate: "2022-03-10", oqDate: "2022-04-05", pqDate: "2022-05-20", nextRequalification: "2026-05-20", qualifiedBy: "Dr. S. Kumar" },
+  { id: "2", equipment: "Climate Chamber TC-1000", equipmentId: "CC-001", standard: "IEC 61215 / IEC 60068", iqStatus: "Qualified", oqStatus: "Qualified", pqStatus: "Requalification Due", iqDate: "2020-06-01", oqDate: "2020-07-15", pqDate: "2020-08-30", nextRequalification: "2025-08-30", qualifiedBy: "A. Mehta" },
+  { id: "3", equipment: "EL Imaging System", equipmentId: "EL-001", standard: "IEC 60904-13", iqStatus: "Qualified", oqStatus: "Qualified", pqStatus: "In Progress", iqDate: "2025-01-10", oqDate: "2025-02-15", pqDate: "—", nextRequalification: "—", qualifiedBy: "K. Iyer" },
+  { id: "4", equipment: "I-V Curve Tracer", equipmentId: "IV-001", standard: "IEC 60904-1", iqStatus: "Qualified", oqStatus: "Qualified", pqStatus: "Qualified", iqDate: "2023-01-20", oqDate: "2023-02-10", pqDate: "2023-03-01", nextRequalification: "2027-03-01", qualifiedBy: "S. Rao" },
+  { id: "5", equipment: "Spectroradiometer", equipmentId: "SR-001", standard: "IEC 60904-9", iqStatus: "Qualified", oqStatus: "In Progress", pqStatus: "Pending", iqDate: "2025-12-01", oqDate: "—", pqDate: "—", nextRequalification: "—", qualifiedBy: "S. Rao" },
+];
+
+const NC_RECORDS: NCRecord[] = [
+  { id: "1", ncRef: "NC-2025-001", description: "Spectral irradiance measurement deviation > 2σ in PT round", source: "Proficiency Testing", severity: "Critical", status: "In Progress", capaRef: "CAPA-2025-003", date: "2025-02-12" },
+  { id: "2", ncRef: "NC-2025-002", description: "EL imaging qualification not completed within scheduled timeline", source: "Internal Audit", severity: "Major", status: "Open", capaRef: undefined, date: "2025-03-05" },
+  { id: "3", ncRef: "NC-2024-015", description: "Climate chamber PQ requalification overdue by 3 months", source: "Management Review", severity: "Major", status: "In Progress", capaRef: "CAPA-2024-010", date: "2024-12-01" },
+  { id: "4", ncRef: "NC-2024-009", description: "Minor deviation in IV curve repeat measurements – within spec", source: "Internal QC Check", severity: "Minor", status: "Closed", capaRef: undefined, date: "2024-08-20" },
+];
+
+// ─── Trend Data ───────────────────────────────────────────────────────────────
+
+const Z_SCORE_TREND = [
+  { round: "2023-R1", Isc: 0.2, Voc: -0.5, Pmax: 0.8 },
+  { round: "2023-R2", Isc: -0.3, Voc: -0.8, Pmax: 0.3 },
+  { round: "2024-R1", Isc: 0.6, Voc: -1.1, Pmax: 1.2 },
+  { round: "2024-R2", Isc: -0.1, Voc: -0.9, Pmax: 0.5 },
+  { round: "2025-R1", Isc: 0.45, Voc: -1.20, Pmax: 0.89 },
+];
+
+const QC_CHART_DATA = [
+  { month: "Oct-24", Pmax: 400.2, UCL: 402, LCL: 398, CL: 400 },
+  { month: "Nov-24", Pmax: 399.8, UCL: 402, LCL: 398, CL: 400 },
+  { month: "Dec-24", Pmax: 401.1, UCL: 402, LCL: 398, CL: 400 },
+  { month: "Jan-25", Pmax: 400.5, UCL: 402, LCL: 398, CL: 400 },
+  { month: "Feb-25", Pmax: 399.3, UCL: 402, LCL: 398, CL: 400 },
+  { month: "Mar-25", Pmax: 400.8, UCL: 402, LCL: 398, CL: 400 },
+];
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const PT_STATUS_CONFIG: Record<PTStatus, { color: string; bg: string }> = {
+  Pass:           { color: "text-green-700",  bg: "bg-green-50" },
+  Satisfactory:   { color: "text-blue-700",   bg: "bg-blue-50" },
+  Questionable:   { color: "text-amber-700",  bg: "bg-amber-50" },
+  Unsatisfactory: { color: "text-red-700",    bg: "bg-red-50" },
+};
+
+const EQ_STATUS_CONFIG: Record<EQStatus, { color: string; icon: any }> = {
+  Qualified:              { color: "text-green-600", icon: CheckCircle2 },
+  "Requalification Due":  { color: "text-amber-600", icon: Clock },
+  "In Progress":          { color: "text-blue-600",  icon: Activity },
+  Failed:                 { color: "text-red-600",   icon: AlertTriangle },
+};
+
+function zScoreColor(z: number) {
+  const abs = Math.abs(z);
+  if (abs <= 2) return "text-green-700";
+  if (abs <= 3) return "text-amber-700";
+  return "text-red-700";
+}
+
+function enColor(en: number) {
+  if (en <= 1) return "text-green-700";
+  if (en <= 2) return "text-amber-700";
+  return "text-red-700";
+}
+
+// ─── Sub-Tab Components ───────────────────────────────────────────────────────
+
+function ProficiencyTestingTab() {
+  const pass = PT_RECORDS.filter(r => r.status === "Pass").length;
+  const satisfactory = PT_RECORDS.filter(r => r.status === "Satisfactory").length;
+  const questionable = PT_RECORDS.filter(r => r.status === "Questionable").length;
+  const unsatisfactory = PT_RECORDS.filter(r => r.status === "Unsatisfactory").length;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { label: "Pass (|z|≤2)", value: pass, color: "text-green-600", border: "border-l-green-500" },
+          { label: "Satisfactory", value: satisfactory, color: "text-blue-600", border: "border-l-blue-500" },
+          { label: "Questionable (2<|z|≤3)", value: questionable, color: "text-amber-600", border: "border-l-amber-500" },
+          { label: "Unsatisfactory (|z|>3)", value: unsatisfactory, color: "text-red-600", border: "border-l-red-500" },
+        ].map(s => (
+          <Card key={s.label} className={cn("border-l-4", s.border)}>
+            <CardContent className="pt-4 pb-3">
+              <div className={cn("text-2xl font-bold", s.color)}>{s.value}</div>
+              <div className="text-xs text-muted-foreground">{s.label}</div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {unsatisfactory > 0 && (
+        <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-xs text-red-800">
+          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+          <span><strong>Action Required:</strong> {unsatisfactory} parameter(s) with |z|{">"} 3. Immediate investigation and corrective action required per ISO 17025 Clause 7.7.2.</span>
+        </div>
+      )}
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">PT Results – z-Score & En Number</CardTitle>
+          <CardDescription className="text-xs">|z| ≤ 2: Satisfactory · 2 {"<"} |z| ≤ 3: Questionable · |z| {">"} 3: Unsatisfactory · En ≤ 1: Satisfactory</CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  {["Provider", "Parameter", "Round", "Date", "Assigned", "Lab Value", "Unit", "z-Score", "En", "Status", "Standard"].map(h => (
+                    <th key={h} className="text-left px-3 py-2 font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {PT_RECORDS.map(r => {
+                  const sc = PT_STATUS_CONFIG[r.status];
+                  return (
+                    <tr key={r.id} className="border-b hover:bg-muted/30">
+                      <td className="px-3 py-2 whitespace-nowrap">{r.ptProvider}</td>
+                      <td className="px-3 py-2 max-w-[200px] truncate" title={r.parameter}>{r.parameter}</td>
+                      <td className="px-3 py-2 font-mono">{r.round}</td>
+                      <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">{r.date}</td>
+                      <td className="px-3 py-2 font-mono">{r.assignedValue}</td>
+                      <td className="px-3 py-2 font-mono">{r.labValue}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{r.unit}</td>
+                      <td className={cn("px-3 py-2 font-bold font-mono", zScoreColor(r.zScore))}>{r.zScore > 0 ? "+" : ""}{r.zScore.toFixed(2)}</td>
+                      <td className={cn("px-3 py-2 font-bold font-mono", r.enNumber !== undefined ? enColor(r.enNumber) : "text-muted-foreground")}>
+                        {r.enNumber !== undefined ? r.enNumber.toFixed(2) : "—"}
+                      </td>
+                      <td className="px-3 py-2">
+                        <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-bold", sc.bg, sc.color)}>{r.status}</span>
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">{r.standard}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <TrendingUp className="h-4 w-4" /> z-Score Trend (Last 5 Rounds)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={Z_SCORE_TREND}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="round" tick={{ fontSize: 10 }} />
+              <YAxis tick={{ fontSize: 10 }} domain={[-4, 4]} />
+              <Tooltip contentStyle={{ fontSize: 11 }} />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <ReferenceLine y={2} stroke="#f59e0b" strokeDasharray="4 4" label={{ value: "+2σ", fontSize: 9 }} />
+              <ReferenceLine y={-2} stroke="#f59e0b" strokeDasharray="4 4" label={{ value: "-2σ", fontSize: 9 }} />
+              <ReferenceLine y={3} stroke="#ef4444" strokeDasharray="4 4" label={{ value: "+3σ", fontSize: 9 }} />
+              <ReferenceLine y={-3} stroke="#ef4444" strokeDasharray="4 4" label={{ value: "-3σ", fontSize: 9 }} />
+              <Line type="monotone" dataKey="Isc" stroke="#3b82f6" dot={{ r: 3 }} strokeWidth={2} />
+              <Line type="monotone" dataKey="Voc" stroke="#8b5cf6" dot={{ r: 3 }} strokeWidth={2} />
+              <Line type="monotone" dataKey="Pmax" stroke="#10b981" dot={{ r: 3 }} strokeWidth={2} />
+            </LineChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function InterLabComparisonTab() {
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Inter-Laboratory Comparison Results</CardTitle>
+          <CardDescription className="text-xs">En ≤ 1: Satisfactory · En {">"} 1: Unsatisfactory. Compared against consensus mean.</CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  {["Parameter", "Date", "Lab Value", "Mean", "Std Dev", "En Number", "Status", "Participants"].map(h => (
+                    <th key={h} className="text-left px-3 py-2 font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {ILC_RECORDS.map(r => {
+                  const sc = PT_STATUS_CONFIG[r.status];
+                  return (
+                    <tr key={r.id} className="border-b hover:bg-muted/30">
+                      <td className="px-3 py-2 font-medium">{r.parameter}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{r.date}</td>
+                      <td className="px-3 py-2 font-mono">{r.labValue}</td>
+                      <td className="px-3 py-2 font-mono">{r.meanValue}</td>
+                      <td className="px-3 py-2 font-mono">±{r.stdDev}</td>
+                      <td className={cn("px-3 py-2 font-bold font-mono", enColor(r.enNumber))}>{r.enNumber.toFixed(2)}</td>
+                      <td className="px-3 py-2">
+                        <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-bold", sc.bg, sc.color)}>{r.status}</span>
+                      </td>
+                      <td className="px-3 py-2 text-muted-foreground">{r.labs.length} labs</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ILC Bar Chart */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">En Numbers – ILC Summary</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={ILC_RECORDS.map(r => ({ name: r.parameter.split(" ")[0], En: r.enNumber }))}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+              <YAxis tick={{ fontSize: 10 }} domain={[0, 2]} />
+              <Tooltip contentStyle={{ fontSize: 11 }} />
+              <ReferenceLine y={1} stroke="#ef4444" strokeDasharray="4 4" label={{ value: "En=1", fontSize: 9 }} />
+              <Bar dataKey="En" fill="#6366f1" radius={[3, 3, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function MethodValidationTab() {
+  const STATUS_CONFIG: Record<MVStatus, { color: string; bg: string }> = {
+    Validated:   { color: "text-green-700", bg: "bg-green-50" },
+    "In Progress": { color: "text-blue-700",  bg: "bg-blue-50" },
+    Pending:     { color: "text-amber-700", bg: "bg-amber-50" },
+    Failed:      { color: "text-red-700",   bg: "bg-red-50" },
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {(["Validated", "In Progress", "Pending", "Failed"] as MVStatus[]).map(s => (
+          <Card key={s} className={cn("border-l-4", s === "Validated" ? "border-l-green-500" : s === "In Progress" ? "border-l-blue-500" : s === "Pending" ? "border-l-amber-500" : "border-l-red-500")}>
+            <CardContent className="pt-4 pb-3">
+              <div className={cn("text-2xl font-bold", STATUS_CONFIG[s].color)}>{MV_RECORDS.filter(r => r.status === s).length}</div>
+              <div className="text-xs text-muted-foreground">{s}</div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Method Validation Records</CardTitle>
+          <CardDescription className="text-xs">ISO 17025 Clause 7.2.2 – All validation parameters per method</CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  {["Method", "Standard", "Accuracy (%)", "Precision (%)", "LOD", "LOQ", "R² (Lin.)", "Repeatab. (%)", "Reproduc. (%)", "Status", "Date"].map(h => (
+                    <th key={h} className="text-left px-3 py-2 font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {MV_RECORDS.map(r => {
+                  const sc = STATUS_CONFIG[r.status];
+                  return (
+                    <tr key={r.id} className="border-b hover:bg-muted/30">
+                      <td className="px-3 py-2 font-medium max-w-[180px] truncate" title={r.method}>{r.method}</td>
+                      <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{r.standard}</td>
+                      <td className="px-3 py-2 font-mono">{r.accuracy}</td>
+                      <td className="px-3 py-2 font-mono">{r.precision}</td>
+                      <td className="px-3 py-2 font-mono">{r.lod}</td>
+                      <td className="px-3 py-2 font-mono">{r.loq}</td>
+                      <td className={cn("px-3 py-2 font-mono font-bold", r.linearityR2 >= 0.999 ? "text-green-600" : r.linearityR2 >= 0.995 ? "text-amber-600" : "text-red-600")}>
+                        {r.linearityR2.toFixed(4)}
+                      </td>
+                      <td className="px-3 py-2 font-mono">{r.repeatability}</td>
+                      <td className="px-3 py-2 font-mono">{r.reproducibility}</td>
+                      <td className="px-3 py-2">
+                        <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-bold", sc.bg, sc.color)}>{r.status}</span>
+                      </td>
+                      <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{r.date}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function EquipmentQualificationTab() {
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        {[
+          { label: "Fully Qualified (IQ+OQ+PQ)", value: EQ_RECORDS.filter(r => r.pqStatus === "Qualified").length, color: "text-green-600", border: "border-l-green-500" },
+          { label: "Requalification Due", value: EQ_RECORDS.filter(r => r.iqStatus === "Requalification Due" || r.oqStatus === "Requalification Due" || r.pqStatus === "Requalification Due").length, color: "text-amber-600", border: "border-l-amber-500" },
+          { label: "Qualification In Progress", value: EQ_RECORDS.filter(r => r.iqStatus === "In Progress" || r.oqStatus === "In Progress" || r.pqStatus === "In Progress").length, color: "text-blue-600", border: "border-l-blue-500" },
+        ].map(s => (
+          <Card key={s.label} className={cn("border-l-4", s.border)}>
+            <CardContent className="pt-4 pb-3">
+              <div className={cn("text-2xl font-bold", s.color)}>{s.value}</div>
+              <div className="text-xs text-muted-foreground">{s.label}</div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Settings className="h-4 w-4 text-blue-600" />
+            Equipment Qualification Records – IQ / OQ / PQ
+          </CardTitle>
+          <CardDescription className="text-xs">Per IEC 61215/61730/60904 and GAMP5 methodology. IQ=Installation · OQ=Operational · PQ=Performance Qualification</CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  {["Equipment", "ID", "Standard", "IQ", "OQ", "PQ", "IQ Date", "OQ Date", "PQ Date", "Next Requalification", "Qualified By"].map(h => (
+                    <th key={h} className="text-left px-3 py-2 font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {EQ_RECORDS.map(r => (
+                  <tr key={r.id} className="border-b hover:bg-muted/30">
+                    <td className="px-3 py-2 font-medium whitespace-nowrap">{r.equipment}</td>
+                    <td className="px-3 py-2 font-mono text-muted-foreground">{r.equipmentId}</td>
+                    <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{r.standard}</td>
+                    {([r.iqStatus, r.oqStatus, r.pqStatus] as EQStatus[]).map((s, i) => {
+                      const sc = EQ_STATUS_CONFIG[s];
+                      return (
+                        <td key={i} className="px-3 py-2">
+                          <span className={cn("flex items-center gap-1", sc.color)}>
+                            <sc.icon className="h-3 w-3" />
+                            <span className="text-[10px] font-medium">{s}</span>
+                          </span>
+                        </td>
+                      );
+                    })}
+                    <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{r.iqDate}</td>
+                    <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{r.oqDate}</td>
+                    <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{r.pqDate}</td>
+                    <td className={cn("px-3 py-2 whitespace-nowrap font-medium",
+                      r.nextRequalification !== "—" && new Date(r.nextRequalification) < new Date() ? "text-red-600" : "text-foreground")}>
+                      {r.nextRequalification}
+                      {r.nextRequalification !== "—" && new Date(r.nextRequalification) < new Date() && <AlertTriangle className="inline ml-1 h-3 w-3" />}
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap">{r.qualifiedBy}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function NCSection() {
+  const SEV_CONFIG = {
+    Critical: { color: "text-red-700",    bg: "bg-red-50 border-red-200" },
+    Major:    { color: "text-amber-700",  bg: "bg-amber-50 border-amber-200" },
+    Minor:    { color: "text-blue-700",   bg: "bg-blue-50 border-blue-200" },
+  };
+  const ST_CONFIG = {
+    Open:        { color: "text-red-600",   icon: AlertTriangle },
+    "In Progress": { color: "text-blue-600", icon: Activity },
+    Closed:      { color: "text-green-600", icon: CheckCircle2 },
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4 text-amber-500" />
+          Non-Conformances Summary (QC/QA Origin)
+        </CardTitle>
+        <CardDescription className="text-xs">Linked to CAPA module for corrective and preventive actions</CardDescription>
+      </CardHeader>
+      <CardContent className="p-0">
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b bg-muted/50">
+                {["NC Ref", "Description", "Source", "Severity", "Status", "CAPA Ref", "Date"].map(h => (
+                  <th key={h} className="text-left px-3 py-2 font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {NC_RECORDS.map(r => {
+                const sev = SEV_CONFIG[r.severity];
+                const st = ST_CONFIG[r.status];
+                return (
+                  <tr key={r.id} className="border-b hover:bg-muted/30">
+                    <td className="px-3 py-2 font-mono font-bold text-blue-700">{r.ncRef}</td>
+                    <td className="px-3 py-2 max-w-[260px]">{r.description}</td>
+                    <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{r.source}</td>
+                    <td className="px-3 py-2">
+                      <span className={cn("px-1.5 py-0.5 rounded border text-[10px] font-bold", sev.bg, sev.color)}>{r.severity}</span>
+                    </td>
+                    <td className="px-3 py-2">
+                      <span className={cn("flex items-center gap-1", st.color)}>
+                        <st.icon className="h-3 w-3" />
+                        {r.status}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 font-mono text-muted-foreground">{r.capaRef ?? "—"}</td>
+                    <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{r.date}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
+export default function QCQATab() {
+  const [subTab, setSubTab] = useState("pt");
+
+  return (
+    <div className="space-y-4">
+      {/* Summary bar */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { label: "PT Rounds (YTD)", value: "2", icon: FlaskConical, color: "text-blue-600", border: "border-l-blue-500" },
+          { label: "Validated Methods", value: MV_RECORDS.filter(r => r.status === "Validated").length.toString(), icon: Microscope, color: "text-green-600", border: "border-l-green-500" },
+          { label: "Fully Qualified Equip.", value: EQ_RECORDS.filter(r => r.pqStatus === "Qualified").length.toString(), icon: Settings, color: "text-purple-600", border: "border-l-purple-500" },
+          { label: "Open NCs", value: NC_RECORDS.filter(r => r.status !== "Closed").length.toString(), icon: AlertTriangle, color: "text-amber-600", border: "border-l-amber-500" },
+        ].map(s => (
+          <Card key={s.label} className={cn("border-l-4", s.border)}>
+            <CardContent className="pt-4 pb-3 flex items-center gap-3">
+              <s.icon className={cn("h-6 w-6", s.color)} />
+              <div>
+                <div className={cn("text-2xl font-bold", s.color)}>{s.value}</div>
+                <div className="text-xs text-muted-foreground">{s.label}</div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* QC Control Chart */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <BarChart3 className="h-4 w-4 text-blue-600" />
+            QC Control Chart – Pmax Reference Module (Monthly)
+          </CardTitle>
+          <CardDescription className="text-xs">Shewhart X-bar chart with UCL/CL/LCL. Limits per ISO 17025 Clause 7.7.1</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={QC_CHART_DATA}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+              <YAxis tick={{ fontSize: 10 }} domain={[396, 404]} />
+              <Tooltip contentStyle={{ fontSize: 11 }} />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Line type="monotone" dataKey="UCL" stroke="#ef4444" dot={false} strokeDasharray="4 4" strokeWidth={1} />
+              <Line type="monotone" dataKey="CL" stroke="#6366f1" dot={false} strokeDasharray="2 2" strokeWidth={1} />
+              <Line type="monotone" dataKey="LCL" stroke="#ef4444" dot={false} strokeDasharray="4 4" strokeWidth={1} />
+              <Line type="monotone" dataKey="Pmax" stroke="#10b981" dot={{ r: 4, fill: "#10b981" }} strokeWidth={2} name="Measured Pmax (W)" />
+            </LineChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* Sub-tabs */}
+      <Tabs value={subTab} onValueChange={setSubTab}>
+        <TabsList className="h-auto flex-wrap bg-muted">
+          <TabsTrigger value="pt" className="text-xs">
+            <FlaskConical className="h-3 w-3 mr-1" /> Proficiency Testing
+          </TabsTrigger>
+          <TabsTrigger value="ilc" className="text-xs">
+            <Zap className="h-3 w-3 mr-1" /> Inter-lab Comparison
+          </TabsTrigger>
+          <TabsTrigger value="mv" className="text-xs">
+            <Microscope className="h-3 w-3 mr-1" /> Method Validation
+          </TabsTrigger>
+          <TabsTrigger value="eq" className="text-xs">
+            <Settings className="h-3 w-3 mr-1" /> Equipment Qualification
+          </TabsTrigger>
+          <TabsTrigger value="nc" className="text-xs">
+            <AlertTriangle className="h-3 w-3 mr-1" /> Non-Conformances
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="pt" className="mt-4"><ProficiencyTestingTab /></TabsContent>
+        <TabsContent value="ilc" className="mt-4"><InterLabComparisonTab /></TabsContent>
+        <TabsContent value="mv" className="mt-4"><MethodValidationTab /></TabsContent>
+        <TabsContent value="eq" className="mt-4"><EquipmentQualificationTab /></TabsContent>
+        <TabsContent value="nc" className="mt-4"><NCSection /></TabsContent>
+      </Tabs>
+    </div>
+  );
+}
