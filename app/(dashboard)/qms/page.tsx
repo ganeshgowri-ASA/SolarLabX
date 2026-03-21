@@ -19,6 +19,8 @@ import {
 } from 'lucide-react'
 import { CAPATrackingDashboard, DocumentRevisionHistory, ManagementReviewDashboard } from '@/components/qms/QMSEnhancements'
 import ExternalDocumentsTab from '@/components/qms/ExternalDocumentsTab'
+import InternalDocumentsTab from '@/components/qms/InternalDocumentsTab'
+import QCQATab from '@/components/qms/QCQATab'
 
 // ─── ISO 17025 Document Hierarchy ─────────────────────────────────────────────
 
@@ -539,6 +541,12 @@ export default function QMSDashboard() {
           <TabsTrigger value="external-docs" className="text-xs">
             <BookOpen className="h-3 w-3 mr-1" /> External Documents
           </TabsTrigger>
+          <TabsTrigger value="internal-docs" className="text-xs">
+            <FileCheck className="h-3 w-3 mr-1" /> Internal Docs
+          </TabsTrigger>
+          <TabsTrigger value="qcqa" className="text-xs">
+            <Microscope className="h-3 w-3 mr-1" /> QC/QA
+          </TabsTrigger>
         </TabsList>
 
         {/* ── DASHBOARD TAB ──────────────────────────────────────── */}
@@ -921,6 +929,16 @@ export default function QMSDashboard() {
         {/* ── EXTERNAL DOCUMENTS TAB (ISO 17025 Clause 8.3) ────────── */}
         <TabsContent value="external-docs" className="space-y-4 mt-4">
           <ExternalDocumentsTab />
+        </TabsContent>
+
+        {/* ── INTERNAL DOCUMENTS TAB ─────────────────────────────────── */}
+        <TabsContent value="internal-docs" className="space-y-4 mt-4">
+          <InternalDocumentsTab />
+        </TabsContent>
+
+        {/* ── QC/QA TAB ──────────────────────────────────────────────── */}
+        <TabsContent value="qcqa" className="space-y-4 mt-4">
+          <QCQATab />
         </TabsContent>
       </Tabs>
     </div>
