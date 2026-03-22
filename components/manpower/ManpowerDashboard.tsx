@@ -131,6 +131,7 @@ export default function ManpowerDashboard() {
           <TabsTrigger value="reassignment">Task Reassignment</TabsTrigger>
           <TabsTrigger value="shift-roster">Shift Roster</TabsTrigger>
           <TabsTrigger value="skills">Skill Matrix</TabsTrigger>
+          <TabsTrigger value="training">Training & Competency</TabsTrigger>
           <TabsTrigger value="reports">Reports</TabsTrigger>
         </TabsList>
 
@@ -182,6 +183,11 @@ export default function ManpowerDashboard() {
         {/* Skill Matrix */}
         <TabsContent value="skills" className="space-y-4">
           <SkillMatrixView />
+        </TabsContent>
+
+        {/* Training & Competency */}
+        <TabsContent value="training" className="space-y-4">
+          <TrainingCompetencyTab />
         </TabsContent>
 
         {/* Reports */}
@@ -599,6 +605,321 @@ function SkillMatrixView() {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+// Training & Competency (ISO 17025 Clause 6.2)
+
+const AUTHORIZATION_LEVELS = ["Trainee", "Supervised", "Independent", "Trainer"] as const;
+type AuthorizationLevel = typeof AUTHORIZATION_LEVELS[number];
+
+const AUTH_LEVEL_COLORS: Record<AuthorizationLevel, string> = {
+  Trainee: "bg-red-100 text-red-700",
+  Supervised: "bg-amber-100 text-amber-700",
+  Independent: "bg-green-100 text-green-700",
+  Trainer: "bg-blue-100 text-blue-700",
+};
+
+const IEC_STANDARDS = ["IEC 61215", "IEC 61730", "IEC 61853", "IEC 60904", "IEC 62716", "IEC 61701", "IEC 62804"];
+
+interface TrainingRecord {
+  id: string;
+  memberId: string;
+  memberName: string;
+  trainingTitle: string;
+  standard: string;
+  completedDate: string;
+  expiryDate: string;
+  authLevel: AuthorizationLevel;
+  certNumber: string;
+}
+
+interface CompetencyEntry {
+  memberId: string;
+  memberName: string;
+  role: string;
+  authorizations: Record<string, AuthorizationLevel>;
+  trainingRecords: TrainingRecord[];
+}
+
+const competencyData: CompetencyEntry[] = teamMembers.map((m, idx) => ({
+  memberId: m.id,
+  memberName: m.name,
+  role: m.role,
+  authorizations: Object.fromEntries(
+    IEC_STANDARDS.map((std, si) => {
+      const levels: AuthorizationLevel[] = ["Trainee", "Supervised", "Independent", "Trainer"];
+      const level = levels[Math.min(3, Math.floor((m.skills.length + si + idx) % 4))];
+      return [std, level];
+    })
+  ),
+  trainingRecords: [
+    {
+      id: `TR-${m.id}-001`,
+      memberId: m.id,
+      memberName: m.name,
+      trainingTitle: `${m.qualifiedTests[0] || "General"} Testing Qualification`,
+      standard: IEC_STANDARDS[idx % IEC_STANDARDS.length],
+      completedDate: "2025-08-15",
+      expiryDate: idx % 3 === 0 ? "2026-02-15" : "2027-08-15",
+      authLevel: idx % 4 === 0 ? "Trainer" : idx % 3 === 0 ? "Independent" : "Supervised",
+      certNumber: `CERT-${String(idx + 1).padStart(4, "0")}`,
+    },
+    {
+      id: `TR-${m.id}-002`,
+      memberId: m.id,
+      memberName: m.name,
+      trainingTitle: "ISO 17025 Awareness",
+      standard: "ISO 17025",
+      completedDate: "2025-06-01",
+      expiryDate: "2026-06-01",
+      authLevel: "Independent",
+      certNumber: `CERT-ISO-${String(idx + 1).padStart(4, "0")}`,
+    },
+  ],
+}));
+
+const upcomingTraining = [
+  { id: "UT-001", title: "IEC 61215:2021 Updates", date: "2026-04-10", instructor: "Dr. Priya Mehta", participants: 6, standard: "IEC 61215" },
+  { id: "UT-002", title: "EL Imaging Advanced Techniques", date: "2026-04-22", instructor: "Rajesh Kumar", participants: 4, standard: "IEC 60904" },
+  { id: "UT-003", title: "Measurement Uncertainty Workshop", date: "2026-05-05", instructor: "External - NABL", participants: 8, standard: "ISO 17025" },
+  { id: "UT-004", title: "Environmental Chamber Operation", date: "2026-05-15", instructor: "Amit Sharma", participants: 5, standard: "IEC 61215" },
+];
+
+function TrainingCompetencyTab() {
+  const [viewMode, setViewMode] = useState<"matrix" | "records" | "calendar">("matrix");
+
+  const expiringSoon = competencyData
+    .flatMap((c) => c.trainingRecords)
+    .filter((r) => {
+      const expiry = new Date(r.expiryDate);
+      const now = new Date("2026-03-22");
+      const diffDays = (expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+      return diffDays <= 90 && diffDays > 0;
+    });
+
+  const expired = competencyData
+    .flatMap((c) => c.trainingRecords)
+    .filter((r) => new Date(r.expiryDate) < new Date("2026-03-22"));
+
+  return (
+    <div className="space-y-4">
+      {/* Summary KPIs */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card>
+          <CardContent className="p-3">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Total Staff</p>
+            <p className="text-xl font-bold mt-0.5">{competencyData.length}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Fully Qualified</p>
+            <p className="text-xl font-bold text-green-600 mt-0.5">
+              {competencyData.filter((c) => Object.values(c.authorizations).every((a) => a === "Independent" || a === "Trainer")).length}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Expiring Soon</p>
+            <p className="text-xl font-bold text-amber-600 mt-0.5">{expiringSoon.length}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Expired</p>
+            <p className="text-xl font-bold text-red-600 mt-0.5">{expired.length}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* View Mode Toggle */}
+      <div className="flex gap-2">
+        {(["matrix", "records", "calendar"] as const).map((mode) => (
+          <Button
+            key={mode}
+            variant={viewMode === mode ? "default" : "outline"}
+            size="sm"
+            className="text-xs"
+            onClick={() => setViewMode(mode)}
+          >
+            {mode === "matrix" ? "Competency Matrix" : mode === "records" ? "Training Records" : "Training Calendar"}
+          </Button>
+        ))}
+      </div>
+
+      {/* Competency Matrix */}
+      {viewMode === "matrix" && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Staff Competency Matrix — ISO 17025 Clause 6.2</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-auto">
+              <table className="w-full text-xs border-collapse min-w-[900px]">
+                <thead>
+                  <tr className="border-b">
+                    <th className="p-2 text-left font-semibold w-40 sticky left-0 bg-background z-10">Staff Member</th>
+                    <th className="p-2 text-left font-semibold w-28">Role</th>
+                    {IEC_STANDARDS.map((std) => (
+                      <th key={std} className="p-2 text-center font-semibold">{std}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {competencyData.map((entry) => (
+                    <tr key={entry.memberId} className="border-b hover:bg-muted/30">
+                      <td className="p-2 font-medium sticky left-0 bg-background z-10">{entry.memberName}</td>
+                      <td className="p-2 text-muted-foreground">{entry.role}</td>
+                      {IEC_STANDARDS.map((std) => {
+                        const level = entry.authorizations[std] || "Trainee";
+                        return (
+                          <td key={std} className="p-1 text-center">
+                            <span className={cn("inline-block px-2 py-1 rounded text-[10px] font-semibold", AUTH_LEVEL_COLORS[level])}>
+                              {level}
+                            </span>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {/* Legend */}
+            <div className="flex gap-3 mt-3 pt-3 border-t">
+              {AUTHORIZATION_LEVELS.map((level) => (
+                <div key={level} className="flex items-center gap-1.5 text-xs">
+                  <span className={cn("px-2 py-0.5 rounded text-[10px] font-semibold", AUTH_LEVEL_COLORS[level])}>{level}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Training Records */}
+      {viewMode === "records" && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Training Records with Expiry Dates</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-auto">
+              <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr className="border-b">
+                    <th className="p-2 text-left font-semibold">Cert #</th>
+                    <th className="p-2 text-left font-semibold">Staff Member</th>
+                    <th className="p-2 text-left font-semibold">Training</th>
+                    <th className="p-2 text-left font-semibold">Standard</th>
+                    <th className="p-2 text-center font-semibold">Auth Level</th>
+                    <th className="p-2 text-left font-semibold">Completed</th>
+                    <th className="p-2 text-left font-semibold">Expiry</th>
+                    <th className="p-2 text-center font-semibold">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {competencyData.flatMap((c) => c.trainingRecords).map((record) => {
+                    const expiry = new Date(record.expiryDate);
+                    const now = new Date("2026-03-22");
+                    const diffDays = (expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+                    const statusText = diffDays < 0 ? "Expired" : diffDays <= 90 ? "Expiring Soon" : "Valid";
+                    const statusColor = diffDays < 0 ? "bg-red-100 text-red-700" : diffDays <= 90 ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700";
+
+                    return (
+                      <tr key={record.id} className="border-b hover:bg-muted/30">
+                        <td className="p-2 font-mono text-muted-foreground">{record.certNumber}</td>
+                        <td className="p-2 font-medium">{record.memberName}</td>
+                        <td className="p-2">{record.trainingTitle}</td>
+                        <td className="p-2">{record.standard}</td>
+                        <td className="p-2 text-center">
+                          <span className={cn("px-2 py-0.5 rounded text-[10px] font-semibold", AUTH_LEVEL_COLORS[record.authLevel])}>
+                            {record.authLevel}
+                          </span>
+                        </td>
+                        <td className="p-2 text-muted-foreground">{record.completedDate}</td>
+                        <td className="p-2 text-muted-foreground">{record.expiryDate}</td>
+                        <td className="p-2 text-center">
+                          <span className={cn("px-2 py-0.5 rounded text-[10px] font-semibold", statusColor)}>{statusText}</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Training Calendar */}
+      {viewMode === "calendar" && (
+        <div className="space-y-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Upcoming Training & Reminders</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {upcomingTraining.map((t) => (
+                  <div key={t.id} className="flex items-start gap-4 p-3 rounded-lg border hover:bg-muted/30 transition-colors">
+                    <div className="text-center shrink-0 w-14">
+                      <div className="text-lg font-bold text-primary">{new Date(t.date).getDate()}</div>
+                      <div className="text-[10px] text-muted-foreground uppercase">
+                        {new Date(t.date).toLocaleDateString("en-US", { month: "short" })}
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-sm font-semibold">{t.title}</span>
+                        <Badge className="text-[10px] bg-primary/10 text-primary">{t.standard}</Badge>
+                      </div>
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        <span>Instructor: {t.instructor}</span>
+                        <span>{t.participants} participants</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Expiring Certifications Alert */}
+          {(expiringSoon.length > 0 || expired.length > 0) && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-amber-600">Certification Renewal Reminders</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {expired.map((r) => (
+                    <div key={r.id} className="flex items-center justify-between p-2 rounded border border-red-200 bg-red-50 text-xs">
+                      <div>
+                        <span className="font-medium text-red-800">{r.memberName}</span>
+                        <span className="text-red-600 ml-2">— {r.trainingTitle}</span>
+                      </div>
+                      <Badge className="bg-red-100 text-red-700 text-[10px]">Expired {r.expiryDate}</Badge>
+                    </div>
+                  ))}
+                  {expiringSoon.map((r) => (
+                    <div key={r.id} className="flex items-center justify-between p-2 rounded border border-amber-200 bg-amber-50 text-xs">
+                      <div>
+                        <span className="font-medium text-amber-800">{r.memberName}</span>
+                        <span className="text-amber-600 ml-2">— {r.trainingTitle}</span>
+                      </div>
+                      <Badge className="bg-amber-100 text-amber-700 text-[10px]">Expires {r.expiryDate}</Badge>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
