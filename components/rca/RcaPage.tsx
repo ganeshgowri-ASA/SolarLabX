@@ -7,12 +7,15 @@ import { toast } from 'sonner'
 import { rcaRecords, rcaMetrics } from '@/lib/data/rca-data'
 import type { RCA, FishboneData, FishboneCause } from '@/lib/types'
 
-type TabKey = 'dashboard' | '5-why' | 'fishbone' | '8d-report' | 'capa-tracking'
+import WhyWhyFlowchart from '@/components/rca/WhyWhyFlowchart'
+
+type TabKey = 'dashboard' | '5-why' | 'fishbone' | '8d-report' | 'capa-tracking' | 'why-why-flowchart'
 
 const tabs: { key: TabKey; label: string }[] = [
   { key: 'dashboard', label: 'RCA Dashboard' },
   { key: '5-why', label: '5-Why Analysis' },
   { key: 'fishbone', label: 'Fishbone / Ishikawa' },
+  { key: 'why-why-flowchart', label: 'Why-Why Flowchart' },
   { key: '8d-report', label: '8D Reports' },
   { key: 'capa-tracking', label: 'CAPA Tracking' },
 ]
@@ -93,6 +96,7 @@ export default function RcaPage() {
       {activeTab === 'fishbone' && <FishboneTab fishbone={currentRca.fishboneDiagram} />}
       {activeTab === '8d-report' && <EightDTab rca={currentRca} />}
       {activeTab === 'capa-tracking' && <CAPATrackingTab />}
+      {activeTab === 'why-why-flowchart' && <WhyWhyFlowchart />}
     </div>
   )
 }
