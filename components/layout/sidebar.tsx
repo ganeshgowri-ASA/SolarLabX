@@ -11,6 +11,7 @@ import {
   ChevronLeft, ChevronRight, ChevronDown, BarChart3, Search,
   MessageSquareWarning, MessageCircle, GitBranch, ClipboardList,
   Package, Users, Boxes, Shield, LineChart, Cpu, UserCheck,
+  ShieldAlert, Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -51,6 +52,7 @@ const navGroups: NavGroup[] = [
       { title: "Traceability", href: "/traceability", icon: GitBranch },
       { title: "RCA", href: "/rca", icon: SearchCheck },
       { title: "Complaints", href: "/complaints", icon: MessageSquareWarning },
+      { title: "Safety & EHS", href: "/safety", icon: ShieldAlert },
     ],
   },
   {
@@ -60,6 +62,7 @@ const navGroups: NavGroup[] = [
       { title: "Equipment", href: "/equipment", icon: Wrench },
       { title: "Manpower", href: "/manpower", icon: Users },
       { title: "Procurement", href: "/procurement", icon: ShoppingCart },
+      { title: "6S", href: "/six-s", icon: Sparkles },
     ],
   },
   {
