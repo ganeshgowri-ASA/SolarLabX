@@ -67,6 +67,7 @@ const navGroups: NavGroup[] = [
     icon: Wrench,
     items: [
       { title: "Equipment", href: "/equipment", icon: Wrench },
+      { title: "Env. Monitoring", href: "/environment", icon: Thermometer },
       { title: "Manpower", href: "/manpower", icon: Users },
       { title: "Procurement", href: "/procurement", icon: ShoppingCart },
     ],
