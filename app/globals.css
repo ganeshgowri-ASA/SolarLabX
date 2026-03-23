@@ -58,36 +58,193 @@
   }
 }
 
+/* ─── Card Hover Effects ─────────────────────────────────────── */
+@layer components {
+  .card-hover {
+    @apply transition-all duration-200 hover:scale-[1.02] hover:shadow-lg hover:border-orange-500/30;
+  }
+}
+
+/* ─── Consistent Dark Table Styling ──────────────────────────── */
+@layer components {
+  .dark-table {
+    @apply w-full text-sm;
+  }
+  .dark-table thead tr {
+    @apply bg-gray-800/70;
+  }
+  .dark-table thead th {
+    @apply px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider;
+  }
+  .dark-table tbody {
+    @apply divide-y divide-gray-800;
+  }
+  .dark-table tbody tr {
+    @apply transition-colors hover:bg-gray-700/50;
+  }
+  .dark-table tbody tr:nth-child(even) {
+    @apply bg-gray-900/30;
+  }
+  .dark-table tbody tr:nth-child(odd) {
+    @apply bg-gray-900/10;
+  }
+  .dark-table tbody td {
+    @apply px-4 py-3;
+  }
+}
+
+/* ─── Button Consistency ─────────────────────────────────────── */
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all duration-200;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-800 transition-all duration-200;
+  }
+}
+
+/* ─── Micro Animations ───────────────────────────────────────── */
 @layer utilities {
-  /* Fix flex child overflow for scrollable layouts */
+  .animate-in {
+    animation: animateIn 200ms ease-out;
+  }
+  .fade-in {
+    animation: fadeIn 200ms ease-out;
+  }
+  .slide-in-from-top-4 {
+    animation: slideInFromTop 200ms ease-out;
+  }
+}
+
+@keyframes animateIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInFromTop {
+  from { opacity: 0; transform: translateY(-16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Page transition ────────────────────────────────────────── */
+main > * {
+  animation: pageIn 250ms ease-out;
+}
+
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Scrollbar styling ──────────────────────────────────────── */
+.dark ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.dark ::-webkit-scrollbar-track {
+  background: transparent;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ─── Fix flex child overflow for scrollable layouts ─────────── */
+@layer utilities {
   .flex-col-scroll {
     display: flex;
     flex-direction: column;
     min-height: 0;
     overflow: hidden;
   }
-
-  /* Ensure cards don't bleed over each other */
   .card-stack > * {
     position: relative;
     z-index: auto;
   }
-
-  /* Prevent content panels from overlapping in grid/flex layouts */
   .panel-grid {
     display: grid;
     align-items: start;
   }
 }
 
-/* ─── A4 Print Styles (ISO 17025 Report) ─────────────────────────────────── */
+/* ─── Global dark-mode overrides for legacy bg-white elements ── */
+.dark .bg-white {
+  background-color: rgb(17 24 39 / 0.5) !important;
+  border-color: rgb(55 65 81) !important;
+}
+.dark .bg-white .text-gray-800,
+.dark .bg-white .text-gray-900 {
+  color: rgb(229 231 235) !important;
+}
+.dark .bg-white .text-gray-700 {
+  color: rgb(209 213 219) !important;
+}
+.dark .bg-white .text-gray-600 {
+  color: rgb(156 163 175) !important;
+}
+.dark .bg-gray-50 {
+  background-color: rgb(17 24 39 / 0.7) !important;
+}
+.dark .bg-gray-100 {
+  background-color: rgb(31 41 55 / 0.5) !important;
+}
+.dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgb(55 65 81) !important;
+}
+.dark .border-gray-200 {
+  border-color: rgb(55 65 81) !important;
+}
+.dark .hover\:bg-gray-50:hover {
+  background-color: rgb(31 41 55 / 0.7) !important;
+}
+.dark .hover\:bg-amber-50:hover {
+  background-color: rgb(245 158 11 / 0.1) !important;
+}
+.dark .bg-amber-50 {
+  background-color: rgb(245 158 11 / 0.1) !important;
+}
+.dark .bg-red-50 {
+  background-color: rgb(239 68 68 / 0.1) !important;
+}
+.dark .bg-green-50 {
+  background-color: rgb(16 185 129 / 0.1) !important;
+}
+.dark .bg-blue-50 {
+  background-color: rgb(59 130 246 / 0.1) !important;
+}
+
+/* Fix text colors in dark mode for light-mode badges */
+.dark .text-gray-900 {
+  color: rgb(243 244 246) !important;
+}
+
+/* Legacy select elements */
+.dark select {
+  background-color: rgb(17 24 39);
+  color: rgb(209 213 219);
+  border-color: rgb(55 65 81);
+}
+.dark input:not([type="checkbox"]):not([type="radio"]):not([role]) {
+  background-color: rgb(17 24 39);
+  color: rgb(209 213 219);
+  border-color: rgb(55 65 81);
+}
+
+/* ─── A4 Print Styles (ISO 17025 Report) ─────────────────────── */
 @media print {
   @page {
     size: A4 portrait;
     margin: 15mm;
   }
 
-  /* ── Hide non-report UI elements ── */
   .no-print,
   [data-no-print],
   aside,
@@ -96,7 +253,6 @@
     display: none !important;
   }
 
-  /* ── Reset body/layout for full-width print ── */
   body {
     background: white !important;
     -webkit-print-color-adjust: exact;
@@ -104,7 +260,6 @@
     overflow: visible !important;
   }
 
-  /* Remove layout constraints that cause cutoff */
   .h-screen,
   .min-h-0 {
     height: auto !important;
@@ -126,7 +281,6 @@
     position: static !important;
   }
 
-  /* Remove shadows, max-width constraints */
   .shadow, .shadow-sm, .shadow-md, .shadow-lg, .shadow-xl {
     box-shadow: none !important;
   }
@@ -138,7 +292,6 @@
     box-shadow: none !important;
   }
 
-  /* ── Page breaks ── */
   .page-break,
   .print-break-before {
     break-before: page;
@@ -149,14 +302,12 @@
     page-break-before: always;
   }
 
-  /* Prevent elements from splitting across pages */
   tr, .card, .iv-curve-chart, .pmax-stabilization-chart,
   .insulation-chart, .degradation-chart {
     page-break-inside: avoid;
     break-inside: avoid;
   }
 
-  /* Keep table headers on each page */
   thead {
     display: table-header-group;
   }
@@ -164,7 +315,6 @@
     display: table-footer-group;
   }
 
-  /* ── IEC Full Report specific styles ── */
   #iec-print-report {
     font-family: 'Times New Roman', Times, serif !important;
     font-size: 11pt !important;
@@ -192,7 +342,6 @@
     break-inside: avoid;
   }
 
-  /* ── Charts: ensure Recharts render properly in print ── */
   .recharts-wrapper,
   .recharts-surface {
     overflow: visible !important;
@@ -201,17 +350,14 @@
     min-height: 200px;
   }
 
-  /* Remove border-radius for cleaner print */
   .rounded, .rounded-md, .rounded-lg, .rounded-xl, .rounded-2xl {
     border-radius: 0 !important;
   }
 
-  /* Ensure grid layouts work in print */
   .grid {
     display: grid !important;
   }
 
-  /* Generated report content */
   #generated-report-content {
     display: block !important;
   }

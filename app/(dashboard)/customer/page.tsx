@@ -1,6 +1,6 @@
 // @ts-nocheck
-import CustomerManagementPage from '@/components/customer/CustomerManagementPage'
+import CustomerProfilesPage from '@/components/customer/CustomerProfilesPage'
 
 export default function CustomerPage() {
-  return <CustomerManagementPage />
+  return <CustomerProfilesPage />
 }

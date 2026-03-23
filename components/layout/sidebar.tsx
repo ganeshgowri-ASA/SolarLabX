@@ -5,45 +5,18 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
-  FlaskConical,
-  FileCheck,
-  ClipboardCheck,
-  FolderKanban,
-  Calculator,
-  ScanEye,
-  BookOpen,
-  FileBarChart,
-  Sun,
-  Thermometer,
-  ShoppingCart,
-  Wrench,
-  SearchCheck,
-  ChevronLeft,
-  ChevronRight,
-  ChevronDown,
-  BarChart3,
-  Search,
-  MessageSquareWarning,
-  MessageCircle,
-  GitBranch,
-  ClipboardList,
-  Package,
-  Users,
-  Boxes,
-  Shield,
-  LineChart,
-  Cpu,
-  UserCheck,
+  LayoutDashboard, FlaskConical, FileCheck, ClipboardCheck,
+  FolderKanban, Calculator, ScanEye, BookOpen, FileBarChart,
+  Sun, Thermometer, ShoppingCart, Wrench, SearchCheck,
+  ChevronLeft, ChevronRight, ChevronDown, BarChart3, Search,
+  MessageSquareWarning, MessageCircle, GitBranch, ClipboardList,
+  Package, Users, Boxes, Shield, LineChart, Cpu, UserCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
 
 interface NavItem {
@@ -135,7 +108,6 @@ interface SidebarProps {
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
-    // All groups expanded by default
     const initial: Record<string, boolean> = {};
     navGroups.forEach((g) => {
       initial[g.label] = true;
@@ -150,20 +122,25 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "relative flex flex-col border-r bg-card transition-all duration-300",
+        "relative flex flex-col border-r border-gray-800 bg-gray-950 transition-all duration-300 ease-in-out",
         collapsed ? "w-16" : "w-64"
       )}
     >
-      <div className="flex h-16 items-center justify-between border-b px-4">
+      {/* Logo */}
+      <div className="flex h-16 items-center justify-between border-b border-gray-800 px-4">
         {!collapsed && (
-          <Link href="/" className="flex items-center gap-2">
-            <Sun className="h-6 w-6 text-primary" />
-            <span className="text-lg font-bold">SolarLabX</span>
+          <Link href="/" className="flex items-center gap-2.5">
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-orange-500/10">
+              <Sun className="h-5 w-5 text-orange-500" />
+            </div>
+            <span className="text-lg font-bold text-white tracking-tight">SolarLabX</span>
           </Link>
         )}
         {collapsed && (
           <Link href="/" className="mx-auto">
-            <Sun className="h-6 w-6 text-primary" />
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-orange-500/10">
+              <Sun className="h-5 w-5 text-orange-500" />
+            </div>
           </Link>
         )}
       </div>
@@ -181,7 +158,6 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               );
 
               if (collapsed) {
-                // When collapsed, show only icons with tooltips
                 return (
                   <React.Fragment key={group.label}>
                     {group.items.map((item) => {
@@ -196,12 +172,15 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                             <Link
                               href={item.href}
                               className={cn(
-                                "flex items-center justify-center rounded-lg px-2 py-2 text-sm font-medium transition-colors",
+                                "relative flex items-center justify-center rounded-lg px-2 py-2 text-sm font-medium transition-all duration-200",
                                 isActive
-                                  ? "bg-primary text-primary-foreground"
-                                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                                  ? "bg-orange-500/10 text-orange-400"
+                                  : "text-gray-500 hover:bg-gray-800 hover:text-gray-300"
                               )}
                             >
+                              {isActive && (
+                                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-orange-500 rounded-r-full" />
+                              )}
                               <Icon className="h-4 w-4 shrink-0" />
                             </Link>
                           </TooltipTrigger>
@@ -215,17 +194,15 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 );
               }
 
-              // Expanded sidebar with collapsible groups
               return (
                 <div key={group.label} className="mb-1">
-                  {/* Group Header */}
                   <button
                     onClick={() => toggleGroup(group.label)}
                     className={cn(
                       "flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider transition-colors",
                       hasActiveChild
-                        ? "text-primary"
-                        : "text-muted-foreground hover:text-foreground"
+                        ? "text-orange-400"
+                        : "text-gray-500 hover:text-gray-300"
                     )}
                   >
                     <GroupIcon className="h-3.5 w-3.5 shrink-0" />
@@ -238,14 +215,13 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                     />
                   </button>
 
-                  {/* Group Items */}
                   <div
                     className={cn(
-                      "overflow-hidden transition-all duration-200",
+                      "overflow-hidden transition-all duration-300 ease-in-out",
                       isExpanded ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
                     )}
                   >
-                    <div className="ml-2 flex flex-col gap-0.5 border-l border-border/50 pl-2 pt-0.5">
+                    <div className="ml-2 flex flex-col gap-0.5 border-l border-gray-800 pl-2 pt-0.5">
                       {group.items.map((item) => {
                         const Icon = item.icon;
                         const isActive =
@@ -257,12 +233,15 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                             key={item.href}
                             href={item.href}
                             className={cn(
-                              "flex items-center gap-3 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
+                              "relative flex items-center gap-3 rounded-lg px-3 py-1.5 text-[13px] font-medium transition-all duration-200",
                               isActive
-                                ? "bg-primary text-primary-foreground"
-                                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                                ? "bg-orange-500/10 text-orange-400"
+                                : "text-gray-400 hover:bg-gray-800/70 hover:text-gray-200"
                             )}
                           >
+                            {isActive && (
+                              <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-orange-500 rounded-r-full" />
+                            )}
                             <Icon className="h-4 w-4 shrink-0" />
                             <span>{item.title}</span>
                           </Link>
@@ -277,12 +256,19 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         </TooltipProvider>
       </ScrollArea>
 
-      <div className="border-t p-2">
+      {/* Footer */}
+      <div className="border-t border-gray-800 px-3 py-2">
+        {!collapsed && (
+          <div className="mb-2 px-1">
+            <p className="text-[10px] text-gray-600 leading-tight">SolarLabX v2.0</p>
+            <p className="text-[10px] text-gray-600">ISO 17025 Compliant</p>
+          </div>
+        )}
         <Button
           variant="ghost"
           size="icon"
           onClick={onToggle}
-          className="w-full"
+          className="w-full text-gray-500 hover:text-gray-300 hover:bg-gray-800"
         >
           {collapsed ? (
             <ChevronRight className="h-4 w-4" />
