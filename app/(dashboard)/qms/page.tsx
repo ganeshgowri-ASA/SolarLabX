@@ -24,6 +24,7 @@ import QCQATab from '@/components/qms/QCQATab'
 import KaizenTab from '@/components/qms/KaizenTab'
 import RiskRegisterTab from '@/components/qms/RiskRegisterTab'
 import SuggestionTrackerTab from '@/components/qms/SuggestionTrackerTab'
+import DocumentPyramid from '@/components/qms/DocumentPyramid'
 
 // ─── ISO 17025 Document Hierarchy ─────────────────────────────────────────────
 
@@ -661,124 +662,7 @@ export default function QMSDashboard() {
 
         {/* ── DOCUMENT HIERARCHY TAB ───────────────────────────────── */}
         <TabsContent value="hierarchy" className="space-y-4 mt-4">
-          {/* Level Legend */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {([1, 2, 3, 4] as const).map(level => {
-              const lvl = LEVEL_LABELS[level]
-              return (
-                <button key={level}
-                  onClick={() => setLevelFilter(levelFilter === level ? 'all' : level)}
-                  className={`p-3 rounded-lg border-2 text-left transition-all ${levelFilter === level ? `${lvl.light} ${lvl.border}` : 'border-border hover:bg-muted/50'}`}>
-                  <div className={`text-xs font-bold ${lvl.text}`}>{lvl.short}</div>
-                  <div className={`text-lg font-bold ${levelFilter === level ? lvl.text : 'text-foreground'}`}>{docCountsByLevel[level]}</div>
-                  <div className="text-xs text-muted-foreground leading-tight">{lvl.label.split(' – ')[1]}</div>
-                </button>
-              )
-            })}
-          </div>
-
-          {/* Search */}
-          <div className="flex gap-2 items-center">
-            <div className="relative flex-1 max-w-xs">
-              <Search className="h-3 w-3 absolute left-2.5 top-2.5 text-muted-foreground" />
-              <Input placeholder="Search documents..." className="pl-8 h-8 text-xs"
-                     value={docSearch} onChange={e => setDocSearch(e.target.value)} />
-            </div>
-            {levelFilter !== 'all' && (
-              <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setLevelFilter('all')}>
-                Clear filter
-              </Button>
-            )}
-            <span className="text-xs text-muted-foreground ml-auto">{filteredDocs.length} documents</span>
-          </div>
-
-          {/* Document Table */}
-          <Card>
-            <div className="divide-y">
-              <div className="grid grid-cols-12 gap-2 px-4 py-2 text-xs font-semibold text-muted-foreground bg-muted/50">
-                <div className="col-span-1">Level</div>
-                <div className="col-span-2">Code</div>
-                <div className="col-span-4">Title</div>
-                <div className="col-span-1">Rev</div>
-                <div className="col-span-1">Status</div>
-                <div className="col-span-2">Owner</div>
-                <div className="col-span-1">Next Review</div>
-              </div>
-              {filteredDocs.map(doc => {
-                const lvl = LEVEL_LABELS[doc.level]
-                return (
-                  <button
-                    key={doc.code}
-                    className={`w-full grid grid-cols-12 gap-2 px-4 py-2 text-xs text-left hover:bg-muted/50 transition-colors ${selectedDoc?.code === doc.code ? 'bg-primary/5' : ''}`}
-                    onClick={() => setSelectedDoc(selectedDoc?.code === doc.code ? null : doc)}
-                  >
-                    <div className="col-span-1">
-                      <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${lvl.light} ${lvl.text}`}>{lvl.short}</span>
-                    </div>
-                    <div className="col-span-2 font-mono text-muted-foreground">{doc.code}</div>
-                    <div className="col-span-4 font-medium truncate">{doc.title}</div>
-                    <div className="col-span-1 font-mono text-center">{doc.revision}</div>
-                    <div className="col-span-1">
-                      <span className={`text-xs px-1 rounded ${docStatusColors[doc.status]}`}>{doc.status.replace(/_/g, ' ')}</span>
-                    </div>
-                    <div className="col-span-2 text-muted-foreground truncate">{doc.owner}</div>
-                    <div className="col-span-1 text-muted-foreground">{doc.nextReview}</div>
-                  </button>
-                )
-              })}
-            </div>
-          </Card>
-
-          {/* Document Viewer */}
-          {selectedDoc && (
-            <Card className="border-primary/30">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded ${LEVEL_LABELS[selectedDoc.level].light} ${LEVEL_LABELS[selectedDoc.level].text}`}>
-                        {LEVEL_LABELS[selectedDoc.level].short}
-                      </span>
-                      <span className="text-sm font-mono text-muted-foreground">{selectedDoc.code}</span>
-                      <span className="text-xs text-muted-foreground">Rev {selectedDoc.revision}</span>
-                    </div>
-                    <CardTitle className="text-base">{selectedDoc.title}</CardTitle>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline" className="h-8 text-xs">
-                      <Eye className="h-3 w-3 mr-1" /> View
-                    </Button>
-                    <Button size="sm" variant="outline" className="h-8 text-xs">
-                      <Download className="h-3 w-3 mr-1" /> Download
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <div className="text-xs text-muted-foreground">Document Level</div>
-                    <div className="font-medium">{LEVEL_LABELS[selectedDoc.level].label}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-muted-foreground">Status</div>
-                    <Badge className={docStatusColors[selectedDoc.status]}>{selectedDoc.status.replace(/_/g, ' ')}</Badge>
-                  </div>
-                  <div>
-                    <div className="text-xs text-muted-foreground">Owner</div>
-                    <div className="font-medium">{selectedDoc.owner}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-muted-foreground">ISO 17025 Clause</div>
-                    <div className="font-medium font-mono">{selectedDoc.clause}</div>
-                  </div>
-                </div>
-                <div className="mt-4 p-4 rounded-lg bg-muted/50 text-sm text-muted-foreground">
-                  <p className="italic">Document content preview would appear here. Click &ldquo;View&rdquo; to open the full document in the document editor.</p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          <DocumentPyramid />
         </TabsContent>
 
         {/* ── ISO 17025 CLAUSES TAB ────────────────────────────────── */}
