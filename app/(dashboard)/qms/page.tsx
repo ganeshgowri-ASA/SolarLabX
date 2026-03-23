@@ -15,7 +15,7 @@ import {
   ChevronRight, ChevronDown, FileText, BookOpen, ClipboardList, Layers,
   CheckCircle2, AlertTriangle, Clock, Search, Plus, Download, Eye,
   BarChart3, Shield, Settings, Users, Microscope, FileCheck, Activity,
-  GitBranch, Briefcase, TrendingUp, MessageSquare
+  GitBranch, Briefcase, TrendingUp, MessageSquare, Turtle, UserCheck, Building2, Workflow
 } from 'lucide-react'
 import { CAPATrackingDashboard, DocumentRevisionHistory, ManagementReviewDashboard } from '@/components/qms/QMSEnhancements'
 import ExternalDocumentsTab from '@/components/qms/ExternalDocumentsTab'
@@ -25,6 +25,10 @@ import KaizenTab from '@/components/qms/KaizenTab'
 import RiskRegisterTab from '@/components/qms/RiskRegisterTab'
 import SuggestionTrackerTab from '@/components/qms/SuggestionTrackerTab'
 import DocumentPyramid from '@/components/qms/DocumentPyramid'
+import TurtleDiagramsTab from '@/components/qms/TurtleDiagramsTab'
+import RolesResponsibilitiesTab from '@/components/qms/RolesResponsibilitiesTab'
+import OrganizationTab from '@/components/qms/OrganizationTab'
+import BusinessWorkflowTab from '@/components/qms/BusinessWorkflowTab'
 
 // ─── ISO 17025 Document Hierarchy ─────────────────────────────────────────────
 
@@ -560,6 +564,18 @@ export default function QMSDashboard() {
           <TabsTrigger value="suggestions" className="text-xs">
             <MessageSquare className="h-3 w-3 mr-1" /> Suggestions
           </TabsTrigger>
+          <TabsTrigger value="turtle-diagrams" className="text-xs">
+            <Turtle className="h-3 w-3 mr-1" /> Turtle Diagrams
+          </TabsTrigger>
+          <TabsTrigger value="roles" className="text-xs">
+            <UserCheck className="h-3 w-3 mr-1" /> Roles & Responsibilities
+          </TabsTrigger>
+          <TabsTrigger value="organization" className="text-xs">
+            <Building2 className="h-3 w-3 mr-1" /> Organization
+          </TabsTrigger>
+          <TabsTrigger value="business-workflow" className="text-xs">
+            <Workflow className="h-3 w-3 mr-1" /> Business Workflow
+          </TabsTrigger>
         </TabsList>
 
         {/* ── DASHBOARD TAB ──────────────────────────────────────── */}
@@ -850,6 +866,26 @@ export default function QMSDashboard() {
         {/* ── SUGGESTION TRACKER TAB ───────────────────────────────── */}
         <TabsContent value="suggestions" className="space-y-4 mt-4">
           <SuggestionTrackerTab />
+        </TabsContent>
+
+        {/* ── TURTLE DIAGRAMS TAB ─────────────────────────────────── */}
+        <TabsContent value="turtle-diagrams" className="space-y-4 mt-4">
+          <TurtleDiagramsTab />
+        </TabsContent>
+
+        {/* ── ROLES & RESPONSIBILITIES TAB ────────────────────────── */}
+        <TabsContent value="roles" className="space-y-4 mt-4">
+          <RolesResponsibilitiesTab />
+        </TabsContent>
+
+        {/* ── ORGANIZATION TAB ────────────────────────────────────── */}
+        <TabsContent value="organization" className="space-y-4 mt-4">
+          <OrganizationTab />
+        </TabsContent>
+
+        {/* ── BUSINESS WORKFLOW TAB ───────────────────────────────── */}
+        <TabsContent value="business-workflow" className="space-y-4 mt-4">
+          <BusinessWorkflowTab />
         </TabsContent>
       </Tabs>
     </div>
