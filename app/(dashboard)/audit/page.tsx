@@ -2,162 +2,230 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { auditPlans, auditFindings, auditMetrics } from "@/lib/data/audit-data";
-import { FindingSeverityBadge, FindingStatusBadge } from "@/components/audit/FindingSeverityBadge";
-import { FindingsTrendChart, ClosureRateChart } from "@/components/audit/TrendChart";
-import { formatDate } from "@/lib/utils";
-import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 import {
-  Eye,
-  Calendar,
-  ClipboardCheck,
-  AlertTriangle,
-  CheckCircle2,
-  FileText,
+  ClipboardCheck, AlertTriangle, CheckCircle2, Calendar, FileText,
+  Search, X, ChevronDown,
 } from "lucide-react";
 
-const statusStyles: Record<string, string> = {
-  Planned: "bg-blue-100 text-blue-700",
-  "In Progress": "bg-yellow-100 text-yellow-700",
-  Completed: "bg-green-100 text-green-700",
-  Cancelled: "bg-gray-100 text-gray-700",
+// ── Types ──
+type FindingCategory = "Conformity" | "Minor NC" | "Major NC" | "Observation" | "OFI";
+type NCSource = "Internal" | "NABL" | "BIS" | "IECEE" | "Intertek" | "TUV" | "UL";
+type NCStatus = "Open" | "In Progress" | "Closed" | "Verified";
+type AuditStatus = "Planned" | "In Progress" | "Completed";
+
+// ── Internal Audit Checklist Data ──
+const ISO_CLAUSES = [
+  { clause: "4.1", title: "Impartiality", findings: "Conformity" as FindingCategory },
+  { clause: "4.2", title: "Confidentiality", findings: "Conformity" as FindingCategory },
+  { clause: "5.1", title: "Legal Entity", findings: "Conformity" as FindingCategory },
+  { clause: "5.2", title: "Management Commitment", findings: "Observation" as FindingCategory },
+  { clause: "5.3", title: "Safeguarding Impartiality", findings: "Conformity" as FindingCategory },
+  { clause: "5.5", title: "Organizational Structure", findings: "Conformity" as FindingCategory },
+  { clause: "5.6", title: "Confidentiality of Information", findings: "Conformity" as FindingCategory },
+  { clause: "6.1", title: "General Resources", findings: "Conformity" as FindingCategory },
+  { clause: "6.2", title: "Personnel Competence", findings: "Minor NC" as FindingCategory },
+  { clause: "6.3", title: "Facilities & Conditions", findings: "OFI" as FindingCategory },
+  { clause: "6.4", title: "Equipment", findings: "Minor NC" as FindingCategory },
+  { clause: "6.5", title: "Metrological Traceability", findings: "Conformity" as FindingCategory },
+  { clause: "6.6", title: "Externally Provided Products", findings: "Conformity" as FindingCategory },
+  { clause: "7.1", title: "Review of Requests", findings: "Conformity" as FindingCategory },
+  { clause: "7.2", title: "Selection, Verification & Validation", findings: "Conformity" as FindingCategory },
+  { clause: "7.3", title: "Sampling", findings: "Observation" as FindingCategory },
+  { clause: "7.4", title: "Handling of Test Items", findings: "Conformity" as FindingCategory },
+  { clause: "7.5", title: "Technical Records", findings: "Conformity" as FindingCategory },
+  { clause: "7.6", title: "Measurement Uncertainty", findings: "Major NC" as FindingCategory },
+  { clause: "7.7", title: "Validity of Results", findings: "OFI" as FindingCategory },
+  { clause: "7.8", title: "Reporting of Results", findings: "Conformity" as FindingCategory },
+  { clause: "8.1", title: "Options - General", findings: "Conformity" as FindingCategory },
+  { clause: "8.2", title: "Management System Documentation", findings: "Conformity" as FindingCategory },
+  { clause: "8.3", title: "Control of Management System Documents", findings: "Conformity" as FindingCategory },
+  { clause: "8.4", title: "Control of Records", findings: "Conformity" as FindingCategory },
+  { clause: "8.5", title: "Actions to Address Risks", findings: "Conformity" as FindingCategory },
+  { clause: "8.6", title: "Improvement", findings: "Conformity" as FindingCategory },
+  { clause: "8.7", title: "Corrective Actions", findings: "Minor NC" as FindingCategory },
+  { clause: "8.8", title: "Internal Audits", findings: "Conformity" as FindingCategory },
+  { clause: "8.9", title: "Management Reviews", findings: "Observation" as FindingCategory },
+];
+
+const AUDIT_PLAN = {
+  id: "IA-2026-001", title: "ISO 17025:2017 Annual Internal Audit", standard: "ISO/IEC 17025:2017",
+  auditor: "Dr. Priya Mehta", coAuditor: "Rahul Singh", department: "Solar PV Testing Lab",
+  plannedDate: "2026-03-15", completedDate: "2026-03-22", status: "Completed" as AuditStatus,
+  scope: "All clauses 4.1 - 8.9 covering LIMS, equipment, personnel, test methods",
 };
 
-export default function AuditDashboard() {
-  const [activeTab, setActiveTab] = useState("overview");
-  const upcomingAudits = auditPlans.filter((a) => a.status === "Planned" || a.status === "In Progress");
-  const openFindings = auditFindings.filter((f) => f.status !== "Closed");
-  const totalFindings = auditFindings.length;
-  const closedFindings = auditFindings.filter((f) => f.status === "Closed").length;
-  const closureRate = totalFindings > 0 ? Math.round((closedFindings / totalFindings) * 100) : 0;
-  const majorNCs = auditFindings.filter((f) => f.severity === "Major NC" && f.status !== "Closed").length;
+const findingColors: Record<FindingCategory, string> = {
+  Conformity: "bg-emerald-900/60 text-emerald-400",
+  "Minor NC": "bg-amber-900/60 text-amber-400",
+  "Major NC": "bg-red-900/60 text-red-400",
+  Observation: "bg-blue-900/60 text-blue-400",
+  OFI: "bg-purple-900/60 text-purple-400",
+};
+
+// ── NC Register Data ──
+interface NCRecord {
+  ncNo: string; source: NCSource; auditDate: string; clauseRef: string;
+  description: string; category: FindingCategory; rootCause: string;
+  correctiveAction: string; dueDate: string; responsible: string;
+  status: NCStatus; effectivenessCheck: string;
+}
+
+const NC_REGISTER: NCRecord[] = [
+  { ncNo: "NC-2026-001", source: "Internal", auditDate: "2026-03-22", clauseRef: "6.2", description: "Two technicians missing updated competency records for IEC 61215 Ed.2", category: "Minor NC", rootCause: "Training schedule not updated after standard revision", correctiveAction: "Schedule retraining and update competency matrix", dueDate: "2026-04-15", responsible: "A. Kumar", status: "In Progress", effectivenessCheck: "Verify updated records by 2026-05-01" },
+  { ncNo: "NC-2026-002", source: "Internal", auditDate: "2026-03-22", clauseRef: "6.4", description: "Solar simulator reference cell calibration expired 2026-03-01", category: "Minor NC", rootCause: "Calibration reminder system failed for this item", correctiveAction: "Recalibrate and fix automated reminder", dueDate: "2026-04-01", responsible: "S. Reddy", status: "Closed", effectivenessCheck: "Confirmed recalibration cert received" },
+  { ncNo: "NC-2026-003", source: "Internal", auditDate: "2026-03-22", clauseRef: "7.6", description: "Measurement uncertainty budget for EL imaging not including lens distortion component", category: "Major NC", rootCause: "Uncertainty budget template missing imaging-specific components", correctiveAction: "Revise uncertainty budget to include lens distortion, update template", dueDate: "2026-04-10", responsible: "Dr. P. Mehta", status: "Open", effectivenessCheck: "Review revised budget and verify calculation" },
+  { ncNo: "NC-2026-004", source: "Internal", auditDate: "2026-03-22", clauseRef: "8.7", description: "3 CAPA records missing effectiveness verification evidence", category: "Minor NC", rootCause: "No follow-up process after CAPA implementation", correctiveAction: "Implement CAPA effectiveness verification checklist", dueDate: "2026-04-20", responsible: "R. Singh", status: "Open", effectivenessCheck: "Check all open CAPAs have verification dates" },
+  { ncNo: "NC-2025-018", source: "NABL", auditDate: "2025-11-05", clauseRef: "6.4.1", description: "Environmental datalogger calibration expired during witness audit", category: "Minor NC", rootCause: "Manual calibration tracking missed renewal date", correctiveAction: "Recalibrate and implement automated 30-day reminder", dueDate: "2025-12-05", responsible: "A. Sharma", status: "Verified", effectivenessCheck: "Verified - automated reminders working since Dec 2025" },
+  { ncNo: "NC-2025-019", source: "NABL", auditDate: "2025-11-05", clauseRef: "7.8.2", description: "Test report template missing uncertainty statement for energy yield", category: "Minor NC", rootCause: "Template not updated for IEC 61853 requirements", correctiveAction: "Update report template with uncertainty statement section", dueDate: "2026-01-15", responsible: "R. Singh", status: "Verified", effectivenessCheck: "Verified - template v4 includes uncertainty statement" },
+  { ncNo: "NC-2025-012", source: "BIS", auditDate: "2025-09-20", clauseRef: "7.2", description: "Test method validation records incomplete for new bifacial module test", category: "Major NC", rootCause: "Validation protocol not finalized before accepting test samples", correctiveAction: "Complete validation protocol, retrain staff on acceptance criteria", dueDate: "2025-10-31", responsible: "Dr. P. Mehta", status: "Closed", effectivenessCheck: "Validation records complete, process gate added" },
+  { ncNo: "NC-2025-010", source: "TUV", auditDate: "2025-07-15", clauseRef: "6.3", description: "Lab temperature excursion not documented during IEC 61215 TC test", category: "Minor NC", rootCause: "Environmental monitoring alert sent but not formally recorded", correctiveAction: "Implement auto-logging of all env excursions into LIMS", dueDate: "2025-08-30", responsible: "M. Patel", status: "Verified", effectivenessCheck: "Auto-logging verified with 3 months data" },
+];
+
+const ncStatusColors: Record<NCStatus, string> = {
+  Open: "bg-red-900/60 text-red-400",
+  "In Progress": "bg-amber-900/60 text-amber-400",
+  Closed: "bg-blue-900/60 text-blue-400",
+  Verified: "bg-emerald-900/60 text-emerald-400",
+};
+
+// ── Audit Schedule Data ──
+interface ScheduleEntry {
+  id: string; month: string; type: string; scope: string; auditor: string;
+  planned: string; actual: string; status: AuditStatus;
+}
+
+const AUDIT_SCHEDULE: ScheduleEntry[] = [
+  { id: "AS-01", month: "Jan 2026", type: "Internal", scope: "Clauses 4-5 (Structural)", auditor: "Dr. P. Mehta", planned: "2026-01-20", actual: "2026-01-22", status: "Completed" },
+  { id: "AS-02", month: "Mar 2026", type: "Internal", scope: "Clauses 6-7 (Resource & Process)", auditor: "Dr. P. Mehta", planned: "2026-03-15", actual: "2026-03-22", status: "Completed" },
+  { id: "AS-03", month: "Apr 2026", type: "NABL Witness", scope: "IEC 61215 DH/TC/HF", auditor: "NABL Assessor", planned: "2026-04-15", actual: "—", status: "Planned" },
+  { id: "AS-04", month: "May 2026", type: "IAS Witness", scope: "IEC 61730 Safety", auditor: "IAS Assessor", planned: "2026-05-20", actual: "—", status: "Planned" },
+  { id: "AS-05", month: "Jun 2026", type: "Internal", scope: "Clauses 8 (Management System)", auditor: "R. Singh", planned: "2026-06-10", actual: "—", status: "Planned" },
+  { id: "AS-06", month: "Jul 2026", type: "BIS Surveillance", scope: "IS 14286 / IEC 61215", auditor: "BIS Assessor", planned: "2026-07-15", actual: "—", status: "Planned" },
+  { id: "AS-07", month: "Sep 2026", type: "Internal", scope: "Full scope (Clauses 4-8)", auditor: "Dr. P. Mehta", planned: "2026-09-15", actual: "—", status: "Planned" },
+  { id: "AS-08", month: "Nov 2026", type: "NABL Surveillance", scope: "IEC 60904 STC", auditor: "NABL Assessor", planned: "2026-11-10", actual: "—", status: "Planned" },
+];
+
+// ── Audit Reports Data ──
+interface AuditReport {
+  id: string; title: string; date: string; auditor: string;
+  conformities: number; minorNCs: number; majorNCs: number; observations: number; ofis: number;
+  status: "Draft" | "Reviewed" | "Approved";
+}
+
+const AUDIT_REPORTS: AuditReport[] = [
+  { id: "RPT-IA-2026-002", title: "Internal Audit - Resource & Process Requirements", date: "2026-03-25", auditor: "Dr. P. Mehta", conformities: 22, minorNCs: 3, majorNCs: 1, observations: 3, ofis: 2, status: "Reviewed" },
+  { id: "RPT-IA-2026-001", title: "Internal Audit - Structural Requirements", date: "2026-01-25", auditor: "Dr. P. Mehta", conformities: 8, minorNCs: 0, majorNCs: 0, observations: 1, ofis: 1, status: "Approved" },
+  { id: "RPT-WA-2025-001", title: "NABL Witness Audit - IEC 61853 Energy Rating", date: "2025-11-10", auditor: "Dr. M. Gupta (NABL)", conformities: 5, minorNCs: 2, majorNCs: 0, observations: 2, ofis: 1, status: "Approved" },
+  { id: "RPT-EA-2025-002", title: "BIS Surveillance Audit", date: "2025-09-25", auditor: "BIS Assessor", conformities: 12, minorNCs: 1, majorNCs: 1, observations: 0, ofis: 0, status: "Approved" },
+  { id: "RPT-EA-2025-001", title: "TUV Witness Audit - Environmental Tests", date: "2025-07-20", auditor: "TUV Assessor", conformities: 10, minorNCs: 1, majorNCs: 0, observations: 1, ofis: 0, status: "Approved" },
+];
+
+export default function AuditPage() {
+  const [activeTab, setActiveTab] = useState("checklist");
+  const [ncFilter, setNcFilter] = useState<string>("All");
+
+  const findingSummary = ISO_CLAUSES.reduce((acc, c) => {
+    acc[c.findings] = (acc[c.findings] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const filteredNCs = ncFilter === "All" ? NC_REGISTER : NC_REGISTER.filter((nc) => nc.source === ncFilter || nc.status === ncFilter);
+  const openNCs = NC_REGISTER.filter((nc) => nc.status === "Open" || nc.status === "In Progress").length;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Audit Management</h1>
-        <div className="flex gap-2">
-          <Link href="/audit/plans" className="btn-secondary text-sm">View All Plans</Link>
-          <Link href="/audit/findings" className="btn-secondary text-sm">View Findings</Link>
-          <Link href="/audit/car" className="btn-primary text-sm">CAR/8D Reports</Link>
+        <div>
+          <h1 className="text-2xl font-bold text-white">Audit Management</h1>
+          <p className="text-sm text-gray-400 mt-1">ISO 17025 internal & external audit tracking</p>
+        </div>
+        <div className="flex gap-2 text-xs">
+          <span className="px-2 py-1 rounded bg-red-900/40 text-red-400">{openNCs} Open NCs</span>
+          <span className="px-2 py-1 rounded bg-emerald-900/40 text-emerald-400">{NC_REGISTER.filter((nc) => nc.status === "Verified").length} Verified</span>
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="card">
-          <p className="text-xs text-gray-500 uppercase tracking-wide">Upcoming Audits</p>
-          <p className="text-3xl font-bold text-primary-600 mt-1">{upcomingAudits.length}</p>
-          <p className="text-xs text-gray-400 mt-1">Planned & In Progress</p>
-        </div>
-        <div className="card">
-          <p className="text-xs text-gray-500 uppercase tracking-wide">Open Findings</p>
-          <p className="text-3xl font-bold text-orange-600 mt-1">{openFindings.length}</p>
-          <p className="text-xs text-gray-400 mt-1">Requiring attention</p>
-        </div>
-        <div className="card">
-          <p className="text-xs text-gray-500 uppercase tracking-wide">Closure Rate</p>
-          <p className="text-3xl font-bold text-green-600 mt-1">{closureRate}%</p>
-          <p className="text-xs text-gray-400 mt-1">{closedFindings}/{totalFindings} findings closed</p>
-        </div>
-        <div className="card">
-          <p className="text-xs text-gray-500 uppercase tracking-wide">Open Major NCs</p>
-          <p className={cn("text-3xl font-bold mt-1", majorNCs > 0 ? "text-red-600" : "text-green-600")}>{majorNCs}</p>
-          <p className="text-xs text-gray-400 mt-1">Critical findings</p>
-        </div>
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="witness-audit">Witness Audit</TabsTrigger>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="bg-gray-900 border border-gray-800">
+          <TabsTrigger value="checklist">Internal Audit Checklist</TabsTrigger>
+          <TabsTrigger value="nc-register">NC Register</TabsTrigger>
+          <TabsTrigger value="schedule">Audit Schedule</TabsTrigger>
+          <TabsTrigger value="reports">Audit Reports</TabsTrigger>
         </TabsList>
 
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6">
-          {/* Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <FindingsTrendChart data={auditMetrics.findingsByMonth} />
-            <ClosureRateChart data={auditMetrics.closureRate} />
+        {/* TAB 1: Internal Audit Checklist */}
+        <TabsContent value="checklist" className="space-y-4">
+          <div className="rounded-xl border border-gray-800 bg-gray-900/40 p-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs mb-4">
+              <div><span className="text-gray-500 block">Audit ID</span><span className="text-orange-400 font-mono">{AUDIT_PLAN.id}</span></div>
+              <div><span className="text-gray-500 block">Lead Auditor</span><span className="text-gray-300">{AUDIT_PLAN.auditor}</span></div>
+              <div><span className="text-gray-500 block">Date</span><span className="text-gray-300">{AUDIT_PLAN.completedDate}</span></div>
+              <div><span className="text-gray-500 block">Status</span><span className="px-2 py-0.5 rounded bg-emerald-900/60 text-emerald-400 text-xs">{AUDIT_PLAN.status}</span></div>
+            </div>
+            <p className="text-xs text-gray-500 mb-1">Scope: {AUDIT_PLAN.scope}</p>
           </div>
-
-          {/* Upcoming Audits Table */}
-          <div className="card">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-gray-900">Upcoming Audits</h2>
-              <Link href="/audit/plans" className="text-xs text-primary-600 hover:underline">View All</Link>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Standard</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Lead</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {upcomingAudits.map((audit) => (
-                    <tr key={audit.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-mono text-gray-600">
-                        <Link href={`/audit/plans/${audit.id}`} className="text-primary-600 hover:underline">
-                          {audit.id}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-900">{audit.title}</td>
-                      <td className="px-4 py-3">
-                        <span className="badge bg-primary-50 text-primary-700">{audit.standard}</span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{audit.type}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{formatDate(audit.scheduledDate)}</td>
-                      <td className="px-4 py-3">
-                        <span className={cn("badge", statusStyles[audit.status])}>{audit.status}</span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{audit.leadAuditor}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          <div className="flex gap-2 text-xs">
+            {Object.entries(findingSummary).map(([cat, count]) => (
+              <span key={cat} className={cn("px-2 py-1 rounded", findingColors[cat as FindingCategory])}>
+                {cat}: {count}
+              </span>
+            ))}
           </div>
-
-          {/* Recent Open Findings */}
-          <div className="card">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-gray-900">Open Findings</h2>
-              <Link href="/audit/findings" className="text-xs text-primary-600 hover:underline">View All</Link>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Severity</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Target Date</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Responsible</th>
+          <div className="rounded-xl border border-gray-800 overflow-hidden">
+            <table className="w-full text-sm">
+              <thead><tr className="bg-gray-900/80 text-gray-400 text-xs uppercase tracking-wider">
+                <th className="px-4 py-3 text-left w-20">Clause</th>
+                <th className="px-4 py-3 text-left">Requirement</th>
+                <th className="px-4 py-3 text-center w-32">Finding</th>
+              </tr></thead>
+              <tbody className="divide-y divide-gray-800/50">
+                {ISO_CLAUSES.map((c) => (
+                  <tr key={c.clause} className="hover:bg-gray-900/50">
+                    <td className="px-4 py-2 font-mono text-orange-400 text-xs">{c.clause}</td>
+                    <td className="px-4 py-2 text-gray-300 text-xs">{c.title}</td>
+                    <td className="px-4 py-2 text-center">
+                      <span className={cn("px-2 py-0.5 rounded text-[10px] font-medium", findingColors[c.findings])}>{c.findings}</span>
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {openFindings.map((finding) => (
-                    <tr key={finding.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-mono text-gray-600">
-                        <Link href={`/audit/findings/${finding.id}`} className="text-primary-600 hover:underline">
-                          {finding.id}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-700 max-w-sm truncate">{finding.description}</td>
-                      <td className="px-4 py-3"><FindingSeverityBadge severity={finding.severity} /></td>
-                      <td className="px-4 py-3"><FindingStatusBadge status={finding.status} /></td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{formatDate(finding.targetDate)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{finding.responsiblePerson}</td>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </TabsContent>
+
+        {/* TAB 2: NC Register */}
+        <TabsContent value="nc-register" className="space-y-4">
+          <div className="flex gap-2 items-center">
+            <span className="text-xs text-gray-500">Filter:</span>
+            {["All", "Internal", "NABL", "BIS", "TUV", "Open", "Closed", "Verified"].map((f) => (
+              <button key={f} onClick={() => setNcFilter(f)} className={cn("px-2 py-1 rounded text-xs transition-colors", ncFilter === f ? "bg-orange-500/20 text-orange-400" : "bg-gray-800 text-gray-400 hover:text-white")}>{f}</button>
+            ))}
+          </div>
+          <div className="rounded-xl border border-gray-800 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead><tr className="bg-gray-900/80 text-gray-400 uppercase tracking-wider">
+                  <th className="px-3 py-3 text-left">NC#</th><th className="px-3 py-3 text-left">Source</th>
+                  <th className="px-3 py-3 text-left">Audit Date</th><th className="px-3 py-3 text-left">Clause</th>
+                  <th className="px-3 py-3 text-left">Description</th><th className="px-3 py-3 text-center">Category</th>
+                  <th className="px-3 py-3 text-left">Corrective Action</th><th className="px-3 py-3 text-left">Due</th>
+                  <th className="px-3 py-3 text-left">Responsible</th><th className="px-3 py-3 text-center">Status</th>
+                </tr></thead>
+                <tbody className="divide-y divide-gray-800/50">
+                  {filteredNCs.map((nc) => (
+                    <tr key={nc.ncNo} className="hover:bg-gray-900/50">
+                      <td className="px-3 py-2 font-mono text-orange-400">{nc.ncNo}</td>
+                      <td className="px-3 py-2 text-gray-300">{nc.source}</td>
+                      <td className="px-3 py-2 text-gray-400">{nc.auditDate}</td>
+                      <td className="px-3 py-2 font-mono text-gray-300">{nc.clauseRef}</td>
+                      <td className="px-3 py-2 text-gray-300 max-w-[200px] truncate">{nc.description}</td>
+                      <td className="px-3 py-2 text-center"><span className={cn("px-1.5 py-0.5 rounded text-[10px] font-medium", findingColors[nc.category])}>{nc.category}</span></td>
+                      <td className="px-3 py-2 text-gray-400 max-w-[180px] truncate">{nc.correctiveAction}</td>
+                      <td className="px-3 py-2 text-gray-400">{nc.dueDate}</td>
+                      <td className="px-3 py-2 text-gray-300">{nc.responsible}</td>
+                      <td className="px-3 py-2 text-center"><span className={cn("px-1.5 py-0.5 rounded text-[10px] font-medium", ncStatusColors[nc.status])}>{nc.status}</span></td>
                     </tr>
                   ))}
                 </tbody>
@@ -166,275 +234,93 @@ export default function AuditDashboard() {
           </div>
         </TabsContent>
 
-        {/* Witness Audit Tab */}
-        <TabsContent value="witness-audit" className="space-y-6">
-          <WitnessAuditTab />
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-}
-
-// Witness Audit Tab Component
-function WitnessAuditTab() {
-  const [viewMode, setViewMode] = useState<"schedule" | "observations" | "actions" | "checklist">("schedule");
-
-  const witnessAudits = [
-    { id: "WA-001", type: "NABL Witness Audit", standard: "ISO 17025:2017", scheduledDate: "2026-04-15", assessor: "Dr. S. Ramanathan (NABL)", scope: "IEC 61215 - DH, TC, HF Tests", status: "Scheduled", lab: "Environmental Testing Lab", lastAudit: "2025-04-10", frequency: "Annual" },
-    { id: "WA-002", type: "IAS Witness Audit", standard: "ISO 17025:2017", scheduledDate: "2026-05-20", assessor: "Ms. K. Patel (IAS)", scope: "IEC 61730 - Safety Tests", status: "Planned", lab: "Electrical Safety Lab", lastAudit: "2025-05-22", frequency: "Annual" },
-    { id: "WA-003", type: "NABL Surveillance", standard: "ISO 17025:2017", scheduledDate: "2026-06-10", assessor: "Mr. V. Krishnan (NABL)", scope: "IEC 60904 - STC Measurements", status: "Planned", lab: "Solar Simulator Lab", lastAudit: "2025-06-15", frequency: "Annual" },
-    { id: "WA-004", type: "NABL Witness Audit", standard: "ISO 17025:2017", scheduledDate: "2025-11-05", assessor: "Dr. M. Gupta (NABL)", scope: "IEC 61853 - Energy Rating", status: "Completed", lab: "Performance Testing Lab", lastAudit: "2025-11-05", frequency: "Annual" },
-  ];
-
-  const observations = [
-    { id: "WO-001", auditId: "WA-004", clause: "7.2.1", observation: "Test procedure for IV curve measurement at STC follows IEC 60904-1 Ed.3 correctly", type: "Positive", assessor: "Dr. M. Gupta", date: "2025-11-05" },
-    { id: "WO-002", auditId: "WA-004", clause: "7.6.1", observation: "Measurement uncertainty calculation for Pmax needs to include spectral mismatch contribution", type: "Improvement", assessor: "Dr. M. Gupta", date: "2025-11-05" },
-    { id: "WO-003", auditId: "WA-004", clause: "6.4.1", observation: "Environmental conditions monitoring datalogger calibration certificate expired by 2 weeks", type: "Non-Conformity", assessor: "Dr. M. Gupta", date: "2025-11-05" },
-    { id: "WO-004", auditId: "WA-004", clause: "7.2.2", observation: "Excellent documentation of test deviations and client communication", type: "Positive", assessor: "Dr. M. Gupta", date: "2025-11-05" },
-    { id: "WO-005", auditId: "WA-004", clause: "7.8.2", observation: "Test report template missing uncertainty statement for energy yield calculation", type: "Improvement", assessor: "Dr. M. Gupta", date: "2025-11-05" },
-  ];
-
-  const correctiveActions = [
-    { id: "WCA-001", observationId: "WO-003", description: "Recalibrate environmental datalogger and establish 30-day advance reminder for calibration renewals", responsible: "Amit Sharma", targetDate: "2025-12-05", status: "Completed", completedDate: "2025-11-20", evidence: "Calibration cert #CAL-DL-2025-089 uploaded" },
-    { id: "WCA-002", observationId: "WO-002", description: "Update uncertainty budget to include spectral mismatch factor per IEC 60904-7", responsible: "Dr. Priya Mehta", targetDate: "2025-12-15", status: "Completed", completedDate: "2025-12-10", evidence: "Revised uncertainty budget UB-2025-REV3" },
-    { id: "WCA-003", observationId: "WO-005", description: "Update test report template to include uncertainty statement for energy yield calculations", responsible: "Rahul Singh", targetDate: "2026-01-15", status: "Completed", completedDate: "2026-01-12", evidence: "Template REP-TPL-61853-v4 approved" },
-  ];
-
-  const preAssessmentChecklist = [
-    { id: 1, category: "Personnel", item: "All test engineers have valid competency records and authorizations", status: "complete" },
-    { id: 2, category: "Personnel", item: "Training records up to date for all personnel in scope", status: "complete" },
-    { id: 3, category: "Equipment", item: "All equipment in scope has valid calibration certificates", status: "warning" },
-    { id: 4, category: "Equipment", item: "Intermediate check records are current", status: "complete" },
-    { id: 5, category: "Equipment", item: "Equipment maintenance logs are up to date", status: "complete" },
-    { id: 6, category: "Documents", item: "Test procedures reviewed and current revision in use", status: "complete" },
-    { id: 7, category: "Documents", item: "Quality manual and SOPs are accessible", status: "complete" },
-    { id: 8, category: "Documents", item: "Previous audit findings closed with evidence", status: "complete" },
-    { id: 9, category: "Environment", item: "Environmental monitoring system operational", status: "complete" },
-    { id: 10, category: "Environment", item: "Lab conditions meet test requirements", status: "complete" },
-    { id: 11, category: "Records", item: "Sample test records complete and traceable", status: "warning" },
-    { id: 12, category: "Records", item: "Measurement uncertainty budgets current and approved", status: "complete" },
-    { id: 13, category: "Records", item: "Proficiency testing / ILC participation records available", status: "incomplete" },
-    { id: 14, category: "Safety", item: "Safety protocols and emergency procedures posted", status: "complete" },
-    { id: 15, category: "Safety", item: "PPE available and condition verified", status: "complete" },
-  ];
-
-  const observationTypeColors: Record<string, string> = {
-    Positive: "bg-green-100 text-green-700",
-    Improvement: "bg-amber-100 text-amber-700",
-    "Non-Conformity": "bg-red-100 text-red-700",
-  };
-
-  const auditStatusColors: Record<string, string> = {
-    Scheduled: "bg-blue-100 text-blue-700",
-    Planned: "bg-purple-100 text-purple-700",
-    Completed: "bg-green-100 text-green-700",
-    "In Progress": "bg-yellow-100 text-yellow-700",
-  };
-
-  const checkStatusIcon = (status: string) => {
-    if (status === "complete") return <CheckCircle2 className="h-4 w-4 text-green-600" />;
-    if (status === "warning") return <AlertTriangle className="h-4 w-4 text-amber-500" />;
-    return <AlertTriangle className="h-4 w-4 text-red-500" />;
-  };
-
-  return (
-    <div className="space-y-4">
-      {/* Summary KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="card">
-          <p className="text-xs text-gray-500 uppercase tracking-wide">Upcoming Witness Audits</p>
-          <p className="text-3xl font-bold text-blue-600 mt-1">{witnessAudits.filter(a => a.status !== "Completed").length}</p>
-        </div>
-        <div className="card">
-          <p className="text-xs text-gray-500 uppercase tracking-wide">Completed This Year</p>
-          <p className="text-3xl font-bold text-green-600 mt-1">{witnessAudits.filter(a => a.status === "Completed").length}</p>
-        </div>
-        <div className="card">
-          <p className="text-xs text-gray-500 uppercase tracking-wide">Open Observations</p>
-          <p className="text-3xl font-bold text-amber-600 mt-1">{observations.filter(o => o.type !== "Positive").length}</p>
-        </div>
-        <div className="card">
-          <p className="text-xs text-gray-500 uppercase tracking-wide">Actions Closed</p>
-          <p className="text-3xl font-bold text-green-600 mt-1">{correctiveActions.filter(a => a.status === "Completed").length}/{correctiveActions.length}</p>
-        </div>
-      </div>
-
-      {/* View Mode Toggle */}
-      <div className="flex gap-2">
-        {([
-          { key: "schedule", label: "Schedule & Tracking", icon: Calendar },
-          { key: "observations", label: "Observations Log", icon: Eye },
-          { key: "actions", label: "Corrective Actions", icon: ClipboardCheck },
-          { key: "checklist", label: "Pre-Assessment Checklist", icon: FileText },
-        ] as const).map(({ key, label, icon: Icon }) => (
-          <button
-            key={key}
-            onClick={() => setViewMode(key)}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
-              viewMode === key
-                ? "bg-primary-600 text-white"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            )}
-          >
-            <Icon className="h-3.5 w-3.5" />
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {/* Schedule & Tracking */}
-      {viewMode === "schedule" && (
-        <div className="card">
-          <h2 className="text-sm font-semibold text-gray-900 mb-4">NABL / IAS Witness Audit Schedule</h2>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 text-xs">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-3 py-2 text-left font-medium text-gray-500 uppercase">ID</th>
-                  <th className="px-3 py-2 text-left font-medium text-gray-500 uppercase">Type</th>
-                  <th className="px-3 py-2 text-left font-medium text-gray-500 uppercase">Scope</th>
-                  <th className="px-3 py-2 text-left font-medium text-gray-500 uppercase">Lab</th>
-                  <th className="px-3 py-2 text-left font-medium text-gray-500 uppercase">Assessor</th>
-                  <th className="px-3 py-2 text-left font-medium text-gray-500 uppercase">Date</th>
-                  <th className="px-3 py-2 text-left font-medium text-gray-500 uppercase">Last Audit</th>
-                  <th className="px-3 py-2 text-center font-medium text-gray-500 uppercase">Status</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {witnessAudits.map(audit => (
-                  <tr key={audit.id} className="hover:bg-gray-50">
-                    <td className="px-3 py-3 font-mono text-gray-600">{audit.id}</td>
-                    <td className="px-3 py-3 font-medium text-gray-900">{audit.type}</td>
-                    <td className="px-3 py-3 text-gray-700">{audit.scope}</td>
-                    <td className="px-3 py-3 text-gray-600">{audit.lab}</td>
-                    <td className="px-3 py-3 text-gray-600">{audit.assessor}</td>
-                    <td className="px-3 py-3 text-gray-600">{audit.scheduledDate}</td>
-                    <td className="px-3 py-3 text-gray-400">{audit.lastAudit}</td>
-                    <td className="px-3 py-3 text-center">
-                      <span className={cn("px-2 py-0.5 rounded text-[10px] font-semibold", auditStatusColors[audit.status])}>
-                        {audit.status}
-                      </span>
+        {/* TAB 3: Audit Schedule */}
+        <TabsContent value="schedule" className="space-y-4">
+          <div className="rounded-xl border border-gray-800 overflow-hidden">
+            <table className="w-full text-sm">
+              <thead><tr className="bg-gray-900/80 text-gray-400 text-xs uppercase tracking-wider">
+                <th className="px-4 py-3 text-left">Month</th><th className="px-4 py-3 text-left">Type</th>
+                <th className="px-4 py-3 text-left">Scope</th><th className="px-4 py-3 text-left">Auditor</th>
+                <th className="px-4 py-3 text-left">Planned</th><th className="px-4 py-3 text-left">Actual</th>
+                <th className="px-4 py-3 text-center">Status</th>
+              </tr></thead>
+              <tbody className="divide-y divide-gray-800/50">
+                {AUDIT_SCHEDULE.map((s) => (
+                  <tr key={s.id} className="hover:bg-gray-900/50">
+                    <td className="px-4 py-2 text-white text-xs font-medium">{s.month}</td>
+                    <td className="px-4 py-2 text-gray-300 text-xs">{s.type}</td>
+                    <td className="px-4 py-2 text-gray-400 text-xs">{s.scope}</td>
+                    <td className="px-4 py-2 text-gray-300 text-xs">{s.auditor}</td>
+                    <td className="px-4 py-2 text-gray-400 text-xs">{s.planned}</td>
+                    <td className="px-4 py-2 text-xs">{s.actual === "—" ? <span className="text-gray-600">—</span> : <span className="text-gray-300">{s.actual}</span>}</td>
+                    <td className="px-4 py-2 text-center">
+                      <span className={cn("px-2 py-0.5 rounded text-[10px] font-medium",
+                        s.status === "Completed" ? "bg-emerald-900/60 text-emerald-400" :
+                        s.status === "In Progress" ? "bg-amber-900/60 text-amber-400" :
+                        "bg-blue-900/60 text-blue-400"
+                      )}>{s.status}</span>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
-      )}
-
-      {/* Observations Log */}
-      {viewMode === "observations" && (
-        <div className="card">
-          <h2 className="text-sm font-semibold text-gray-900 mb-4">Witness Audit Observations</h2>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 text-xs">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-3 py-2 text-left font-medium text-gray-500 uppercase">ID</th>
-                  <th className="px-3 py-2 text-left font-medium text-gray-500 uppercase">Audit</th>
-                  <th className="px-3 py-2 text-left font-medium text-gray-500 uppercase">ISO Clause</th>
-                  <th className="px-3 py-2 text-left font-medium text-gray-500 uppercase">Observation</th>
-                  <th className="px-3 py-2 text-center font-medium text-gray-500 uppercase">Type</th>
-                  <th className="px-3 py-2 text-left font-medium text-gray-500 uppercase">Assessor</th>
-                  <th className="px-3 py-2 text-left font-medium text-gray-500 uppercase">Date</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {observations.map(obs => (
-                  <tr key={obs.id} className="hover:bg-gray-50">
-                    <td className="px-3 py-3 font-mono text-gray-500">{obs.id}</td>
-                    <td className="px-3 py-3 font-mono text-gray-500">{obs.auditId}</td>
-                    <td className="px-3 py-3 font-medium text-gray-900">{obs.clause}</td>
-                    <td className="px-3 py-3 text-gray-700 max-w-md">{obs.observation}</td>
-                    <td className="px-3 py-3 text-center">
-                      <span className={cn("px-2 py-0.5 rounded text-[10px] font-semibold", observationTypeColors[obs.type])}>
-                        {obs.type}
-                      </span>
-                    </td>
-                    <td className="px-3 py-3 text-gray-600">{obs.assessor}</td>
-                    <td className="px-3 py-3 text-gray-500">{obs.date}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Corrective Actions */}
-      {viewMode === "actions" && (
-        <div className="card">
-          <h2 className="text-sm font-semibold text-gray-900 mb-4">Corrective Actions from Witness Audits</h2>
-          <div className="space-y-3">
-            {correctiveActions.map(action => (
-              <div key={action.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono text-gray-500">{action.id}</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-gray-100 text-gray-500">Ref: {action.observationId}</span>
+          {/* Annual Calendar Visual */}
+          <div className="rounded-xl border border-gray-800 bg-gray-900/40 p-4">
+            <h3 className="text-sm font-semibold text-white mb-3">2026 Audit Calendar</h3>
+            <div className="grid grid-cols-12 gap-1">
+              {["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].map((m, i) => {
+                const auditsInMonth = AUDIT_SCHEDULE.filter((s) => s.month.startsWith(m));
+                const hasCompleted = auditsInMonth.some((a) => a.status === "Completed");
+                const hasPlanned = auditsInMonth.some((a) => a.status === "Planned");
+                return (
+                  <div key={m} className={cn("rounded-lg p-2 text-center border", hasCompleted ? "border-emerald-700 bg-emerald-950/30" : hasPlanned ? "border-blue-700 bg-blue-950/30" : "border-gray-800 bg-gray-900/40")}>
+                    <span className="text-[10px] text-gray-400 block">{m}</span>
+                    {auditsInMonth.length > 0 ? (
+                      <span className={cn("text-xs font-bold", hasCompleted ? "text-emerald-400" : "text-blue-400")}>{auditsInMonth.length}</span>
+                    ) : (
+                      <span className="text-xs text-gray-600">—</span>
+                    )}
                   </div>
-                  <span className={cn("px-2 py-0.5 rounded text-[10px] font-semibold",
-                    action.status === "Completed" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
-                  )}>
-                    {action.status}
-                  </span>
+                );
+              })}
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* TAB 4: Audit Reports */}
+        <TabsContent value="reports" className="space-y-4">
+          <div className="space-y-3">
+            {AUDIT_REPORTS.map((r) => (
+              <div key={r.id} className="rounded-xl border border-gray-800 bg-gray-900/40 p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-4 w-4 text-orange-400" />
+                    <span className="font-mono text-orange-400 text-xs">{r.id}</span>
+                    <span className="text-white text-sm font-medium">{r.title}</span>
+                  </div>
+                  <span className={cn("px-2 py-0.5 rounded text-[10px] font-medium",
+                    r.status === "Approved" ? "bg-emerald-900/60 text-emerald-400" :
+                    r.status === "Reviewed" ? "bg-blue-900/60 text-blue-400" :
+                    "bg-gray-700 text-gray-300"
+                  )}>{r.status}</span>
                 </div>
-                <p className="text-sm text-gray-800 mb-2">{action.description}</p>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs text-gray-500">
-                  <div><span className="font-medium text-gray-700">Responsible:</span> {action.responsible}</div>
-                  <div><span className="font-medium text-gray-700">Target:</span> {action.targetDate}</div>
-                  {action.completedDate && <div><span className="font-medium text-gray-700">Completed:</span> {action.completedDate}</div>}
-                  {action.evidence && <div><span className="font-medium text-gray-700">Evidence:</span> {action.evidence}</div>}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs mb-2">
+                  <div><span className="text-gray-500 block">Date</span><span className="text-gray-300">{r.date}</span></div>
+                  <div><span className="text-gray-500 block">Auditor</span><span className="text-gray-300">{r.auditor}</span></div>
+                </div>
+                <div className="flex gap-2 text-xs">
+                  <span className="px-2 py-0.5 rounded bg-emerald-900/40 text-emerald-400">{r.conformities} Conformities</span>
+                  {r.minorNCs > 0 && <span className="px-2 py-0.5 rounded bg-amber-900/40 text-amber-400">{r.minorNCs} Minor NC</span>}
+                  {r.majorNCs > 0 && <span className="px-2 py-0.5 rounded bg-red-900/40 text-red-400">{r.majorNCs} Major NC</span>}
+                  {r.observations > 0 && <span className="px-2 py-0.5 rounded bg-blue-900/40 text-blue-400">{r.observations} Observations</span>}
+                  {r.ofis > 0 && <span className="px-2 py-0.5 rounded bg-purple-900/40 text-purple-400">{r.ofis} OFI</span>}
                 </div>
               </div>
             ))}
           </div>
-        </div>
-      )}
-
-      {/* Pre-Assessment Checklist */}
-      {viewMode === "checklist" && (
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-gray-900">Pre-Assessment Checklist — Next Witness Audit (WA-001)</h2>
-            <div className="flex gap-3 text-xs">
-              <span className="flex items-center gap-1 text-green-600"><CheckCircle2 className="h-3.5 w-3.5" /> {preAssessmentChecklist.filter(c => c.status === "complete").length} Ready</span>
-              <span className="flex items-center gap-1 text-amber-500"><AlertTriangle className="h-3.5 w-3.5" /> {preAssessmentChecklist.filter(c => c.status === "warning").length} Needs Attention</span>
-              <span className="flex items-center gap-1 text-red-500"><AlertTriangle className="h-3.5 w-3.5" /> {preAssessmentChecklist.filter(c => c.status === "incomplete").length} Not Ready</span>
-            </div>
-          </div>
-          <div className="space-y-1">
-            {["Personnel", "Equipment", "Documents", "Environment", "Records", "Safety"].map(category => {
-              const items = preAssessmentChecklist.filter(c => c.category === category);
-              if (items.length === 0) return null;
-              return (
-                <div key={category} className="mb-3">
-                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 mt-3">{category}</h3>
-                  {items.map(item => (
-                    <div key={item.id} className="flex items-center gap-3 py-2 px-3 rounded hover:bg-gray-50">
-                      {checkStatusIcon(item.status)}
-                      <span className={cn("text-sm flex-1",
-                        item.status === "complete" ? "text-gray-700" :
-                        item.status === "warning" ? "text-amber-700" : "text-red-700"
-                      )}>
-                        {item.item}
-                      </span>
-                      <span className={cn("text-[10px] px-2 py-0.5 rounded font-semibold",
-                        item.status === "complete" ? "bg-green-100 text-green-700" :
-                        item.status === "warning" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"
-                      )}>
-                        {item.status === "complete" ? "Ready" : item.status === "warning" ? "Attention" : "Not Ready"}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
