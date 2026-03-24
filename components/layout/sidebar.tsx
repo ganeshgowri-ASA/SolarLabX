@@ -52,6 +52,7 @@ const navGroups: NavGroup[] = [
       { title: "Traceability", href: "/traceability", icon: GitBranch },
       { title: "RCA", href: "/rca", icon: SearchCheck },
       { title: "Complaints", href: "/complaints", icon: MessageSquareWarning },
+      { title: "Sampling", href: "/sampling", icon: ClipboardList },
     ],
   },
   {
@@ -69,6 +70,12 @@ const navGroups: NavGroup[] = [
       { title: "Equipment", href: "/equipment", icon: Wrench },
       { title: "Env. Monitoring", href: "/environment", icon: Thermometer },
       { title: "Manpower", href: "/manpower", icon: Users },
+    ],
+  },
+  {
+    label: "Supply Chain",
+    icon: ShoppingCart,
+    items: [
       { title: "Procurement", href: "/procurement", icon: ShoppingCart },
     ],
   },
