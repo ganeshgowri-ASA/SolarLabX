@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Package, Search, Plus, ChevronRight, Clock, AlertTriangle, CheckCircle2,
   Truck, ClipboardCheck, FlaskConical, FileBarChart, Eye, X, ArrowRight,
+  MapPin, LayoutGrid,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -45,6 +46,44 @@ const SAMPLES: Sample[] = [
   { id: "SLX-2026-0008", client: "Premier Energies", moduleType: "HJT 710W", quantity: 4, dateReceived: "2026-03-20", stage: "Sample Login & ID", priority: "Rush", testPlan: "IEC 61215 + 61853", status: "Active", serialNumbers: ["PE-710-001","PE-710-002","PE-710-003","PE-710-004"], poNumber: "PO-PMR-2026-088", receivedBy: "R. Sharma", inspectionResult: "Pass", packagingCondition: "Good", tests: [] },
 ];
 
+// --- Lab Layout zone data ---
+type ZoneStage = "testing" | "waiting" | "storage" | "conditioning" | "on-hold";
+const ZONE_STAGE_COLORS: Record<ZoneStage, { bg: string; text: string; label: string }> = {
+  testing: { bg: "bg-emerald-500", text: "text-emerald-400", label: "Testing" },
+  waiting: { bg: "bg-yellow-500", text: "text-yellow-400", label: "Waiting" },
+  storage: { bg: "bg-blue-500", text: "text-blue-400", label: "Storage" },
+  conditioning: { bg: "bg-orange-500", text: "text-orange-400", label: "Conditioning" },
+  "on-hold": { bg: "bg-red-500", text: "text-red-400", label: "On Hold" },
+};
+
+interface LabZone {
+  id: string; name: string; gridArea: string; color: string;
+  samples: { sampleId: string; client: string; stage: ZoneStage }[];
+}
+
+const LAB_ZONES: LabZone[] = [
+  { id: "receiving", name: "Receiving", gridArea: "col-span-2", color: "border-sky-700 bg-sky-950/30",
+    samples: [{ sampleId: "SLX-2026-0005", client: "Luminous", stage: "waiting" }, { sampleId: "SLX-2026-0008", client: "Premier Energies", stage: "waiting" }] },
+  { id: "storage", name: "Storage", gridArea: "col-span-2", color: "border-blue-700 bg-blue-950/30",
+    samples: [{ sampleId: "SLX-2026-0004", client: "Waaree Energies", stage: "storage" }, { sampleId: "SLX-2026-0002", client: "Tata Power Solar", stage: "storage" }] },
+  { id: "flash-test", name: "Flash Test Lab", gridArea: "col-span-1", color: "border-amber-700 bg-amber-950/30",
+    samples: [{ sampleId: "SLX-2026-0003", client: "Vikram Solar", stage: "testing" }] },
+  { id: "thermal-chamber", name: "Thermal Chamber", gridArea: "col-span-2", color: "border-red-700 bg-red-950/30",
+    samples: [{ sampleId: "SLX-2026-0001", client: "Adani Solar", stage: "testing" }, { sampleId: "SLX-2026-0007", client: "Goldi Solar", stage: "on-hold" }] },
+  { id: "uv-chamber", name: "UV Chamber", gridArea: "col-span-1", color: "border-violet-700 bg-violet-950/30",
+    samples: [] },
+  { id: "damp-heat", name: "Damp Heat", gridArea: "col-span-2", color: "border-teal-700 bg-teal-950/30",
+    samples: [{ sampleId: "SLX-2026-0001", client: "Adani Solar", stage: "waiting" }] },
+  { id: "mechanical-load", name: "Mechanical Load", gridArea: "col-span-1", color: "border-pink-700 bg-pink-950/30",
+    samples: [] },
+  { id: "outdoor-yard", name: "Outdoor Yard", gridArea: "col-span-2", color: "border-lime-700 bg-lime-950/30",
+    samples: [{ sampleId: "SLX-2026-0004", client: "Waaree Energies", stage: "conditioning" }] },
+  { id: "calibration-lab", name: "Calibration Lab", gridArea: "col-span-1", color: "border-cyan-700 bg-cyan-950/30",
+    samples: [] },
+  { id: "dispatch", name: "Dispatch Area", gridArea: "col-span-2", color: "border-emerald-700 bg-emerald-950/30",
+    samples: [{ sampleId: "SLX-2026-0006", client: "RenewSys", stage: "waiting" }] },
+];
+
 const priorityColor = { Normal: "bg-gray-700 text-gray-300", Urgent: "bg-amber-900/60 text-amber-400", Rush: "bg-red-900/60 text-red-400" };
 const statusColor: Record<Status, string> = { Active: "bg-emerald-900/60 text-emerald-400", "On Hold": "bg-amber-900/60 text-amber-400", Completed: "bg-blue-900/60 text-blue-400", Rejected: "bg-red-900/60 text-red-400" };
 
@@ -53,6 +92,7 @@ export default function SampleTrackingPage() {
   const [filterStage, setFilterStage] = useState<string>("All");
   const [expandedStage, setExpandedStage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("registry");
+  const [selectedZone, setSelectedZone] = useState<string | null>(null);
 
   const filtered = SAMPLES.filter((s) => {
     const matchSearch = !search || s.id.toLowerCase().includes(search.toLowerCase()) || s.client.toLowerCase().includes(search.toLowerCase()) || s.moduleType.toLowerCase().includes(search.toLowerCase());
@@ -88,6 +128,7 @@ export default function SampleTrackingPage() {
           <TabsTrigger value="receipt">Receipt & Inspection</TabsTrigger>
           <TabsTrigger value="testing">Testing Progress</TabsTrigger>
           <TabsTrigger value="dispatch">Dispatch & Return</TabsTrigger>
+          <TabsTrigger value="lab-layout">Lab Layout</TabsTrigger>
         </TabsList>
 
         {/* TAB 1: Sample Registry */}
@@ -269,6 +310,96 @@ export default function SampleTrackingPage() {
               </tbody>
             </table>
           </div>
+        </TabsContent>
+
+        {/* TAB 6: Lab Layout */}
+        <TabsContent value="lab-layout" className="space-y-4">
+          {/* Legend */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1">
+              <LayoutGrid className="h-4 w-4 text-gray-400 mr-1" />
+              <span className="text-sm text-gray-400 mr-3">Sample Stage:</span>
+              {Object.entries(ZONE_STAGE_COLORS).map(([key, val]) => (
+                <span key={key} className="flex items-center gap-1.5 mr-3">
+                  <span className={cn("w-2.5 h-2.5 rounded-full", val.bg)} />
+                  <span className="text-xs text-gray-400">{val.label}</span>
+                </span>
+              ))}
+            </div>
+            <span className="text-xs text-gray-500">
+              {LAB_ZONES.reduce((sum, z) => sum + z.samples.length, 0)} samples across {LAB_ZONES.filter((z) => z.samples.length > 0).length} zones
+            </span>
+          </div>
+
+          {/* Grid Floor Plan */}
+          <div className="grid grid-cols-5 gap-3">
+            {LAB_ZONES.map((zone) => {
+              const isSelected = selectedZone === zone.id;
+              return (
+                <button
+                  key={zone.id}
+                  onClick={() => setSelectedZone(isSelected ? null : zone.id)}
+                  className={cn(
+                    "rounded-xl border p-4 text-left transition-all hover:scale-[1.01]",
+                    zone.color, zone.gridArea,
+                    isSelected && "ring-2 ring-orange-500"
+                  )}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold text-white">{zone.name}</span>
+                    <span className="text-[10px] text-gray-400">{zone.samples.length} sample{zone.samples.length !== 1 ? "s" : ""}</span>
+                  </div>
+                  {zone.samples.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {zone.samples.map((s, i) => (
+                        <span
+                          key={i}
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-gray-900/60 border border-gray-700"
+                        >
+                          <MapPin className={cn("h-3 w-3", ZONE_STAGE_COLORS[s.stage].text)} />
+                          <span className="text-[10px] font-mono text-gray-300">{s.sampleId.slice(-4)}</span>
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-[10px] text-gray-600 italic">No samples</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Zone Detail Panel */}
+          {selectedZone && (() => {
+            const zone = LAB_ZONES.find((z) => z.id === selectedZone);
+            if (!zone) return null;
+            return (
+              <div className="rounded-xl border border-gray-800 bg-gray-900/40 p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-white">{zone.name} — {zone.samples.length} Sample{zone.samples.length !== 1 ? "s" : ""}</h3>
+                  <button onClick={() => setSelectedZone(null)} className="text-gray-500 hover:text-white"><X className="h-4 w-4" /></button>
+                </div>
+                {zone.samples.length > 0 ? (
+                  <div className="space-y-2">
+                    {zone.samples.map((s, i) => (
+                      <div key={i} className="flex items-center justify-between bg-gray-900 rounded-lg px-4 py-2 border border-gray-800">
+                        <div className="flex items-center gap-3">
+                          <MapPin className={cn("h-4 w-4", ZONE_STAGE_COLORS[s.stage].text)} />
+                          <span className="font-mono text-orange-400 text-sm">{s.sampleId}</span>
+                          <span className="text-gray-300 text-sm">{s.client}</span>
+                        </div>
+                        <span className={cn("px-2 py-0.5 rounded text-xs font-medium", ZONE_STAGE_COLORS[s.stage].bg, "bg-opacity-20", ZONE_STAGE_COLORS[s.stage].text)}>
+                          {ZONE_STAGE_COLORS[s.stage].label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-sm">No samples currently in this zone</p>
+                )}
+              </div>
+            );
+          })()}
         </TabsContent>
       </Tabs>
     </div>
