@@ -11,7 +11,7 @@ import {
   ChevronLeft, ChevronRight, ChevronDown, BarChart3, Search,
   MessageSquareWarning, MessageCircle, GitBranch, ClipboardList,
   Package, Users, Boxes, Shield, LineChart, Cpu, UserCheck,
-  HardHat, Sparkles,
+  HardHat, Sparkles, Workflow,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -54,6 +54,7 @@ const navGroups: NavGroup[] = [
       { title: "RCA", href: "/rca", icon: SearchCheck },
       { title: "Complaints", href: "/complaints", icon: MessageSquareWarning },
       { title: "Sampling", href: "/sampling", icon: ClipboardList },
+      { title: "Turtle Diagrams", href: "/turtle-diagrams", icon: Workflow },
     ],
   },
   {
