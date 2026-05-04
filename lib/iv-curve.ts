@@ -6,22 +6,16 @@ export const CURVE_COLORS = [
 ]
 
 export interface TemperatureCorrectionParams {
-  tempCoeffPmax: number  // %/°C (alias: gammaPmax)
-  tempCoeffVoc: number   // %/°C (alias: betaVoc)
-  tempCoeffIsc: number   // %/°C (alias: alphaIsc)
-  gammaPmax: number      // %/°C
-  betaVoc: number        // %/°C
-  alphaIsc: number       // %/°C
-  nmot: number           // °C
-  noct: number           // °C
-  tAmbient: number       // °C
-  irradiance: number     // W/m²
+  gammaPmax: number  // %/°C (IEC 60904-1 notation)
+  betaVoc: number    // %/°C
+  alphaIsc: number   // %/°C
+  nmot: number       // °C
+  noct: number       // °C
+  tAmbient: number   // °C
+  irradiance: number // W/m²
 }
 
 export const DEFAULT_TEMP_COEFFICIENTS: TemperatureCorrectionParams = {
-  tempCoeffPmax: -0.35,
-  tempCoeffVoc: -0.30,
-  tempCoeffIsc: 0.05,
   gammaPmax: -0.35,
   betaVoc: -0.30,
   alphaIsc: 0.05,
@@ -150,10 +144,10 @@ export function correctPmaxToSTC(
 export function correctToSTC(curve: IVCurveData, params: TemperatureCorrectionParams): IVCurveData {
   const tempDelta = 25 - curve.temperature
   const irradianceRatio = 1000 / curve.irradiance
-  const pmax = curve.pmax * (1 + params.tempCoeffPmax / 100 * tempDelta) * irradianceRatio
-  const voc = curve.voc * (1 + params.tempCoeffVoc / 100 * tempDelta)
-  const isc = curve.isc * (1 + params.tempCoeffIsc / 100 * tempDelta) * irradianceRatio
-  const vmpp = curve.vmpp * (1 + params.tempCoeffVoc / 100 * tempDelta)
+  const pmax = curve.pmax * (1 + params.gammaPmax / 100 * tempDelta) * irradianceRatio
+  const voc = curve.voc * (1 + params.betaVoc / 100 * tempDelta)
+  const isc = curve.isc * (1 + params.alphaIsc / 100 * tempDelta) * irradianceRatio
+  const vmpp = curve.vmpp * (1 + params.betaVoc / 100 * tempDelta)
   const impp = isc * (curve.impp / curve.isc)
   const ff = (voc * isc) > 0 ? pmax / (voc * isc) : curve.ff
   const dataPoints = generateIVCurve(isc, voc, impp, vmpp)
@@ -236,10 +230,10 @@ export function correctToNMOT(curve: IVCurveData, params: TemperatureCorrectionP
   const tMod = params.tAmbient + ((params.nmot - 20) * params.irradiance / 800)
   const tempDelta = tMod - 25
   const irradianceRatio = params.irradiance / 1000
-  const pmax = curve.pmax * (1 + params.tempCoeffPmax / 100 * tempDelta) * irradianceRatio
-  const voc = curve.voc * (1 + params.tempCoeffVoc / 100 * tempDelta)
-  const isc = curve.isc * (1 + params.tempCoeffIsc / 100 * tempDelta) * irradianceRatio
-  const vmpp = curve.vmpp * (1 + params.tempCoeffVoc / 100 * tempDelta)
+  const pmax = curve.pmax * (1 + params.gammaPmax / 100 * tempDelta) * irradianceRatio
+  const voc = curve.voc * (1 + params.betaVoc / 100 * tempDelta)
+  const isc = curve.isc * (1 + params.alphaIsc / 100 * tempDelta) * irradianceRatio
+  const vmpp = curve.vmpp * (1 + params.betaVoc / 100 * tempDelta)
   const impp = isc * (curve.impp / curve.isc)
   const ff = (voc * isc) > 0 ? pmax / (voc * isc) : curve.ff
   const dataPoints = generateIVCurve(isc, voc, impp, vmpp)
