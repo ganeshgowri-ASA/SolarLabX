@@ -24,10 +24,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const apiKey = process.env.CLAUDE_API_KEY;
+    const apiKey = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
-        { error: "CLAUDE_API_KEY not configured" },
+        { error: "ANTHROPIC_API_KEY not configured" },
         { status: 500 }
       );
     }
@@ -43,8 +43,8 @@ export async function POST(request: NextRequest) {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 4096,
+        model: "claude-sonnet-4-6",
+        max_tokens: 8192,
         messages: [
           {
             role: "user",
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       sop,
       metadata: {
-        model: "claude-sonnet-4-20250514",
+        model: "claude-sonnet-4-6",
         timestamp: new Date().toISOString(),
         standard,
         clause,
