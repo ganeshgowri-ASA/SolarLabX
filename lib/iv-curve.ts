@@ -57,23 +57,6 @@ export interface IVCurveData {
   ideality: number // diode ideality factor
 }
 
-export interface NMOTInputs {
-  tAmbient: number // ambient temperature °C
-  irradiance: number // W/m²
-  windSpeed: number // m/s
-  nmot: number // nominal module operating temp °C (typically 43-48)
-  tempCoeffPmax: number // %/°C (typically -0.3 to -0.5)
-  pmax_stc: number // rated power at STC
-}
-
-export interface NMOTResult {
-  moduleTemp: number
-  pmaxAtNMOT: number
-  performanceRatio: number
-  thermalLoss: number // percentage
-  tempDelta: number
-}
-
 // Generate a realistic IV curve using single-diode model
 export function generateIVCurve(
   isc: number,
@@ -174,45 +157,6 @@ export function correctToSTC(curve: IVCurveData, params: TemperatureCorrectionPa
   }
 }
 
-// NMOT/NOCT calculation per IEC 61215
-export function calculateNMOT(inputs: NMOTInputs): NMOTResult {
-  // Module temperature: T_mod = T_amb + (NMOT - 20) * G / 800
-  // NMOT is measured at 800 W/m², 20°C ambient, 1 m/s wind
-  const moduleTemp = inputs.tAmbient + ((inputs.nmot - 20) * inputs.irradiance / 800)
-  const tempDelta = moduleTemp - 25 // difference from STC
-  const thermalLoss = Math.abs(inputs.tempCoeffPmax * tempDelta)
-  const pmaxAtNMOT = inputs.pmax_stc * (1 + inputs.tempCoeffPmax / 100 * tempDelta)
-  const performanceRatio = (pmaxAtNMOT / inputs.pmax_stc) * (inputs.irradiance / 1000)
-
-  return {
-    moduleTemp: parseFloat(moduleTemp.toFixed(1)),
-    pmaxAtNMOT: parseFloat(pmaxAtNMOT.toFixed(2)),
-    performanceRatio: parseFloat(performanceRatio.toFixed(4)),
-    thermalLoss: parseFloat(thermalLoss.toFixed(2)),
-    tempDelta: parseFloat(tempDelta.toFixed(1)),
-  }
-}
-
-// Generate irradiance vs temperature model data
-export function generateIrradianceTempModel(
-  nmot: number,
-  pmax_stc: number,
-  tempCoeffPmax: number,
-): { irradiance: number; moduleTemp: number; power: number; pr: number }[] {
-  const data: { irradiance: number; moduleTemp: number; power: number; pr: number }[] = []
-  for (let g = 200; g <= 1200; g += 100) {
-    const tMod = 25 + (nmot - 20) * g / 800
-    const pmax = pmax_stc * (1 + tempCoeffPmax / 100 * (tMod - 25)) * (g / 1000)
-    data.push({
-      irradiance: g,
-      moduleTemp: parseFloat(tMod.toFixed(1)),
-      power: parseFloat(pmax.toFixed(2)),
-      pr: parseFloat((pmax / (pmax_stc * g / 1000)).toFixed(4)),
-    })
-  }
-  return data
-}
-
 // Extract IV parameters from raw data points
 export function extractIVParameters(points: IVDataPoint[]): Pick<IVCurveData, 'voc' | 'isc' | 'pmax' | 'vmpp' | 'impp' | 'ff' | 'rSeries' | 'rShunt' | 'ideality'> {
   if (points.length === 0) {
@@ -268,10 +212,10 @@ export function generateSampleCurves(): IVCurveData[] {
   const curves: IVCurveData[] = []
 
   const configs = [
-    { id: 'stc', label: 'STC (25\u00B0C, 1000 W/m\u00B2)', color: '#f97316', isc: 10.5, voc: 49.5, impp: 9.8, vmpp: 40.8, temp: 25, irr: 1000 },
-    { id: 'nmot', label: 'NMOT (45\u00B0C, 800 W/m\u00B2)', color: '#3b82f6', isc: 8.5, voc: 46.2, impp: 7.9, vmpp: 38.5, temp: 45, irr: 800 },
-    { id: 'low', label: 'Low Irradiance (200 W/m\u00B2)', color: '#22c55e', isc: 2.1, voc: 47.0, impp: 1.95, vmpp: 39.5, temp: 30, irr: 200 },
-    { id: 'hot', label: 'Hot (60\u00B0C, 1000 W/m\u00B2)', color: '#ef4444', isc: 10.6, voc: 44.8, impp: 9.7, vmpp: 37.2, temp: 60, irr: 1000 },
+    { id: 'stc', label: 'STC (25°C, 1000 W/m²)', color: '#f97316', isc: 10.5, voc: 49.5, impp: 9.8, vmpp: 40.8, temp: 25, irr: 1000 },
+    { id: 'nmot', label: 'NMOT (45°C, 800 W/m²)', color: '#3b82f6', isc: 8.5, voc: 46.2, impp: 7.9, vmpp: 38.5, temp: 45, irr: 800 },
+    { id: 'low', label: 'Low Irradiance (200 W/m²)', color: '#22c55e', isc: 2.1, voc: 47.0, impp: 1.95, vmpp: 39.5, temp: 30, irr: 200 },
+    { id: 'hot', label: 'Hot (60°C, 1000 W/m²)', color: '#ef4444', isc: 10.6, voc: 44.8, impp: 9.7, vmpp: 37.2, temp: 60, irr: 1000 },
   ]
 
   for (const cfg of configs) {
