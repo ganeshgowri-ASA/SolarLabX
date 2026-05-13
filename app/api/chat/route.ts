@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import Anthropic from "@anthropic-ai/sdk";
 
 // ---------------------------------------------------------------------------
 // POST /api/chat – RAG-powered chat endpoint
@@ -83,63 +84,74 @@ async function embedText(text: string): Promise<number[]> {
   return data.data?.[0]?.embedding ?? [];
 }
 
-// ---- Claude streaming helper -----------------------------------------------
+// ---- Claude streaming helper (Anthropic SDK + prompt caching) --------------
+
+// Static portion of the system prompt — sent with cache_control so the
+// ~600-token expert-persona block is cached across requests.
+const STATIC_SOLAR_SYSTEM = `You are SolarLabX AI Assistant, an expert in solar PV testing laboratory operations, IEC/ISO standards, and quality management systems.
+
+Your knowledge covers:
+- IEC 61215 (Design Qualification), IEC 61730 (Safety), IEC 61853 (Energy Rating)
+- IEC 60904 (Measurement Procedures), IEC 60891 (I-V Translation)
+- IEC 62915 (Type Test Sample Requirements), IEC 62788 (Material Testing)
+- IEC 62804 (PID), IEC 61701 (Salt Mist), IEC 62716 (Ammonia)
+- ISO/IEC 17025 (Lab Competence), ISO 9001 (Quality Management)
+- GUM (Guide to Uncertainty in Measurement)
+- NABL, ILAC, BIS compliance requirements
+
+Guidelines:
+- Provide technically accurate, detailed answers with specific clause/section references
+- Use markdown formatting with tables where appropriate
+- When citing standards, include edition year and specific clause numbers
+- If the context doesn't fully answer the question, supplement with your knowledge but note this
+- For procedural questions, include step-by-step instructions with acceptance criteria
+- Always mention relevant SolarLabX modules that can help (e.g., Uncertainty Calculator, LIMS, etc.)`;
 
 async function* streamClaude(
-  systemPrompt: string,
+  ragContext: string,
   messages: { role: string; content: string }[]
 ): AsyncGenerator<string> {
   const apiKey = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY;
   if (!apiKey) throw new Error("NO_API_KEY");
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 4096,
-      stream: true,
-      system: systemPrompt,
-      messages,
-    }),
-  });
+  const client = new Anthropic({ apiKey });
 
-  if (!res.ok) {
-    const err = await res.text();
-    console.error("Claude API error:", err);
-    throw new Error(`Claude API ${res.status}`);
+  // Build system blocks: stable part (cached) + dynamic RAG context (uncached).
+  const system: Array<{
+    type: "text";
+    text: string;
+    cache_control?: { type: "ephemeral" };
+  }> = [
+    {
+      type: "text",
+      text: STATIC_SOLAR_SYSTEM,
+      cache_control: { type: "ephemeral" },
+    },
+  ];
+  if (ragContext) {
+    system.push({
+      type: "text",
+      text: `## Retrieved Context from Knowledge Base\nUse the following retrieved information to ground your answer. Cite the source references.\n\n${ragContext}`,
+    });
   }
 
-  const reader = res.body?.getReader();
-  if (!reader) throw new Error("No response body");
+  const stream = await client.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 4096,
+    stream: true,
+    system,
+    messages: messages.map((m) => ({
+      role: m.role as "user" | "assistant",
+      content: m.content,
+    })),
+  });
 
-  const decoder = new TextDecoder();
-  let buf = "";
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buf += decoder.decode(value, { stream: true });
-
-    const lines = buf.split("\n");
-    buf = lines.pop() ?? "";
-
-    for (const line of lines) {
-      if (!line.startsWith("data: ")) continue;
-      const payload = line.slice(6).trim();
-      if (payload === "[DONE]") return;
-      try {
-        const evt = JSON.parse(payload);
-        if (evt.type === "content_block_delta" && evt.delta?.text) {
-          yield evt.delta.text;
-        }
-      } catch {
-        // ignore non-JSON lines
-      }
+  for await (const event of stream) {
+    if (
+      event.type === "content_block_delta" &&
+      event.delta.type === "text_delta"
+    ) {
+      yield event.delta.text;
     }
   }
 }
@@ -518,27 +530,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Build system prompt
-    const systemPrompt = `You are SolarLabX AI Assistant, an expert in solar PV testing laboratory operations, IEC/ISO standards, and quality management systems.
-
-Your knowledge covers:
-- IEC 61215 (Design Qualification), IEC 61730 (Safety), IEC 61853 (Energy Rating)
-- IEC 60904 (Measurement Procedures), IEC 60891 (I-V Translation)
-- IEC 62915 (Type Test Sample Requirements), IEC 62788 (Material Testing)
-- IEC 62804 (PID), IEC 61701 (Salt Mist), IEC 62716 (Ammonia)
-- ISO/IEC 17025 (Lab Competence), ISO 9001 (Quality Management)
-- GUM (Guide to Uncertainty in Measurement)
-- NABL, ILAC, BIS compliance requirements
-
-${ragContext ? `\n## Retrieved Context from Knowledge Base\nUse the following retrieved information to ground your answer. Cite the source references.\n\n${ragContext}\n` : ""}
-
-Guidelines:
-- Provide technically accurate, detailed answers with specific clause/section references
-- Use markdown formatting with tables where appropriate
-- When citing standards, include edition year and specific clause numbers
-- If the context doesn't fully answer the question, supplement with your knowledge but note this
-- For procedural questions, include step-by-step instructions with acceptance criteria
-- Always mention relevant SolarLabX modules that can help (e.g., Uncertainty Calculator, LIMS, etc.)`;
+    // ragContext is passed directly into streamClaude; STATIC_SOLAR_SYSTEM is
+    // the cached constant defined at module level.
 
     // Build messages array
     const claudeMessages = [
@@ -554,7 +547,7 @@ Guidelines:
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          for await (const text of streamClaude(systemPrompt, claudeMessages)) {
+          for await (const text of streamClaude(ragContext, claudeMessages)) {
             controller.enqueue(
               encoder.encode(
                 `data: ${JSON.stringify({ type: "text", data: text })}\n\n`
