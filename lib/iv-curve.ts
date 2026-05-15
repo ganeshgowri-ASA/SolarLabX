@@ -1,4 +1,10 @@
-// IV Curve Analysis utilities for Solar PV testing
+/**
+ * IV Curve Analysis — Solar PV testing utilities
+ *
+ * Provides single-diode curve generation, parameter extraction, and
+ * temperature/irradiance correction to STC (25 °C, 1000 W/m²) and NMOT
+ * conditions per IEC 60904-1 and IEC 61215.
+ */
 
 export const CURVE_COLORS = [
   '#f97316', '#3b82f6', '#22c55e', '#ef4444', '#a855f7',
@@ -74,7 +80,16 @@ export interface NMOTResult {
   tempDelta: number
 }
 
-// Generate a realistic IV curve using single-diode model
+/**
+ * Generate a discretised I-V curve using a simplified single-diode model.
+ *
+ * @param isc       - Short-circuit current (A)
+ * @param voc       - Open-circuit voltage (V)
+ * @param impp      - Current at maximum power point (A)
+ * @param vmpp      - Voltage at maximum power point (V)
+ * @param numPoints - Number of V-I samples; default 100
+ * @returns Ordered array of `{ voltage, current, power }` from V = 0 to Voc
+ */
 export function generateIVCurve(
   isc: number,
   voc: number,
@@ -105,13 +120,13 @@ export function generateIVCurve(
   return points
 }
 
-// Calculate series resistance from IV curve
+/** Estimate series resistance (Ω) from the slope near Voc. */
 export function calcSeriesResistance(voc: number, vmpp: number, impp: number, isc: number): number {
   // Approximate Rs from slope near Voc
   return parseFloat(((voc - vmpp) / impp - (voc - vmpp) / (isc - impp) * 0.5).toFixed(4))
 }
 
-// Calculate shunt resistance from IV curve
+/** Estimate shunt resistance (Ω) from the slope in the low-voltage region near Isc. */
 export function calcShuntResistance(voc: number, isc: number, points: IVDataPoint[]): number {
   // Approximate Rsh from slope near Isc (low voltage region)
   if (points.length < 5) return 1000
@@ -123,7 +138,7 @@ export function calcShuntResistance(voc: number, isc: number, points: IVDataPoin
   return parseFloat(Math.abs(dv / di).toFixed(2))
 }
 
-// Calculate diode ideality factor
+/** Estimate diode ideality factor (1–2) from the one-diode model equation. */
 export function calcIdealityFactor(voc: number, isc: number, vmpp: number, impp: number, temp: number): number {
   const k = 1.381e-23 // Boltzmann constant
   const q = 1.602e-19 // electron charge
@@ -134,7 +149,16 @@ export function calcIdealityFactor(voc: number, isc: number, vmpp: number, impp:
   return parseFloat(Math.max(1, Math.min(2, n)).toFixed(3))
 }
 
-// Temperature correction scalar (pmax only) to STC (25°C, 1000 W/m²)
+/**
+ * Scalar Pmax correction to STC (25 °C, 1000 W/m²) using a single
+ * temperature coefficient.  Use {@link correctToSTC} for a full curve.
+ *
+ * @param pmax          - Measured maximum power (W)
+ * @param irradiance    - Measured irradiance (W/m²)
+ * @param temperature   - Measured cell/module temperature (°C)
+ * @param tempCoeffPmax - Pmax temperature coefficient (%/°C, typically negative)
+ * @returns Pmax corrected to STC (W)
+ */
 export function correctPmaxToSTC(
   pmax: number,
   irradiance: number,
@@ -146,7 +170,13 @@ export function correctPmaxToSTC(
   return parseFloat((pmax * irradianceCorrection * tempCorrection).toFixed(2))
 }
 
-// Correct a full IV curve to STC conditions
+/**
+ * Translate a full IV curve to STC (25 °C, 1000 W/m²) using linear
+ * temperature coefficients per IEC 60904-1.
+ *
+ * Note: reads `params.tempCoeffPmax/Voc/Isc`; the alias fields
+ * `gammaPmax/betaVoc/alphaIsc` are unified in draft PR #93.
+ */
 export function correctToSTC(curve: IVCurveData, params: TemperatureCorrectionParams): IVCurveData {
   const tempDelta = 25 - curve.temperature
   const irradianceRatio = 1000 / curve.irradiance
@@ -213,7 +243,13 @@ export function generateIrradianceTempModel(
   return data
 }
 
-// Extract IV parameters from raw data points
+/**
+ * Derive key IV parameters (Voc, Isc, Pmax, Vmpp, Impp, FF, Rs, Rsh, n)
+ * from a raw array of measured data points.
+ *
+ * Assumes `points[0]` is at V = 0 (Isc) and the last point is at I = 0 (Voc).
+ * Returns all-zero values for an empty input rather than throwing.
+ */
 export function extractIVParameters(points: IVDataPoint[]): Pick<IVCurveData, 'voc' | 'isc' | 'pmax' | 'vmpp' | 'impp' | 'ff' | 'rSeries' | 'rShunt' | 'ideality'> {
   if (points.length === 0) {
     return { voc: 0, isc: 0, pmax: 0, vmpp: 0, impp: 0, ff: 0, rSeries: 0, rShunt: 0, ideality: 1 }
@@ -231,7 +267,11 @@ export function extractIVParameters(points: IVDataPoint[]): Pick<IVCurveData, 'v
   return { voc, isc, pmax, vmpp, impp, ff, rSeries, rShunt, ideality }
 }
 
-// Correct an IV curve to NMOT conditions
+/**
+ * Translate a full IV curve to NMOT operating conditions
+ * (T_amb + Ross model cell temperature, specified irradiance)
+ * using linear temperature coefficients per IEC 60904-1.
+ */
 export function correctToNMOT(curve: IVCurveData, params: TemperatureCorrectionParams): IVCurveData {
   const tMod = params.tAmbient + ((params.nmot - 20) * params.irradiance / 800)
   const tempDelta = tMod - 25
