@@ -1,4 +1,14 @@
-// NMOT/NOCT Calculator per IEC 61215 and IEC 61853
+/**
+ * NMOT/NOCT Calculator — IEC 61215:2021 and IEC 61853-2
+ *
+ * Computes Nominal Module Operating Temperature (NMOT) and the related
+ * cell-temperature model for any combination of irradiance, ambient
+ * temperature, wind speed, and mounting configuration.  NMOT supersedes
+ * the older NOCT metric in the 2021 edition of IEC 61215.
+ *
+ * Reference conditions for NMOT measurement:
+ *   G = 800 W/m², T_amb = 20 °C, wind = 1 m/s, open-rack mounting
+ */
 
 export interface NMOTInput {
   nocTmeasured: number;   // Measured NOCT (°C) from IEC 61215 MQT 05
@@ -40,7 +50,14 @@ const MOUNTING_CORRECTIONS: Record<string, number> = {
   bipv: 6,
 };
 
-// Calculate NMOT per IEC 61215:2021 (replaces NOCT)
+/**
+ * Derive NMOT from a measured NOCT value, applying mounting-type and
+ * wind-speed corrections per IEC 61215:2021 Annex A.
+ *
+ * @param input - Measurement inputs including measured NOCT, wind speed,
+ *   and mounting type (open_rack | close_roof | bipv)
+ * @returns NMOT in °C
+ */
 export function calculateNMOT(input: NMOTInput): number {
   const correction = MOUNTING_CORRECTIONS[input.mountingType] || 0;
   // NMOT = NOCT_measured + correction - (for wind speed difference)
@@ -49,12 +66,21 @@ export function calculateNMOT(input: NMOTInput): number {
   return input.nocTmeasured + correction + windCorrection;
 }
 
-// Calculate NOCT (legacy per IEC 61215:2005)
+/** Legacy NOCT with mounting correction per IEC 61215:2005. Prefer {@link calculateNMOT} for new work. */
 export function calculateNOCT(measuredNOCT: number, mountingType: string): number {
   return measuredNOCT + (MOUNTING_CORRECTIONS[mountingType] || 0);
 }
 
-// Calculate cell temperature at any operating conditions
+/**
+ * Cell temperature via the Ross model (IEC 61853-2 §6.3):
+ *   Tc = Ta + (NMOT − 20) × (G / 800) × windFactor
+ *
+ * @param ambientTemp - Ambient air temperature (°C)
+ * @param irradiance  - In-plane irradiance (W/m²)
+ * @param nmot        - Module NMOT (°C)
+ * @param windSpeed   - Wind speed (m/s); default 1 m/s (NMOT reference)
+ * @returns Cell temperature (°C)
+ */
 export function calculateCellTemp(
   ambientTemp: number,
   irradiance: number,
@@ -67,7 +93,16 @@ export function calculateCellTemp(
   return ambientTemp + (nmot - 20) * (irradiance / 800) * windFactor;
 }
 
-// Calculate performance at NMOT/NOCT conditions
+/**
+ * Compute module output parameters at NMOT reference conditions
+ * (G = 800 W/m², T_amb = 20 °C) using linear temperature coefficients.
+ *
+ * @param moduleSpecs - STC electrical specs and temperature coefficients
+ * @param nmot        - NMOT of the module (°C)
+ * @param irradiance  - Operating irradiance (W/m²); default 800 (NMOT ref)
+ * @returns Full {@link NMOTResult} including corrected Pmax, Voc, Isc,
+ *   performance ratio, and temperature derating factor
+ */
 export function calculatePerformanceAtNMOT(
   moduleSpecs: ModuleSpecs,
   nmot: number,
@@ -97,7 +132,15 @@ export function calculatePerformanceAtNMOT(
   };
 }
 
-// Generate irradiance vs temperature model data for charting
+/**
+ * Build a 2-D grid of cell temperatures for every combination of
+ * ambient temperature and irradiance — useful for heatmap charting.
+ *
+ * @param nmot         - Module NMOT (°C)
+ * @param ambientTemps - Array of ambient temperatures to sweep (°C)
+ * @param irradiances  - Array of irradiance levels to sweep (W/m²)
+ * @returns Flat array of `{ ambient, irradiance, cellTemp }` records
+ */
 export function generateIrradianceTempModel(
   nmot: number,
   ambientTemps: number[] = [0, 10, 20, 30, 40, 50],
@@ -116,7 +159,16 @@ export function generateIrradianceTempModel(
   return data;
 }
 
-// Generate performance ratio curve across temperatures
+/**
+ * Generate a performance-ratio curve across a range of ambient temperatures
+ * at 800 W/m² (NMOT irradiance reference).  The PR is expressed as a
+ * percentage of STC Pmax scaled to 800 W/m².
+ *
+ * @param moduleSpecs - STC specs and temperature coefficients
+ * @param nmot        - Module NMOT (°C)
+ * @param tempRange   - Ambient temperatures to evaluate (°C); default −10…50
+ * @returns Array of `{ ambient, cellTemp, pr, power }` records
+ */
 export function generatePRCurve(
   moduleSpecs: ModuleSpecs,
   nmot: number,
