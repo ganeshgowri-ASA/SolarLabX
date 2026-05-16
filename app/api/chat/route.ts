@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { z } from "zod";
 
 // ---------------------------------------------------------------------------
 // POST /api/chat – RAG-powered chat endpoint
@@ -9,6 +10,16 @@ import { NextRequest } from "next/server";
 // Falls back to Claude-only (no RAG) if Pinecone is not configured, and
 // further falls back to a rich demo/mock mode when no API keys are set.
 // ---------------------------------------------------------------------------
+
+const ChatMessageSchema = z.object({
+  role: z.enum(["user", "assistant"]),
+  content: z.string().max(8192),
+});
+
+const ChatRequestSchema = z.object({
+  message: z.string().min(1).max(4096),
+  history: z.array(ChatMessageSchema).max(20).default([]),
+});
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -456,18 +467,15 @@ async function* streamDemo(
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { message, history = [] } = body as {
-      message: string;
-      history: ChatMessage[];
-    };
-
-    if (!message?.trim()) {
-      return new Response(JSON.stringify({ error: "Message is required" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+    const raw = await request.json();
+    const parsed = ChatRequestSchema.safeParse(raw);
+    if (!parsed.success) {
+      return new Response(
+        JSON.stringify({ error: parsed.error.issues[0]?.message ?? "Invalid request" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
     }
+    const { message, history } = parsed.data;
 
     const anthropicKey =
       process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY;
