@@ -1,26 +1,48 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 
-/**
- * POST /api/vision/detect
- * Proxy to Roboflow API for PV module defect detection.
- *
- * Accepts multipart form data with:
- * - image: The PV module image file (EL, IR, or visual)
- * - inspectionType: "el" | "ir" | "visual"
- * - moduleId: Optional module identifier
- *
- * Forwards the image to Roboflow's inference API and returns
- * detection predictions with bounding boxes and confidence scores.
- */
+const ALLOWED_INSPECTION_TYPES = ["el", "ir", "visual"] as const;
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+const ALLOWED_MIME_PREFIXES = ["image/jpeg", "image/png", "image/webp", "image/tiff", "image/bmp"];
+
+const InspectionTypeSchema = z.enum(ALLOWED_INSPECTION_TYPES);
+const ModuleIdSchema = z.string().max(100).trim().optional().default("");
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const imageFile = formData.get("image") as File | null;
-    const inspectionType = formData.get("inspectionType") as string || "el";
-    const moduleId = formData.get("moduleId") as string || "";
+
+    const inspectionTypeRaw = formData.get("inspectionType") as string | null;
+    const inspectionTypeParsed = InspectionTypeSchema.safeParse(inspectionTypeRaw ?? "el");
+    if (!inspectionTypeParsed.success) {
+      return NextResponse.json(
+        { error: "inspectionType must be one of: el, ir, visual" },
+        { status: 400 }
+      );
+    }
+    const inspectionType = inspectionTypeParsed.data;
+
+    const moduleIdParsed = ModuleIdSchema.safeParse(formData.get("moduleId") as string | null ?? "");
+    const moduleId = moduleIdParsed.success ? moduleIdParsed.data : "";
 
     if (!imageFile) {
       return NextResponse.json({ error: "No image provided" }, { status: 400 });
+    }
+
+    if (imageFile.size > MAX_FILE_SIZE_BYTES) {
+      return NextResponse.json(
+        { error: "Image too large. Maximum size is 10 MB." },
+        { status: 400 }
+      );
+    }
+
+    const mimeType = imageFile.type.toLowerCase();
+    if (!ALLOWED_MIME_PREFIXES.includes(mimeType)) {
+      return NextResponse.json(
+        { error: "Unsupported image type. Upload JPEG, PNG, WebP, TIFF, or BMP." },
+        { status: 400 }
+      );
     }
 
     const apiKey = process.env.ROBOFLOW_API_KEY;
@@ -31,21 +53,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Model selection based on inspection type
-    // These can be configured per Roboflow workspace/project
     const modelMap: Record<string, string> = {
       el: process.env.ROBOFLOW_EL_MODEL || "solar-panel-defect-detection/1",
       ir: process.env.ROBOFLOW_IR_MODEL || "solar-panel-thermal/1",
       visual: process.env.ROBOFLOW_VISUAL_MODEL || "solar-panel-defects/1",
     };
 
-    const modelId = modelMap[inspectionType] || modelMap.el;
+    const modelId = modelMap[inspectionType];
 
-    // Convert image to base64 for Roboflow API
     const arrayBuffer = await imageFile.arrayBuffer();
     const base64Image = Buffer.from(arrayBuffer).toString("base64");
 
-    // Call Roboflow Inference API
     const roboflowUrl = `https://detect.roboflow.com/${modelId}?api_key=${apiKey}&confidence=40&overlap=30`;
 
     const roboflowResponse = await fetch(roboflowUrl, {
@@ -65,8 +83,6 @@ export async function POST(request: NextRequest) {
 
     const roboflowData = await roboflowResponse.json();
 
-    // Transform Roboflow response to our detection format
-    // Roboflow returns: { predictions: [{ x, y, width, height, class, confidence }], image: { width, height } }
     const predictions = (roboflowData.predictions || []).map((pred: any) => ({
       x: pred.x,
       y: pred.y,
@@ -96,13 +112,8 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/**
- * Normalize defect class names from Roboflow model output
- * to our standardized defect type IDs.
- */
 function normalizeDefectClass(rawClass: string): string {
   const classMap: Record<string, string> = {
-    // Common Roboflow model output labels
     "crack": "crack",
     "cell-crack": "crack",
     "cell_crack": "crack",

@@ -1,40 +1,59 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 
-/**
- * POST /api/sop/generate
- * Generate a Standard Operating Procedure using Claude API.
- *
- * Accepts JSON body with:
- * - standard: The IEC/ISO standard identifier
- * - clause: The specific clause/test method
- * - title: SOP title
- * - additionalContext: Optional additional context
- * - labName: Laboratory name
- * - documentNumber: Optional SOP document number
- */
+const ALLOWED_STANDARDS = [
+  "IEC 61215", "IEC 61730", "IEC 61853", "IEC 60904", "IEC 60891",
+  "IEC 62915", "IEC 62788", "IEC 62804", "IEC 61701", "IEC 62716",
+  "ISO/IEC 17025", "ISO 9001", "NABL", "other",
+];
+
+const SopRequestSchema = z.object({
+  standard: z.string().min(1).max(60).trim(),
+  clause: z.string().min(1).max(120).trim(),
+  title: z.string().min(1).max(200).trim(),
+  additionalContext: z.string().max(2000).trim().optional().default(""),
+  labName: z.string().max(200).trim().optional().default("Solar PV Testing Laboratory"),
+  documentNumber: z.string().max(50).trim().optional().default(""),
+});
+
+function stripControlChars(s: string): string {
+  // Remove characters that could be used to inject LLM instructions
+  // eslint-disable-next-line no-control-regex
+  return s.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, "");
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { standard, clause, title, additionalContext, labName, documentNumber } = body;
-
-    if (!standard || !clause || !title) {
+    const raw = await request.json();
+    const parsed = SopRequestSchema.safeParse(raw);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "standard, clause, and title are required" },
+        { error: "Invalid input", details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
 
-    const apiKey = process.env.CLAUDE_API_KEY;
+    const { standard, clause, title, additionalContext, labName, documentNumber } = parsed.data;
+
+    const apiKey = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
-        { error: "CLAUDE_API_KEY not configured" },
+        { error: "ANTHROPIC_API_KEY not configured" },
         { status: 500 }
       );
     }
 
-    const prompt = buildSOPPrompt({ standard, clause, title, additionalContext, labName, documentNumber });
+    const params = {
+      standard: stripControlChars(standard),
+      clause: stripControlChars(clause),
+      title: stripControlChars(title),
+      additionalContext: stripControlChars(additionalContext),
+      labName: stripControlChars(labName),
+      documentNumber: stripControlChars(documentNumber),
+    };
 
-    // Call Claude API
+    const prompt = buildSOPPrompt(params);
+
     const claudeResponse = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -43,14 +62,9 @@ export async function POST(request: NextRequest) {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 4096,
-        messages: [
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
+        model: "claude-sonnet-4-6",
+        max_tokens: 8192,
+        messages: [{ role: "user", content: prompt }],
       }),
     });
 
@@ -66,13 +80,12 @@ export async function POST(request: NextRequest) {
     const claudeData = await claudeResponse.json();
     const responseText = claudeData.content?.[0]?.text || "";
 
-    // Parse the structured SOP from Claude's response
-    const sop = parseSOPResponse(responseText, { title, standard, clause, labName, documentNumber });
+    const sop = parseSOPResponse(responseText, params);
 
     return NextResponse.json({
       sop,
       metadata: {
-        model: "claude-sonnet-4-20250514",
+        model: "claude-sonnet-4-6",
         timestamp: new Date().toISOString(),
         standard,
         clause,
@@ -97,15 +110,17 @@ interface SOPPromptParams {
 }
 
 function buildSOPPrompt(params: SOPPromptParams): string {
+  // Sentinel delimiters prevent user-supplied values from being treated as instructions
   return `You are an expert in solar PV testing laboratory operations and ISO/IEC standards. Generate a comprehensive Standard Operating Procedure (SOP) for a solar PV testing laboratory.
 
+<document_metadata>
 STANDARD: ${params.standard}
 CLAUSE/TEST METHOD: ${params.clause}
 SOP TITLE: ${params.title}
-LABORATORY: ${params.labName || "Solar PV Testing Laboratory"}
-${params.documentNumber ? `DOCUMENT NUMBER: ${params.documentNumber}` : ""}
-${params.additionalContext ? `ADDITIONAL CONTEXT: ${params.additionalContext}` : ""}
+LABORATORY: ${params.labName}${params.documentNumber ? `\nDOCUMENT NUMBER: ${params.documentNumber}` : ""}
+</document_metadata>
 
+${params.additionalContext ? `<additional_context>\n${params.additionalContext}\n</additional_context>\n` : ""}
 Generate the SOP with the following sections. Use clear, precise technical language appropriate for a NABL/ISO 17025 accredited laboratory. Include specific procedural steps, acceptance criteria where applicable, and reference standard clauses.
 
 Respond with EXACTLY these section headers (one per section), followed by the content:
@@ -163,7 +178,6 @@ function parseSOPResponse(
     { pattern: /REVISION[_\s]HISTORY:\s*/i, key: "revisionHistory" },
   ];
 
-  // Find positions of each section header
   const positions: { key: string; index: number }[] = [];
   for (const { pattern, key } of sectionKeys) {
     const match = text.match(pattern);
@@ -172,17 +186,12 @@ function parseSOPResponse(
     }
   }
 
-  // Sort by position
   positions.sort((a, b) => a.index - b.index);
 
-  // Extract content between headers
   for (let i = 0; i < positions.length; i++) {
     const start = positions[i].index;
-    const end = i + 1 < positions.length ? positions[i + 1].index : text.length;
-    // Find the start of the next section header (go back to find the header)
-    let endPos = end;
+    let endPos = i + 1 < positions.length ? positions[i + 1].index : text.length;
     if (i + 1 < positions.length) {
-      // Find the actual header text before the next section
       const nextKey = sectionKeys.find((s) => s.key === positions[i + 1].key);
       if (nextKey) {
         const headerMatch = text.substring(positions[i].index).match(nextKey.pattern);
