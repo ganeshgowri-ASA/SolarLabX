@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 
 // ---------------------------------------------------------------------------
 // POST /api/pinecone/ingest
@@ -10,6 +11,17 @@ import { NextRequest, NextResponse } from "next/server";
 // Chunks the text with overlap, embeds via OpenAI, and upserts to Pinecone.
 // Returns { success, chunksIngested, documentSource }
 // ---------------------------------------------------------------------------
+
+const IngestDocumentSchema = z.object({
+  text: z.string().min(1).max(200_000),
+  source: z.string().min(1).max(200).trim(),
+  metadata: z.record(z.string().max(500)).optional(),
+});
+
+const IngestBodySchema = z.union([
+  z.object({ documents: z.array(IngestDocumentSchema).min(1).max(20) }),
+  IngestDocumentSchema,
+]);
 
 interface IngestDocument {
   text: string;
@@ -164,19 +176,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
+    const raw = await request.json();
+    const parsed = IngestBodySchema.safeParse(raw);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid input", details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
 
     // Support single doc or array
     let documents: IngestDocument[];
-    if (Array.isArray(body.documents)) {
-      documents = body.documents;
-    } else if (body.text && body.source) {
-      documents = [{ text: body.text, source: body.source, metadata: body.metadata }];
+    if ("documents" in parsed.data) {
+      documents = parsed.data.documents;
     } else {
-      return NextResponse.json(
-        { error: "Provide { text, source } or { documents: [...] }" },
-        { status: 400 }
-      );
+      documents = [parsed.data];
     }
 
     let totalChunks = 0;
