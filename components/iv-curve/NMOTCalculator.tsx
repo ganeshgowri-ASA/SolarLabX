@@ -23,7 +23,7 @@ import {
   Bar,
 } from "recharts"
 import { Thermometer, Sun, Wind, Zap, TrendingDown, Activity } from "lucide-react"
-import { calculateNMOT, generateIrradianceTempModel, NMOTInputs } from "@/lib/iv-curve"
+import { calculateNMOTOperatingPoint, generatePowerIrradianceCurve, IVNMOTInputs } from "@/lib/iv-curve"
 
 export default function NMOTCalculator() {
   const [tAmbient, setTAmbient] = useState(25)
@@ -33,7 +33,7 @@ export default function NMOTCalculator() {
   const [tempCoeffPmax, setTempCoeffPmax] = useState(-0.35)
   const [pmaxStc, setPmaxStc] = useState(400)
 
-  const inputs: NMOTInputs = useMemo(
+  const inputs: IVNMOTInputs = useMemo(
     () => ({
       tAmbient,
       irradiance,
@@ -45,10 +45,10 @@ export default function NMOTCalculator() {
     [tAmbient, irradiance, windSpeed, nmot, tempCoeffPmax, pmaxStc]
   )
 
-  const result = useMemo(() => calculateNMOT(inputs), [inputs])
+  const result = useMemo(() => calculateNMOTOperatingPoint(inputs), [inputs])
 
   const irrTempData = useMemo(
-    () => generateIrradianceTempModel(nmot, pmaxStc, tempCoeffPmax),
+    () => generatePowerIrradianceCurve(nmot, pmaxStc, tempCoeffPmax),
     [nmot, pmaxStc, tempCoeffPmax]
   )
 

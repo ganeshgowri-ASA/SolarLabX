@@ -57,7 +57,9 @@ export interface IVCurveData {
   ideality: number // diode ideality factor
 }
 
-export interface NMOTInputs {
+// Inputs for computing the operating point at a known NMOT value.
+// Distinct from nmot-noct.ts::NMOTInput, which computes the NMOT value itself.
+export interface IVNMOTInputs {
   tAmbient: number // ambient temperature °C
   irradiance: number // W/m²
   windSpeed: number // m/s
@@ -66,7 +68,7 @@ export interface NMOTInputs {
   pmax_stc: number // rated power at STC
 }
 
-export interface NMOTResult {
+export interface IVNMOTResult {
   moduleTemp: number
   pmaxAtNMOT: number
   performanceRatio: number
@@ -174,12 +176,11 @@ export function correctToSTC(curve: IVCurveData, params: TemperatureCorrectionPa
   }
 }
 
-// NMOT/NOCT calculation per IEC 61215
-export function calculateNMOT(inputs: NMOTInputs): NMOTResult {
-  // Module temperature: T_mod = T_amb + (NMOT - 20) * G / 800
-  // NMOT is measured at 800 W/m², 20°C ambient, 1 m/s wind
+// Computes module temperature and power at a given operating point for a known NMOT value.
+// Use nmot-noct.ts::calculateNMOT to derive the NMOT temperature itself.
+export function calculateNMOTOperatingPoint(inputs: IVNMOTInputs): IVNMOTResult {
   const moduleTemp = inputs.tAmbient + ((inputs.nmot - 20) * inputs.irradiance / 800)
-  const tempDelta = moduleTemp - 25 // difference from STC
+  const tempDelta = moduleTemp - 25
   const thermalLoss = Math.abs(inputs.tempCoeffPmax * tempDelta)
   const pmaxAtNMOT = inputs.pmax_stc * (1 + inputs.tempCoeffPmax / 100 * tempDelta)
   const performanceRatio = (pmaxAtNMOT / inputs.pmax_stc) * (inputs.irradiance / 1000)
@@ -193,8 +194,9 @@ export function calculateNMOT(inputs: NMOTInputs): NMOTResult {
   }
 }
 
-// Generate irradiance vs temperature model data
-export function generateIrradianceTempModel(
+// 1-D sweep of module temperature and power output vs irradiance at a fixed NMOT.
+// Use nmot-noct.ts::generateIrradianceTempModel for the 2-D cell-temp matrix.
+export function generatePowerIrradianceCurve(
   nmot: number,
   pmax_stc: number,
   tempCoeffPmax: number,
