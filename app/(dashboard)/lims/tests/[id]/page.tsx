@@ -111,7 +111,7 @@ export default function TestDetailPage() {
           <TestTemplateRenderer
             template={template}
             initialData={test.inputData}
-            onSubmit={(data) => console.log('Test data submitted:', data)}
+            onSubmit={() => {}}
             readOnly={test.status === 'completed'}
           />
         </div>
