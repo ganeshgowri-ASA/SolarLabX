@@ -40,6 +40,7 @@ const navGroups: NavGroup[] = [
       { title: "Dashboard", href: "/", icon: LayoutDashboard },
       { title: "LIMS", href: "/lims", icon: FlaskConical },
       { title: "Test Protocols", href: "/lims/tests", icon: ClipboardList },
+      { title: "Calibration Chain", href: "/lims/calibration-chain", icon: GitBranch },
       { title: "Test Flow", href: "/test-flow", icon: GitBranch },
       { title: "Sample Tracking", href: "/sample-tracking", icon: Package },
     ],
