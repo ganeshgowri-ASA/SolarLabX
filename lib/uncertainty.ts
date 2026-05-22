@@ -63,6 +63,15 @@ export interface CorrelationEntry {
 
 // ===== Distribution Conversion =====
 
+/**
+ * Convert a raw half-width uncertainty to standard uncertainty (u) for a given distribution.
+ * Applies the divisors from JCGM 100:2008 Table B.1.
+ * @param rawUncertainty Half-width (or expanded value when isExpanded=true) in the measurement unit.
+ * @param distribution Probability distribution of the input quantity.
+ * @param isExpanded When true, rawUncertainty is treated as an expanded uncertainty U = k·u.
+ * @param k Coverage factor used when isExpanded=true (default 2, i.e. ≈95 % normal).
+ * @returns Standard uncertainty u(x).
+ */
 export function toStandardUncertainty(
   rawUncertainty: number,
   distribution: DistributionType,
@@ -89,6 +98,12 @@ export function toStandardUncertainty(
 
 // ===== Type A (Statistical) =====
 
+/**
+ * Type A uncertainty evaluation by statistical analysis of a measurement series.
+ * Computes the experimental standard deviation of the mean (JCGM 100:2008 §4.2).
+ * @param measurements Array of repeated observations of the same measurand (n ≥ 2).
+ * @returns Mean, standard deviation of the population, standard uncertainty of the mean, DOF (n-1), and count.
+ */
 export function calculateTypeA(measurements: number[]): {
   mean: number;
   stdDev: number;
@@ -107,6 +122,14 @@ export function calculateTypeA(measurements: number[]): {
 
 // ===== Combined Uncertainty (with optional correlations) =====
 
+/**
+ * Combined standard uncertainty uc(y) from a set of uncertainty components.
+ * Applies the law of propagation of uncertainty (JCGM 100:2008 §5.1) and
+ * optionally adds pairwise correlation cross-terms (§5.2.2).
+ * @param components Evaluated uncertainty components (each carries its varianceContribution = (ci·ui)²).
+ * @param correlations Optional correlation coefficients between component pairs.
+ * @returns Combined standard uncertainty uc(y) in the measurement unit.
+ */
 export function calculateCombinedUncertainty(
   components: UncertaintyComponent[],
   correlations?: CorrelationEntry[]
@@ -134,6 +157,12 @@ export function calculateCombinedUncertainty(
 
 // ===== Welch-Satterthwaite =====
 
+/**
+ * Effective degrees of freedom νeff via the Welch-Satterthwaite formula (JCGM 100:2008 §G.4.1).
+ * Used to look up the appropriate Student-t coverage factor.
+ * @param components Uncertainty components with their varianceContribution and degreesOfFreedom.
+ * @returns Effective DOF rounded to the nearest integer; Infinity when all DOF are Infinity.
+ */
 export function welchSatterthwaite(components: UncertaintyComponent[]): number {
   const totalVariance = components.reduce((sum, c) => sum + c.varianceContribution, 0);
   const uc4 = totalVariance ** 2;
@@ -148,6 +177,13 @@ export function welchSatterthwaite(components: UncertaintyComponent[]): number {
 
 // ===== Coverage Factor (Student's t) =====
 
+/**
+ * Student-t coverage factor k for a given effective DOF and coverage probability.
+ * Tabulated values from JCGM 100:2008 Table G.2; linear interpolation for non-tabulated DOF.
+ * @param dof Effective degrees of freedom (result of welchSatterthwaite); use Infinity for a normal distribution.
+ * @param probability Coverage probability (0.95 or 0.99); defaults to 0.95 (≈2σ).
+ * @returns Coverage factor k such that U = k · uc(y) covers the stated probability.
+ */
 export function getCoverageFactor(dof: number, probability: number = 0.95): number {
   if (dof === Infinity || dof > 100) {
     if (probability === 0.99) return 2.576;
@@ -182,6 +218,23 @@ export function getCoverageFactor(dof: number, probability: number = 0.95): numb
 
 // ===== Component Builder =====
 
+/**
+ * Factory function to build a fully evaluated UncertaintyComponent.
+ * Converts the raw uncertainty to standard form, computes the variance contribution,
+ * and wires the sensitivity coefficient — ready to pass to calculateBudget().
+ * @param id Unique identifier within the budget.
+ * @param name Human-readable component name (e.g. "Reference standard calibration").
+ * @param value Best estimate of the input quantity x.
+ * @param uncertainty Raw half-width (or expanded U when isExpanded=true).
+ * @param distribution Probability distribution for the input quantity.
+ * @param type "typeA" (statistical) or "typeB" (other means of evaluation).
+ * @param sensitivityCoefficient Partial derivative ∂y/∂x evaluated at best estimates.
+ * @param degreesOfFreedom Degrees of freedom for the component (default Infinity for Type B normal).
+ * @param isExpanded True when `uncertainty` is an expanded uncertainty U rather than half-width.
+ * @param category Optional fishbone category (Equipment, Method, Environment, etc.).
+ * @param description Optional free-text description.
+ * @returns Fully populated UncertaintyComponent (percentageContribution initialised to 0; set by calculateBudget).
+ */
 export function createComponent(
   id: string,
   name: string,
@@ -216,6 +269,21 @@ export function createComponent(
 
 // ===== Full Budget Calculation =====
 
+/**
+ * Compute a complete GUM-compliant uncertainty budget.
+ * Combines all components, applies Welch-Satterthwaite, looks up the coverage factor,
+ * and returns a fully populated UncertaintyBudget ready for display and PDF export.
+ * @param name Budget title (e.g. "Pmax measurement — IEC 61215 TC 200 cycle").
+ * @param measurand Symbol or description of the output quantity y.
+ * @param measuredValue Best estimate of y (used to compute relative uncertainty).
+ * @param components Evaluated uncertainty components (from createComponent).
+ * @param coverageProbability Target coverage probability (0.95 or 0.99); default 0.95.
+ * @param correlations Optional pairwise correlation entries between components.
+ * @param unit Measurement unit of y (e.g. "W", "%", "V").
+ * @param measurementModel Optional model equation string for documentation.
+ * @param standardReference Optional standard reference string (e.g. "ISO 17025:2017 §7.6").
+ * @returns UncertaintyBudget with combined uc(y), expanded U, coverage factor k, and sorted components.
+ */
 export function calculateBudget(
   name: string,
   measurand: string,
@@ -298,6 +366,18 @@ function sampleFromDistribution(
   }
 }
 
+/**
+ * Validate GUM results and characterise the output distribution via Monte Carlo simulation.
+ * Each iteration propagates independently sampled input deviations through the linear model;
+ * the 2.5/97.5 percentiles give the 95 % coverage interval without assuming normality.
+ * Note: uses the linear (sensitivity-coefficient) model. For non-linear models see planned
+ * issue #130 (JCGM 101:2008 MCM engine with functional model support).
+ * @param components Uncertainty components whose distributions to sample.
+ * @param measuredValue Best estimate of the measurand y.
+ * @param iterations Number of Monte Carlo trials (default 10 000; increase to 100 000 for publication).
+ * @param correlations Pairwise correlations — currently informational only; not yet sampled jointly.
+ * @returns Distribution statistics, histogram, and convergence trace.
+ */
 export function runMonteCarloSimulation(
   components: UncertaintyComponent[],
   measuredValue: number,

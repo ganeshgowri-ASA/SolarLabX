@@ -139,7 +139,7 @@ export function calculateSpectralMatch(data: SpectralDataPoint[]): SpectralMatch
   };
 }
 
-/** Uniformity calculation */
+/** Spatial non-uniformity result across the illuminated test plane. */
 export interface UniformityResult {
   nonUniformity: number;
   grade: ClassificationGrade;
@@ -151,6 +151,13 @@ export interface UniformityResult {
   grid: number[][];
 }
 
+/**
+ * Spatial uniformity of irradiance across the test plane per IEC 60904-9 §5.2.
+ * Non-uniformity = (Emax - Emin) / (Emax + Emin) × 100 %.
+ * A+ ≤ 1 %, A ≤ 2 %, B ≤ 5 %, C ≤ 10 %.
+ * @param grid 2-D array of irradiance measurements (W/m²) at grid positions.
+ * @returns Non-uniformity percentage, classification grade, and descriptive statistics.
+ */
 export function calculateUniformity(grid: number[][]): UniformityResult {
   const flat = grid.flat();
   const mean = flat.reduce((a, b) => a + b, 0) / flat.length;
@@ -202,6 +209,16 @@ function worseGrade(a: ClassificationGrade, b: ClassificationGrade): Classificat
   return gradeOrder.indexOf(a) >= gradeOrder.indexOf(b) ? a : b;
 }
 
+/**
+ * Temporal stability of irradiance over short (STI) and long (LTI) time intervals per IEC 60904-9 §5.3.
+ * Both indices: (Emax - Emin) / (Emax + Emin) × 100 %.
+ * STI thresholds — A+: ≤0.5 %, A: ≤2 %, B: ≤5 %, C: ≤10 %.
+ * LTI thresholds — A+: ≤1 %, A: ≤2 %, B: ≤5 %, C: ≤10 %.
+ * Overall grade is the worse of STI and LTI grades.
+ * @param stiData Short-interval irradiance time series (typically ≤10 ms window, ≥100 Hz).
+ * @param ltiData Long-interval irradiance time series (typically full flash duration).
+ * @returns STI, LTI values and grades, overall grade, and the input time series for charting.
+ */
 export function calculateTemporalStability(
   stiData: { time: number; irradiance: number }[],
   ltiData: { time: number; irradiance: number }[]
@@ -249,6 +266,14 @@ const D3: Record<number, number> = { 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0.076, 8: 
 const D4: Record<number, number> = { 2: 3.267, 3: 2.575, 4: 2.282, 5: 2.115, 6: 2.004, 7: 1.924, 8: 1.864, 9: 1.816, 10: 1.777 };
 const d2: Record<number, number> = { 2: 1.128, 3: 1.693, 4: 2.059, 5: 2.326, 6: 2.534, 7: 2.704, 8: 2.847, 9: 2.970, 10: 3.078 };
 
+/**
+ * X̄-R SPC control chart statistics and process capability indices for sun simulator QC.
+ * Uses the standard SPC constants A2, D3, D4, d2 (AIAG SPC Manual, 2nd ed.) for subgroup sizes 2–10.
+ * @param data Array of subgroups, each with a subgroup index and array of measured irradiance values.
+ * @param usl Upper specification limit (e.g. 1020 W/m² for ±2 % irradiance tolerance).
+ * @param lsl Lower specification limit (e.g. 980 W/m²).
+ * @returns X̄ and range control limits, Cp, Cpk, and per-subgroup data arrays for charting.
+ */
 export function calculateSPC(
   data: SPCDataPoint[],
   usl: number,
