@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/api-auth";
 
 /**
  * POST /api/sop/generate
@@ -13,6 +14,9 @@ import { NextRequest, NextResponse } from "next/server";
  * - documentNumber: Optional SOP document number
  */
 export async function POST(request: NextRequest) {
+  const { error: authError } = await requireAuth();
+  if (authError) return authError;
+
   try {
     const body = await request.json();
     const { standard, clause, title, additionalContext, labName, documentNumber } = body;
