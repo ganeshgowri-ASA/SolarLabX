@@ -5,12 +5,16 @@ import {
   getStandardTitle,
   type DetailedTestResult,
 } from "@/lib/report-test-definitions";
+import { requireAuth } from "@/lib/api-auth";
 
 /**
  * POST /api/reports/generate
  * Generate an ISO 17025 compliant test report.
  */
 export async function POST(request: NextRequest) {
+  const { error: authError } = await requireAuth();
+  if (authError) return authError;
+
   try {
     const body = await request.json();
     const {

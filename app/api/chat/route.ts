@@ -1,4 +1,5 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/api-auth";
 
 // ---------------------------------------------------------------------------
 // POST /api/chat – RAG-powered chat endpoint
@@ -455,6 +456,9 @@ async function* streamDemo(
 // ---- Main handler ----------------------------------------------------------
 
 export async function POST(request: NextRequest) {
+  const { error: authError } = await requireAuth();
+  if (authError) return authError;
+
   try {
     const body = await request.json();
     const { message, history = [] } = body as {

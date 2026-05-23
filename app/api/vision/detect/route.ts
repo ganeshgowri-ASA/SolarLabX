@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/api-auth";
 
 /**
  * POST /api/vision/detect
@@ -13,6 +14,9 @@ import { NextRequest, NextResponse } from "next/server";
  * detection predictions with bounding boxes and confidence scores.
  */
 export async function POST(request: NextRequest) {
+  const { error: authError } = await requireAuth();
+  if (authError) return authError;
+
   try {
     const formData = await request.formData();
     const imageFile = formData.get("image") as File | null;
@@ -46,11 +50,15 @@ export async function POST(request: NextRequest) {
     const base64Image = Buffer.from(arrayBuffer).toString("base64");
 
     // Call Roboflow Inference API
-    const roboflowUrl = `https://detect.roboflow.com/${modelId}?api_key=${apiKey}&confidence=40&overlap=30`;
+    // api_key sent as Authorization header to avoid logging it in request URLs
+    const roboflowUrl = `https://detect.roboflow.com/${modelId}?confidence=40&overlap=30`;
 
     const roboflowResponse = await fetch(roboflowUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Authorization": `Bearer ${apiKey}`,
+      },
       body: base64Image,
     });
 
