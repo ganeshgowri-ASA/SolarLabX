@@ -2,6 +2,16 @@
 import * as XLSX from "xlsx"
 import { saveAs } from "file-saver"
 
+function computeColWidths(data: Record<string, unknown>[]): { wch: number }[] {
+  return Object.keys(data[0] || {}).map((key) => {
+    const maxLen = Math.max(
+      key.length,
+      ...data.map((row) => String(row[key] ?? "").length)
+    )
+    return { wch: Math.min(maxLen + 2, 40) }
+  })
+}
+
 // ─── CSV Export ──────────────────────────────────────────────────────────────
 
 export function exportToCSV(
@@ -44,14 +54,7 @@ export function exportToExcel(
   const workbook = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(workbook, worksheet, sheetName)
 
-  const colWidths = Object.keys(data[0] || {}).map((key) => {
-    const maxLen = Math.max(
-      key.length,
-      ...data.map((row) => String(row[key] ?? "").length)
-    )
-    return { wch: Math.min(maxLen + 2, 40) }
-  })
-  worksheet["!cols"] = colWidths
+  worksheet["!cols"] = computeColWidths(data)
 
   const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" })
   const blob = new Blob([excelBuffer], {
@@ -67,14 +70,7 @@ export function exportToExcelMultiSheet(
   const workbook = XLSX.utils.book_new()
   sheets.forEach(({ name, data }) => {
     const worksheet = XLSX.utils.json_to_sheet(data)
-    const colWidths = Object.keys(data[0] || {}).map((key) => {
-      const maxLen = Math.max(
-        key.length,
-        ...data.map((row) => String(row[key] ?? "").length)
-      )
-      return { wch: Math.min(maxLen + 2, 40) }
-    })
-    worksheet["!cols"] = colWidths
+    worksheet["!cols"] = computeColWidths(data)
     XLSX.utils.book_append_sheet(workbook, worksheet, name)
   })
 
