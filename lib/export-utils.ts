@@ -1,4 +1,3 @@
-// @ts-nocheck
 import * as XLSX from "xlsx"
 import { saveAs } from "file-saver"
 
@@ -96,7 +95,7 @@ export async function exportToWord(
     description?: string
   }
 ): Promise<void> {
-  const { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, WidthType, AlignmentType, HeadingLevel, BorderStyle } = await import("docx")
+  const { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, WidthType, AlignmentType, HeadingLevel, BorderStyle, ShadingType } = await import("docx")
 
   if (data.length === 0) return
   const headers = Object.keys(data[0])
@@ -110,7 +109,7 @@ export async function exportToWord(
       (h) =>
         new TableCell({
           borders: cellBorders,
-          shading: { fill: "1E3A5F" },
+          shading: { type: ShadingType.SOLID, color: "1E3A5F", fill: "1E3A5F" },
           children: [
             new Paragraph({
               alignment: AlignmentType.CENTER,
@@ -128,7 +127,7 @@ export async function exportToWord(
           (h) =>
             new TableCell({
               borders: cellBorders,
-              shading: idx % 2 === 0 ? { fill: "F5F5F5" } : undefined,
+              shading: idx % 2 === 0 ? { type: ShadingType.SOLID, color: "000000", fill: "F5F5F5" } : undefined,
               children: [
                 new Paragraph({
                   children: [new TextRun({ text: String(row[h] ?? ""), size: 18, font: "Calibri" })],
@@ -139,7 +138,7 @@ export async function exportToWord(
       })
   )
 
-  const children: any[] = [
+  const children: Array<InstanceType<typeof Paragraph> | InstanceType<typeof Table>> = [
     new Paragraph({
       heading: HeadingLevel.HEADING_1,
       children: [new TextRun({ text: options.title, bold: true, color: "1E3A5F", font: "Calibri" })],
