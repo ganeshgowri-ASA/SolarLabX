@@ -6,7 +6,20 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { UNCERTAINTY_TEMPLATES } from "@/lib/uncertainty";
+import { UNCERTAINTY_TEMPLATES, runMonteCarloSimulation } from "@/lib/uncertainty";
+import type { MonteCarloResult, UncertaintyComponent } from "@/lib/uncertainty";
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  ReferenceLine,
+} from "recharts";
 import { ReportUncertaintyBudgetTable } from "@/components/reports/uncertainty/ReportUncertaintyBudgetTable";
 import { UncertaintyPieChart, DEFAULT_UNCERTAINTY_PIE_DATA } from "@/components/reports/uncertainty/UncertaintyPieChart";
 import { ReportFishboneDiagram, DEFAULT_PV_FISHBONE_CATEGORIES } from "@/components/reports/uncertainty/ReportFishboneDiagram";
@@ -100,8 +113,38 @@ function FinancialImpactAnalysis({ uncertaintyPct }: { uncertaintyPct: number })
 
 export default function UncertaintyDashboard() {
   const [selectedType, setSelectedType] = useState<TestUncertaintyType>("flasher_stc");
-  const [activeTab, setActiveTab] = useState<"overview" | "fishbone" | "simulators" | "cals" | "financial" | "gum">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "fishbone" | "simulators" | "cals" | "financial" | "gum" | "montecarlo">("overview");
   const [adminMode, setAdminMode] = useState(false);
+  const [mcmIterations, setMcmIterations] = useState<10000 | 50000 | 100000>(10000);
+  const [mcmResult, setMcmResult] = useState<MonteCarloResult | null>(null);
+  const [mcmRunning, setMcmRunning] = useState(false);
+
+  function rowsToComponents(rows: typeof config.rows): UncertaintyComponent[] {
+    return rows.map((r, i) => ({
+      id: r.id ?? String(i),
+      name: r.component,
+      value: r.value,
+      uncertainty: r.value,
+      standardUncertainty: r.standardUncertainty,
+      distribution: (r.distribution as UncertaintyComponent["distribution"]) ?? "normal",
+      type: r.type === "A" ? "typeA" : "typeB",
+      sensitivityCoefficient: r.sensitivityCoefficient ?? 1,
+      degreesOfFreedom: r.type === "A" ? 9 : Infinity,
+      varianceContribution: r.contribution ?? r.standardUncertainty ** 2,
+      percentageContribution: r.percentContribution ?? 0,
+      category: r.category,
+    }));
+  }
+
+  function runMCM() {
+    setMcmRunning(true);
+    setTimeout(() => {
+      const components = rowsToComponents(config.rows);
+      const result = runMonteCarloSimulation(components, 432.0, mcmIterations);
+      setMcmResult(result);
+      setMcmRunning(false);
+    }, 20);
+  }
 
   const config = TEST_UNCERTAINTY_CONFIGS[selectedType];
   const totalBudgets = MOCK_BUDGETS.length;
@@ -240,6 +283,7 @@ export default function UncertaintyDashboard() {
           { key: "cals", label: "Cal. Laboratories (8)" },
           { key: "financial", label: "Financial Impact" },
           { key: "gum", label: "GUM Components" },
+          { key: "montecarlo", label: "Monte Carlo (GUM-S1)" },
         ].map((tab) => (
           <button
             key={tab.key}
@@ -612,6 +656,188 @@ export default function UncertaintyDashboard() {
     </Card>
   </div>
 )}
+
+      {activeTab === "montecarlo" && (
+        <div className="space-y-6">
+          {/* Controls */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Monte Carlo Simulation — GUM Supplement 1 (JCGM 101:2008)</CardTitle>
+              <CardDescription>
+                Propagates input distributions by random sampling to verify the GUM linear approximation.
+                Uses the uncertainty components from the selected measurement type ({config.label}).
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">Iterations:</span>
+                  {([10000, 50000, 100000] as const).map((n) => (
+                    <button
+                      key={n}
+                      onClick={() => setMcmIterations(n)}
+                      className={`px-3 py-1 text-sm rounded border transition-colors ${
+                        mcmIterations === n
+                          ? "bg-blue-600 text-white border-blue-600"
+                          : "bg-white text-gray-700 border-gray-300 hover:border-blue-400"
+                      }`}
+                    >
+                      {n.toLocaleString()}
+                    </button>
+                  ))}
+                </div>
+                <Button onClick={runMCM} disabled={mcmRunning} size="sm">
+                  {mcmRunning ? "Running…" : "Run Simulation"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {mcmResult ? (
+            <>
+              {/* GUM vs MCM Comparison */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">GUM vs. Monte Carlo Comparison — {config.measurand} ({config.unit})</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-gray-100 border-b">
+                        <th className="text-left p-2 font-semibold">Parameter</th>
+                        <th className="text-center p-2 font-semibold">GUM (Law of Propagation)</th>
+                        <th className="text-center p-2 font-semibold">Monte Carlo (N={mcmResult.iterations.toLocaleString()})</th>
+                        <th className="text-center p-2 font-semibold">Δ (MCM − GUM)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        {
+                          label: "Nominal value",
+                          gum: (432.0).toFixed(3),
+                          mcm: mcmResult.mean.toFixed(3),
+                          delta: (mcmResult.mean - 432.0).toFixed(4),
+                        },
+                        {
+                          label: "Combined std. uncertainty uc (W)",
+                          gum: config.combinedUncertainty.toFixed(4),
+                          mcm: mcmResult.standardDeviation.toFixed(4),
+                          delta: (mcmResult.standardDeviation - config.combinedUncertainty).toFixed(4),
+                        },
+                        {
+                          label: "Expanded uncertainty U, k=2 (W)",
+                          gum: config.expandedUncertainty.toFixed(4),
+                          mcm: mcmResult.expandedUncertainty.toFixed(4),
+                          delta: (mcmResult.expandedUncertainty - config.expandedUncertainty).toFixed(4),
+                        },
+                        {
+                          label: "Relative expanded U (%)",
+                          gum: ((config.expandedUncertainty / 432) * 100).toFixed(3),
+                          mcm: ((mcmResult.expandedUncertainty / 432) * 100).toFixed(3),
+                          delta: (((mcmResult.expandedUncertainty - config.expandedUncertainty) / 432) * 100).toFixed(4),
+                        },
+                        {
+                          label: "Lower bound (2.5th percentile)",
+                          gum: (432.0 - config.expandedUncertainty).toFixed(3),
+                          mcm: mcmResult.percentile2_5.toFixed(3),
+                          delta: (mcmResult.percentile2_5 - (432.0 - config.expandedUncertainty)).toFixed(4),
+                        },
+                        {
+                          label: "Upper bound (97.5th percentile)",
+                          gum: (432.0 + config.expandedUncertainty).toFixed(3),
+                          mcm: mcmResult.percentile97_5.toFixed(3),
+                          delta: (mcmResult.percentile97_5 - (432.0 + config.expandedUncertainty)).toFixed(4),
+                        },
+                      ].map((row, i) => (
+                        <tr key={i} className={`border-b ${i % 2 === 0 ? "bg-white" : "bg-gray-50"}`}>
+                          <td className="p-2 text-gray-700">{row.label}</td>
+                          <td className="p-2 text-center font-mono">{row.gum}</td>
+                          <td className="p-2 text-center font-mono">{row.mcm}</td>
+                          <td className={`p-2 text-center font-mono text-xs ${Math.abs(parseFloat(row.delta)) < 0.01 ? "text-green-700" : "text-amber-700"}`}>
+                            {parseFloat(row.delta) >= 0 ? "+" : ""}{row.delta}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <p className="text-xs text-muted-foreground mt-3">
+                    GUM supplement 1 validity criterion: |U_MCM − U_GUM| {"<"} 0.05 × U_GUM for a 95% coverage interval
+                    (JCGM 101:2008 §7.9.3).{" "}
+                    {Math.abs(mcmResult.expandedUncertainty - config.expandedUncertainty) < 0.05 * config.expandedUncertainty
+                      ? "✅ GUM approximation is valid for this budget."
+                      : "⚠️ GUM approximation may be inadequate — prefer MCM result."}
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Histogram */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">Output Distribution Histogram</CardTitle>
+                  <CardDescription>
+                    Probability density of simulated {config.measurand} values · {mcmResult.iterations.toLocaleString()} samples
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart data={mcmResult.histogram} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis
+                        dataKey="bin"
+                        tickFormatter={(v) => v.toFixed(2)}
+                        tick={{ fontSize: 10 }}
+                        label={{ value: config.unit, position: "insideBottom", offset: -2, fontSize: 11 }}
+                      />
+                      <YAxis tick={{ fontSize: 10 }} />
+                      <Tooltip
+                        formatter={(v: number) => [v, "Count"]}
+                        labelFormatter={(v: number) => `${Number(v).toFixed(3)} ${config.unit}`}
+                      />
+                      <ReferenceLine x={mcmResult.mean} stroke="#2563eb" strokeDasharray="4 2" label={{ value: "mean", fill: "#2563eb", fontSize: 10 }} />
+                      <ReferenceLine x={mcmResult.percentile2_5} stroke="#dc2626" strokeDasharray="4 2" label={{ value: "2.5%", fill: "#dc2626", fontSize: 10 }} />
+                      <ReferenceLine x={mcmResult.percentile97_5} stroke="#dc2626" strokeDasharray="4 2" label={{ value: "97.5%", fill: "#dc2626", fontSize: 10 }} />
+                      <Bar dataKey="count" fill="#3b82f6" opacity={0.8} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              {/* Convergence */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">Convergence Plot — Running Mean ± 1σ</CardTitle>
+                  <CardDescription>Verifies the simulation has stabilised before {mcmResult.iterations.toLocaleString()} iterations</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <LineChart data={mcmResult.convergenceData} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="iteration" tickFormatter={(v) => (v / 1000).toFixed(0) + "k"} tick={{ fontSize: 10 }} />
+                      <YAxis domain={["auto", "auto"]} tick={{ fontSize: 10 }} />
+                      <Tooltip
+                        formatter={(v: number, name: string) => [v.toFixed(4), name]}
+                        labelFormatter={(v: number) => `Iteration ${v.toLocaleString()}`}
+                      />
+                      <Line type="monotone" dataKey="runningMean" stroke="#2563eb" dot={false} strokeWidth={1.5} name="Running mean" />
+                      <Line type="monotone" dataKey="runningStd" stroke="#f59e0b" dot={false} strokeWidth={1} strokeDasharray="4 2" name="Running σ" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </>
+          ) : (
+            <Card>
+              <CardContent className="py-16 text-center text-muted-foreground">
+                <div className="text-4xl mb-3">🎲</div>
+                <p className="font-medium">Click <strong>Run Simulation</strong> to propagate the {config.label} budget via random sampling.</p>
+                <p className="text-sm mt-1">
+                  GUM-S1 (JCGM 101:2008) validates whether the GUM linear approximation is adequate for this measurement.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
     </div>
   );
 }
