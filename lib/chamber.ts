@@ -107,12 +107,24 @@ export const STANDARD_TEST_PROFILES: TestProfile[] = [
   },
 ];
 
-/** Calculate chamber volume in m³ */
+/**
+ * Calculate chamber internal volume from dimensions.
+ * @param dims - Internal dimensions in millimetres (length × width × height)
+ * @returns Volume in m³
+ */
 export function calculateVolume(dims: ChamberDimensions): number {
   return (dims.length * dims.width * dims.height) / 1e9;
 }
 
-/** Calculate required cooling capacity (simplified) */
+/**
+ * Estimate refrigeration cooling capacity required for the chamber.
+ * Uses air mass × specific heat × temperature delta; adds 40 % safety factor
+ * to cover wall losses and simultaneous ramp demand.
+ * @param volume - Chamber volume (m³)
+ * @param tempMin - Minimum test temperature (°C)
+ * @param rampRate - Required cooling ramp rate (°C/min)
+ * @returns Recommended cooling capacity (kW), rounded up to one decimal
+ */
 export function calculateCoolingCapacity(volume: number, tempMin: number, rampRate: number): number {
   const airDensity = 1.2; // kg/m³
   const specificHeat = 1.005; // kJ/(kg·°C)
@@ -124,7 +136,14 @@ export function calculateCoolingCapacity(volume: number, tempMin: number, rampRa
   return Math.ceil((baseCapacity + rampCapacity) * 1.4 * 10) / 10;
 }
 
-/** Calculate required heating capacity */
+/**
+ * Estimate electrical heating capacity required for the chamber.
+ * Mirrors cooling calculation with a 30 % safety factor (heating losses are lower).
+ * @param volume - Chamber volume (m³)
+ * @param tempMax - Maximum test temperature (°C)
+ * @param rampRate - Required heating ramp rate (°C/min)
+ * @returns Recommended heating capacity (kW), rounded up to one decimal
+ */
 export function calculateHeatingCapacity(volume: number, tempMax: number, rampRate: number): number {
   const airDensity = 1.2;
   const specificHeat = 1.005;
@@ -135,7 +154,14 @@ export function calculateHeatingCapacity(volume: number, tempMax: number, rampRa
   return Math.ceil((baseCapacity + rampCapacity) * 1.3 * 10) / 10;
 }
 
-/** Calculate UV system specs */
+/**
+ * Size the UV LED array for a given chamber floor area and irradiance target.
+ * Each LED covers 0.05 m² at 85 W output; uniformity is fixed at ±8.5 %
+ * (complies with IEC 61215 MQT 10 ≤ ±15 % requirement).
+ * @param areaM2 - Chamber floor area to illuminate (m²)
+ * @param targetIntensity - Required UV irradiance (W/m²)
+ * @returns LED count, total installed power (kW), and spatial uniformity (%)
+ */
 export function calculateUVSystem(areaM2: number, targetIntensity: number): {
   ledCount: number;
   totalPower: number;
@@ -149,7 +175,15 @@ export function calculateUVSystem(areaM2: number, targetIntensity: number): {
   return { ledCount, totalPower, uniformity };
 }
 
-/** Generate chamber specification from configuration */
+/**
+ * Build a complete `ChamberSpec` from user-supplied name, dimensions, and test profiles.
+ * Derives worst-case environmental envelope across all profiles, sizes refrigeration,
+ * heating, and UV subsystems, infers feature flags, and generates a cost breakdown.
+ * @param name - Human-readable chamber label (used as spec ID seed)
+ * @param dimensions - Internal dimensions in millimetres
+ * @param testProfiles - One or more IEC test profiles the chamber must support
+ * @returns Fully populated `ChamberSpec` including capacities, features, and cost
+ */
 export function generateChamberSpec(
   name: string,
   dimensions: ChamberDimensions,
@@ -233,7 +267,14 @@ function generateCostBreakdown(
   };
 }
 
-/** Compare two chamber configurations */
+/**
+ * Produce a side-by-side comparison table for two chamber specifications.
+ * Returns one row per key parameter (volume, capacities, UV LEDs, cost, test types),
+ * each annotated with which chamber has the advantage.
+ * @param a - First chamber specification
+ * @param b - Second chamber specification
+ * @returns Array of comparison rows with parameter name, formatted values, and advantage flag
+ */
 export function compareChambers(a: ChamberSpec, b: ChamberSpec): {
   parameter: string;
   specA: string;

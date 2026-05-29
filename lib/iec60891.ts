@@ -34,7 +34,14 @@ export interface TranslationResult {
   correctionApplied: string;
 }
 
-/** IEC 60891 Procedure 1 - Temperature coefficient method */
+/**
+ * IEC 60891 Procedure 1 — temperature coefficient method.
+ * Translates an I-V characteristic to standard reference conditions using
+ * explicit temperature coefficients α (Isc) and β (Voc) per IEC 60891:2021 §5.1.
+ * @param input - Measured I-V points with source and target irradiance/temperature
+ * @param params - Coefficients α, β, curve correction factor κ (Ω), and unit flags
+ * @returns Translated I-V array with procedure label and applied-correction string
+ */
 export function translateProcedure1(
   input: TranslationInput,
   params: Procedure1Params
@@ -80,7 +87,14 @@ export interface Procedure2Params {
   rs: number;       // Internal series resistance (Ω)
 }
 
-/** IEC 60891 Procedure 2 - Reference device method */
+/**
+ * IEC 60891 Procedure 2 — reference device method.
+ * Scales currents by the Isc ratio of a co-irradiated reference device, then
+ * applies the series-resistance voltage correction per IEC 60891:2021 §5.2.
+ * @param input - Measured I-V points with source and target irradiance/temperature
+ * @param params - Reference device Isc at both conditions, β (V/°C), and Rs (Ω)
+ * @returns Translated I-V array with procedure label and applied-correction string
+ */
 export function translateProcedure2(
   input: TranslationInput,
   params: Procedure2Params
@@ -121,7 +135,14 @@ export interface Procedure3Input {
   targetTemperature: number;  // Target T (°C)
 }
 
-/** IEC 60891 Procedure 3 - Interpolation between two I-V curves */
+/**
+ * IEC 60891 Procedure 3 — linear interpolation between two I-V curves.
+ * Blends point-by-point voltages and currents from curves measured at two
+ * irradiance levels using the fractional distance f = (G_target − G_low) /
+ * (G_high − G_low), per IEC 60891:2021 §5.3.
+ * @param input - Paired low/high I-V datasets with their irradiance and temperature conditions
+ * @returns Interpolated I-V array (length = min of both input arrays) with procedure metadata
+ */
 export function translateProcedure3(input: Procedure3Input): TranslationResult {
   const { ivDataLow, ivDataHigh, gLow, gHigh, targetIrradiance: gTarget } = input;
   const f = gHigh !== gLow ? (gTarget - gLow) / (gHigh - gLow) : 0;
@@ -162,7 +183,12 @@ export interface RsDeterminationResult {
   details: string;
 }
 
-/** Method 1: From slope near Voc on I-V curve */
+/**
+ * Determine series resistance from the slope of the I-V curve near Voc (Method 1).
+ * Uses points above 85 % of Voc; Rs = −ΔV/ΔI per IEC 60891:2021 Annex A.
+ * @param ivData - Measured I-V points sorted by ascending voltage
+ * @returns Best-fit Rs (Ω), method label, and calculation details string
+ */
 export function determineRsFromSlope(ivData: IVDataPoint[]): RsDeterminationResult {
   const sorted = [...ivData].sort((a, b) => a.voltage - b.voltage);
   const voc = sorted[sorted.length - 1].voltage;
@@ -185,7 +211,16 @@ export function determineRsFromSlope(ivData: IVDataPoint[]): RsDeterminationResu
   };
 }
 
-/** Method 2: From two I-V curves at different irradiances */
+/**
+ * Determine series resistance from two I-V curves at different irradiances (Method 2).
+ * Rs = |ΔVmpp / ΔIsc| where ΔVmpp is the maximum-power-point voltage shift between
+ * the two curves; per IEC 60891:2021 Annex A.2.
+ * @param iv1 - I-V points at irradiance G1
+ * @param iv2 - I-V points at irradiance G2
+ * @param g1 - Irradiance for iv1 (W/m²)
+ * @param g2 - Irradiance for iv2 (W/m²)
+ * @returns Best-fit Rs (Ω), method label, and calculation details string
+ */
 export function determineRsFromTwoCurves(
   iv1: IVDataPoint[],
   iv2: IVDataPoint[],
@@ -218,7 +253,21 @@ export function determineRsFromTwoCurves(
   };
 }
 
-/** Method 3: Iterative fitting - minimize translation error */
+/**
+ * Determine series resistance by iterative fitting to a reference I-V curve (Method 3).
+ * Scans κ from 0 to 5 Ω in 10 mΩ steps; picks the value that minimises the RMS
+ * current error between the Procedure-1-translated curve and a reference.
+ * Per IEC 60891:2021 Annex A.3.
+ * @param ivMeasured - I-V points to translate
+ * @param ivReference - Target reference I-V curve for error minimisation
+ * @param alpha - Isc temperature coefficient (%/°C)
+ * @param beta - Voc temperature coefficient (%/°C)
+ * @param g1 - Measured irradiance (W/m²)
+ * @param g2 - Target irradiance (W/m²)
+ * @param t1 - Measured temperature (°C)
+ * @param t2 - Target temperature (°C)
+ * @returns Best-fit Rs (Ω), method label, and RMS error at optimum
+ */
 export function determineRsIterative(
   ivMeasured: IVDataPoint[],
   ivReference: IVDataPoint[],
