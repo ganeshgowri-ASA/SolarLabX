@@ -24,6 +24,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const INPUT_LIMITS: Record<string, number> = {
+      standard: 100,
+      clause: 200,
+      title: 300,
+      additionalContext: 2000,
+      labName: 200,
+      documentNumber: 50,
+    };
+    for (const [field, max] of Object.entries(INPUT_LIMITS)) {
+      const value = body[field] as string | undefined;
+      if (value && value.length > max) {
+        return NextResponse.json(
+          { error: `${field} exceeds maximum length of ${max} characters` },
+          { status: 400 }
+        );
+      }
+    }
+
     const apiKey = process.env.CLAUDE_API_KEY;
     if (!apiKey) {
       return NextResponse.json(

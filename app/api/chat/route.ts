@@ -469,6 +469,15 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    if (message.length > 8_000) {
+      return new Response(
+        JSON.stringify({ error: "Message too long. Maximum 8,000 characters." }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    const safeHistory = (Array.isArray(history) ? history : []).slice(-20);
+
     const anthropicKey =
       process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY;
     const pineconeKey = process.env.PINECONE_API_KEY;
@@ -542,7 +551,7 @@ Guidelines:
 
     // Build messages array
     const claudeMessages = [
-      ...history.slice(-10).map((m) => ({
+      ...safeHistory.slice(-10).map((m) => ({
         role: m.role,
         content: m.content,
       })),
