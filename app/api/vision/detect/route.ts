@@ -23,6 +23,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No image provided" }, { status: 400 });
     }
 
+    const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/tiff", "image/webp"]);
+    const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+
+    if (!ALLOWED_MIME_TYPES.has(imageFile.type)) {
+      return NextResponse.json(
+        { error: "Invalid file type. Allowed: JPEG, PNG, TIFF, WebP" },
+        { status: 415 }
+      );
+    }
+    if (imageFile.size > MAX_FILE_SIZE_BYTES) {
+      return NextResponse.json(
+        { error: "File too large. Maximum size: 10 MB" },
+        { status: 413 }
+      );
+    }
+
     const apiKey = process.env.ROBOFLOW_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
