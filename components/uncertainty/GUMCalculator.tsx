@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client";
 
 import React, { useState } from "react";
@@ -79,6 +78,11 @@ export default function GUMCalculator({ onCalculate, initialTemplate }: GUMCalcu
     degreesOfFreedom: number;
     n: number;
   } | null>(null);
+
+  function setField(key: keyof ComponentFormData) {
+    return (e: React.ChangeEvent<HTMLInputElement>) =>
+      setForm((f) => ({ ...f, [key]: e.target.value } as ComponentFormData));
+  }
 
   function handleMeasurementsChange(value: string) {
     setForm((f) => ({ ...f, measurements: value }));
@@ -177,7 +181,7 @@ export default function GUMCalculator({ onCalculate, initialTemplate }: GUMCalcu
                 id="compName"
                 placeholder="e.g., Reference cell calibration"
                 value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                onChange={setField("name")}
               />
             </div>
             <div className="space-y-2">
@@ -243,7 +247,7 @@ export default function GUMCalculator({ onCalculate, initialTemplate }: GUMCalcu
                 type="number"
                 placeholder="0"
                 value={form.value}
-                onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))}
+                onChange={setField("value")}
                 disabled={form.type === "typeA" && typeAResult !== null}
               />
             </div>
@@ -254,7 +258,7 @@ export default function GUMCalculator({ onCalculate, initialTemplate }: GUMCalcu
                 type="number"
                 placeholder="0"
                 value={form.uncertainty}
-                onChange={(e) => setForm((f) => ({ ...f, uncertainty: e.target.value }))}
+                onChange={setField("uncertainty")}
                 disabled={form.type === "typeA" && typeAResult !== null}
               />
             </div>
@@ -283,9 +287,7 @@ export default function GUMCalculator({ onCalculate, initialTemplate }: GUMCalcu
                 type="number"
                 placeholder="1.0"
                 value={form.sensitivityCoefficient}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, sensitivityCoefficient: e.target.value }))
-                }
+                onChange={setField("sensitivityCoefficient")}
               />
             </div>
           </div>
@@ -297,7 +299,7 @@ export default function GUMCalculator({ onCalculate, initialTemplate }: GUMCalcu
                 id="compDOF"
                 placeholder="Inf (leave blank for infinite)"
                 value={form.degreesOfFreedom}
-                onChange={(e) => setForm((f) => ({ ...f, degreesOfFreedom: e.target.value }))}
+                onChange={setField("degreesOfFreedom")}
                 disabled={form.type === "typeA" && typeAResult !== null}
               />
             </div>
