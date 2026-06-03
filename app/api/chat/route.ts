@@ -1,14 +1,101 @@
 import { NextRequest } from "next/server";
+import Anthropic from "@anthropic-ai/sdk";
 
 // ---------------------------------------------------------------------------
 // POST /api/chat – RAG-powered chat endpoint
 // Accepts { message, history }
 // 1. Embeds the user query and retrieves relevant chunks from Pinecone
-// 2. Passes context + history to Claude API for a grounded answer
+// 2. Passes context + history to Claude via the Anthropic SDK (streaming)
 // 3. Streams the response back as text/event-stream
 // Falls back to Claude-only (no RAG) if Pinecone is not configured, and
 // further falls back to a rich demo/mock mode when no API keys are set.
 // ---------------------------------------------------------------------------
+
+// Module-level client — connection-pooled across invocations.
+const client = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY,
+});
+
+/**
+ * Stable assistant instruction block sent with cache_control: ephemeral.
+ * The ~1 200-token block is re-used across chat turns within the 5-minute
+ * cache TTL. Dynamic RAG context is injected as a separate (non-cached)
+ * system block so the stable prefix remains cacheable.
+ */
+const ASSISTANT_SYSTEM = `\
+You are SolarLabX AI Assistant, an expert advisor integrated into a solar PV testing laboratory's \
+unified operations platform. You provide technically accurate, well-referenced answers to questions \
+about PV module testing, laboratory quality management, IEC/ISO standards compliance, and measurement \
+uncertainty.
+
+## Domain Coverage
+
+### PV Testing Standards
+- IEC 61215 series: Design qualification and type approval of crystalline silicon PV modules. \
+Complete MQT test sequences (MQT 01–19), sample requirements per sequence group (A/B/C/D), \
+pass/fail criteria (≤5% power degradation, no major visual defects per Table 1), visual inspection \
+criteria, and sequence diagrams for 8-module minimum test programs.
+- IEC 61730 series: Safety qualification. Application class definitions (Class A/B/C), insulation \
+test voltages (1000 V + 2×Voc for ≥1 min), grounding requirements, bypass diode thermal test \
+(75 °C, 1 h per diode), fire classification.
+- IEC 61853 series: Energy rating. 12-point irradiance × temperature matrix (100–1100 W/m², \
+15–75 °C), temperature coefficient determination (α, β, γ), spectral responsivity, angular response, \
+bifacial correction, energy yield methodology per specific climate datasets.
+- IEC 60904 series: Measurement procedures — I-V curve tracing at STC (60904-1), reference solar \
+device requirements (60904-2), calibration chain from WRR (60904-4), irradiance measurement \
+(60904-6), EQE and spectral response (60904-8), sun simulator classification A+/A/B/C using spectral \
+match, spatial uniformity, temporal instability (60904-9), angle-of-incidence correction (60904-10), \
+bifacial measurement (60904-1-2).
+- IEC 60891: I-V translation procedures — Procedure 1 (α/β temperature coefficients), Procedure 2 \
+(reference Isc ratio), Procedure 3 (linear interpolation between conditions).
+- IEC 62915: Retest after design change. Component change matrix, partial retest eligibility, BoM.
+- IEC 62788: Material testing — backsheet peel, encapsulant UV transmission, junction box pull.
+- IEC 62804 (PID), IEC 61701 (salt mist), IEC 62716 (ammonia), IEC 62782 (dynamic mechanical load).
+
+### Laboratory Quality Management
+- ISO/IEC 17025:2017: Full clause coverage — impartiality and confidentiality (§4–5), resources \
+(personnel competency §6.2, facilities §6.3, equipment and calibration §6.4, traceability §6.5), \
+process requirements (method validation §7.2, sampling §7.3, handling §7.4, technical records §7.5, \
+measurement uncertainty §7.6, quality control §7.7, reporting §7.8), management system (§8).
+- ISO 9001:2015: Context, leadership, planning, support, operation, performance evaluation, \
+improvement.
+- JCGM 100:2008 GUM: Type A (statistical) and Type B (non-statistical) uncertainty evaluation, law \
+of propagation of uncertainty, Welch-Satterthwaite formula for effective degrees of freedom, \
+Student-t coverage factor selection, expanded uncertainty reporting at 95% confidence.
+- NABL 141: Specific accreditation criteria for PV testing laboratories in India.
+- ILAC P14: Policy for uncertainty in calibration.
+
+### SolarLabX Platform
+Point users to the right module:
+- LIMS (/lims): sample registration, test execution workflows, chain of custody, equipment \
+calibration tracking, barcode/QR label generation.
+- QMS (/qms): document control, CAPA management, management review, internal audit scheduling.
+- Audit (/audit): ISO 9001/17025 audit planning, NC/OFI tracking with severity, 8D/CAR \
+problem-solving, auditor competency.
+- Projects (/projects): test project Gantt charts, milestone tracking, resource allocation, client \
+deliverables, project costing.
+- Uncertainty Calculator (/uncertainty): GUM budget builder with Type A/B components, Monte Carlo \
+simulation (GUM-S1), Welch-Satterthwaite, k-factor selection, budget PDF export.
+- Vision AI (/vision-ai): AI-powered defect detection (EL, IR, visual inspection) via Roboflow; \
+crack, hotspot, snail trail, PID classification.
+- SOP Generator (/sop-gen): AI-assisted SOP authoring referenced to IEC/ISO clauses.
+- Reports (/reports): ISO 17025-compliant automated test report generation with digital signatures.
+- Sun Simulator (/sun-simulator): IEC 60904-9 classification — spectral match, spatial uniformity, \
+temporal stability assessment.
+- Chamber Config (/chamber-config): environmental chamber specifications, CFD visualisation, quoting.
+- Procurement (/procurement): RFQ, Technical Bid Evaluation, PO tracking, FAT/SAT management.
+
+## Response Guidelines
+
+1. **Cite precisely**: Standard code + edition year + clause (e.g., "IEC 61215-1:2021 §7.4.3").
+2. **Use structured markdown**: Tables for comparison data, numbered steps for procedures.
+3. **State acceptance criteria numerically**: "power degradation ≤ 5%" — never just "acceptable".
+4. **Distinguish certainty levels**: Separate information directly from the standard versus reasoned \
+interpretation. State assumptions explicitly.
+5. **Point to SolarLabX modules**: When a module directly addresses the question, mention it by name \
+and route path.
+6. **Uncertainty**: Remind users that ISO/IEC 17025 §7.8.3 requires test reports to include a \
+statement of measurement uncertainty with coverage factor and confidence level.`;
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -22,13 +109,10 @@ async function queryPinecone(
   topK = 5
 ): Promise<{ text: string; source: string; score: number }[]> {
   const apiKey = process.env.PINECONE_API_KEY;
-  const indexHost = process.env.PINECONE_INDEX; // full host URL or index name
+  const indexHost = process.env.PINECONE_INDEX;
   if (!apiKey || !indexHost) return [];
 
-  // Support both full host URL and index-name style
-  const host = indexHost.startsWith("http")
-    ? indexHost
-    : `https://${indexHost}`;
+  const host = indexHost.startsWith("http") ? indexHost : `https://${indexHost}`;
 
   const res = await fetch(`${host}/query`, {
     method: "POST",
@@ -36,11 +120,7 @@ async function queryPinecone(
       "Api-Key": apiKey,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      vector: queryEmbedding,
-      topK,
-      includeMetadata: true,
-    }),
+    body: JSON.stringify({ vector: queryEmbedding, topK, includeMetadata: true }),
   });
 
   if (!res.ok) {
@@ -68,10 +148,7 @@ async function embedText(text: string): Promise<number[]> {
       Authorization: `Bearer ${openaiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      model: "text-embedding-3-small",
-      input: text,
-    }),
+    body: JSON.stringify({ model: "text-embedding-3-small", input: text }),
   });
 
   if (!res.ok) {
@@ -83,63 +160,25 @@ async function embedText(text: string): Promise<number[]> {
   return data.data?.[0]?.embedding ?? [];
 }
 
-// ---- Claude streaming helper -----------------------------------------------
+// ---- SDK streaming helper --------------------------------------------------
 
 async function* streamClaude(
-  systemPrompt: string,
-  messages: { role: string; content: string }[]
+  systemBlocks: Anthropic.TextBlockParam[],
+  messages: Anthropic.MessageParam[]
 ): AsyncGenerator<string> {
-  const apiKey = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY;
-  if (!apiKey) throw new Error("NO_API_KEY");
-
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 4096,
-      stream: true,
-      system: systemPrompt,
-      messages,
-    }),
+  const stream = client.messages.stream({
+    model: "claude-sonnet-4-6",
+    max_tokens: 4096,
+    system: systemBlocks,
+    messages,
   });
 
-  if (!res.ok) {
-    const err = await res.text();
-    console.error("Claude API error:", err);
-    throw new Error(`Claude API ${res.status}`);
-  }
-
-  const reader = res.body?.getReader();
-  if (!reader) throw new Error("No response body");
-
-  const decoder = new TextDecoder();
-  let buf = "";
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buf += decoder.decode(value, { stream: true });
-
-    const lines = buf.split("\n");
-    buf = lines.pop() ?? "";
-
-    for (const line of lines) {
-      if (!line.startsWith("data: ")) continue;
-      const payload = line.slice(6).trim();
-      if (payload === "[DONE]") return;
-      try {
-        const evt = JSON.parse(payload);
-        if (evt.type === "content_block_delta" && evt.delta?.text) {
-          yield evt.delta.text;
-        }
-      } catch {
-        // ignore non-JSON lines
-      }
+  for await (const event of stream) {
+    if (
+      event.type === "content_block_delta" &&
+      event.delta.type === "text_delta"
+    ) {
+      yield event.delta.text;
     }
   }
 }
@@ -371,38 +410,20 @@ Use the **Uncertainty Calculator** module in SolarLabX for automated computation
   },
 };
 
-function findDemoResponse(query: string): {
-  answer: string;
-  sources: string[];
-} {
+function findDemoResponse(query: string): { answer: string; sources: string[] } {
   const q = query.toLowerCase();
 
   if (q.includes("61215") || (q.includes("test") && q.includes("sequence")))
     return DEMO_RESPONSES["iec 61215"];
-  if (
-    q.includes("qms") ||
-    q.includes("audit") ||
-    q.includes("checklist") ||
-    q.includes("17025")
-  )
+  if (q.includes("qms") || q.includes("audit") || q.includes("checklist") || q.includes("17025"))
     return DEMO_RESPONSES["qms audit"];
   if (q.includes("62915") || q.includes("design change") || q.includes("bom"))
     return DEMO_RESPONSES["iec 62915"];
-  if (
-    q.includes("uncertainty") ||
-    q.includes("budget") ||
-    q.includes("gum") ||
-    q.includes("measurement")
-  )
+  if (q.includes("uncertainty") || q.includes("budget") || q.includes("gum") || q.includes("measurement"))
     return DEMO_RESPONSES["uncertainty"];
-  if (
-    q.includes("calibration") ||
-    q.includes("equipment") ||
-    q.includes("traceability")
-  )
+  if (q.includes("calibration") || q.includes("equipment") || q.includes("traceability"))
     return DEMO_RESPONSES["calibration"];
 
-  // Generic fallback
   return {
     answer: `Thank you for your question about "${query}".
 
@@ -433,22 +454,14 @@ async function* streamDemo(
   query: string
 ): AsyncGenerator<{ type: "text" | "sources"; data: string }> {
   const resp = findDemoResponse(query);
-
-  // Stream the answer character-by-character in small chunks for realistic effect
   const chars = resp.answer;
   let i = 0;
   while (i < chars.length) {
-    const chunkSize = Math.min(
-      3 + Math.floor(Math.random() * 8),
-      chars.length - i
-    );
+    const chunkSize = Math.min(3 + Math.floor(Math.random() * 8), chars.length - i);
     yield { type: "text", data: chars.slice(i, i + chunkSize) };
     i += chunkSize;
-    // Small delay simulated via the stream itself
     await new Promise((r) => setTimeout(r, 10 + Math.random() * 20));
   }
-
-  // Send sources as a final event
   yield { type: "sources", data: JSON.stringify(resp.sources) };
 }
 
@@ -469,8 +482,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const anthropicKey =
-      process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY;
+    const anthropicKey = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY;
     const pineconeKey = process.env.PINECONE_API_KEY;
     const openaiKey = process.env.OPENAI_API_KEY;
 
@@ -480,9 +492,7 @@ export async function POST(request: NextRequest) {
       const stream = new ReadableStream({
         async start(controller) {
           for await (const chunk of streamDemo(message)) {
-            controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`)
-            );
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
           }
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
           controller.close();
@@ -518,32 +528,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Build system prompt
-    const systemPrompt = `You are SolarLabX AI Assistant, an expert in solar PV testing laboratory operations, IEC/ISO standards, and quality management systems.
+    // Build system blocks: stable instructions are cached; RAG context is not.
+    const systemBlocks: Anthropic.TextBlockParam[] = [
+      {
+        type: "text",
+        text: ASSISTANT_SYSTEM,
+        cache_control: { type: "ephemeral" },
+      },
+    ];
 
-Your knowledge covers:
-- IEC 61215 (Design Qualification), IEC 61730 (Safety), IEC 61853 (Energy Rating)
-- IEC 60904 (Measurement Procedures), IEC 60891 (I-V Translation)
-- IEC 62915 (Type Test Sample Requirements), IEC 62788 (Material Testing)
-- IEC 62804 (PID), IEC 61701 (Salt Mist), IEC 62716 (Ammonia)
-- ISO/IEC 17025 (Lab Competence), ISO 9001 (Quality Management)
-- GUM (Guide to Uncertainty in Measurement)
-- NABL, ILAC, BIS compliance requirements
+    if (ragContext) {
+      systemBlocks.push({
+        type: "text",
+        text: `## Retrieved Context from Knowledge Base\nUse the following retrieved information to ground your answer. Cite the source references.\n\n${ragContext}`,
+      });
+    }
 
-${ragContext ? `\n## Retrieved Context from Knowledge Base\nUse the following retrieved information to ground your answer. Cite the source references.\n\n${ragContext}\n` : ""}
-
-Guidelines:
-- Provide technically accurate, detailed answers with specific clause/section references
-- Use markdown formatting with tables where appropriate
-- When citing standards, include edition year and specific clause numbers
-- If the context doesn't fully answer the question, supplement with your knowledge but note this
-- For procedural questions, include step-by-step instructions with acceptance criteria
-- Always mention relevant SolarLabX modules that can help (e.g., Uncertainty Calculator, LIMS, etc.)`;
-
-    // Build messages array
-    const claudeMessages = [
+    const claudeMessages: Anthropic.MessageParam[] = [
       ...history.slice(-10).map((m) => ({
-        role: m.role,
+        role: m.role as "user" | "assistant",
         content: m.content,
       })),
       { role: "user", content: message },
@@ -554,7 +557,7 @@ Guidelines:
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          for await (const text of streamClaude(systemPrompt, claudeMessages)) {
+          for await (const text of streamClaude(systemBlocks, claudeMessages)) {
             controller.enqueue(
               encoder.encode(
                 `data: ${JSON.stringify({ type: "text", data: text })}\n\n`
@@ -562,7 +565,6 @@ Guidelines:
             );
           }
 
-          // Send sources if we have RAG context
           if (ragSources.length > 0) {
             controller.enqueue(
               encoder.encode(
@@ -595,9 +597,9 @@ Guidelines:
     });
   } catch (error) {
     console.error("Chat API error:", error);
-    return new Response(
-      JSON.stringify({ error: "Internal server error" }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }
