@@ -36,6 +36,19 @@ export interface HistogramBin {
   midpoint: number
 }
 
+/**
+ * Calculate mean, standard deviation, median, and SPC capability indices (Cp/Cpk)
+ * for a sample array against specification limits.
+ *
+ * Cp  = (USL − LSL) / (6σ) — process spread vs. tolerance width
+ * Cpk = min((USL − μ) / 3σ, (μ − LSL) / 3σ) — centering-aware index
+ * Reference: ISO 22514-1 / AIAG SPC 2nd Ed.
+ *
+ * @param values - Array of measurement values (e.g., Pmax in W, Voc in V)
+ * @param lsl - Lower specification limit (same unit as values)
+ * @param usl - Upper specification limit (same unit as values)
+ * @returns StatisticalSummary with descriptive stats and Cp/Cpk capability indices
+ */
 export function calculateStatistics(values: number[], lsl: number, usl: number): StatisticalSummary {
   const n = values.length
   if (n === 0) return { mean: 0, stdDev: 0, min: 0, max: 0, median: 0, count: 0, cp: 0, cpk: 0, lsl, usl }
@@ -65,6 +78,14 @@ export function calculateStatistics(values: number[], lsl: number, usl: number):
   }
 }
 
+/**
+ * Partition an array of values into equal-width histogram bins for distribution plotting.
+ * The final bin absorbs the maximum value (index clamped with Math.min).
+ *
+ * @param values - Array of measurement values
+ * @param binCount - Number of bins (default 10)
+ * @returns Array of HistogramBin each with a display range label, bin midpoint, and count
+ */
 export function generateHistogram(values: number[], binCount: number = 10): HistogramBin[] {
   if (values.length === 0) return []
   const min = Math.min(...values)
@@ -85,13 +106,21 @@ export function generateHistogram(values: number[], binCount: number = 10): Hist
   return bins
 }
 
-// Generate realistic mock PV test data
+/** Box-Muller transform: draw one sample from N(mean, std²) */
 function randNormal(mean: number, std: number): number {
   const u1 = Math.random()
   const u2 = Math.random()
   return mean + std * Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2)
 }
 
+/**
+ * Generate 200 synthetic PV module test records spanning 5 manufacturers,
+ * 5 batch IDs, and 3 IEC test standards for UI development and demonstration.
+ * Electrical parameters are drawn from normal distributions centred on
+ * representative mono-PERC values (Pmax ≈ 400 W, η ≈ 21.5%).
+ *
+ * @returns Array of 200 DataPoints with normally-distributed Pmax/Voc/Isc/FF/η
+ */
 export function generateMockData(): DataPoint[] {
   const manufacturers = ['SunPower', 'JinkoSolar', 'Trina Solar', 'LONGi', 'Canadian Solar']
   const batches = ['B-2025-001', 'B-2025-002', 'B-2025-003', 'B-2025-004', 'B-2025-005']
