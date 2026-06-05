@@ -33,7 +33,20 @@ export interface IVAnalysisResult {
   ffLoss: { rsLoss: number; rshLoss: number; idealFF: number };
 }
 
-/** Extract key parameters from an I-V curve dataset */
+/**
+ * Extract key I-V parameters (Isc, Voc, Pmax, FF, η, Rs, Rsh) from measured data
+ * and compute fill-factor loss components per IEC 60904-1.
+ *
+ * Rs is estimated from the slope near Voc (dV/dI at the high-voltage end).
+ * Rsh is estimated from the slope near Isc (dV/dI at the low-voltage end).
+ * Ideal FF uses the Voc/Vt approximation: FF₀ = (v_oc − ln(v_oc + 0.72)) / (v_oc + 1)
+ * where v_oc = Voc / (nkT/q) at 25°C.
+ *
+ * @param data - Raw I-V measurement points (voltage/current pairs); order does not matter
+ * @param area - Active cell or module area in m²
+ * @param irradiance - Incident irradiance in W/m² (default 1000 for STC)
+ * @returns IVAnalysisResult with extracted parameters, sorted curve, power curve, and FF loss breakdown
+ */
 export function analyzeIVCurve(
   data: IVDataPoint[],
   area: number,
@@ -116,7 +129,17 @@ export function analyzeIVCurve(
   };
 }
 
-/** Generate a synthetic I-V curve from parameters using single-diode model */
+/**
+ * Synthesise an I-V curve using the single-diode model solved by Newton–Raphson iteration.
+ * Covers voltages from 0 to ~1.05×Voc; current is clamped to zero below zero.
+ *
+ * @param isc - Short-circuit current in A
+ * @param voc - Open-circuit voltage in V
+ * @param rs - Series resistance in Ω (default 0.5)
+ * @param rsh - Shunt resistance in Ω (default 500)
+ * @param nPoints - Number of evenly-spaced voltage steps (default 100)
+ * @returns Array of IVDataPoint from V=0 to V≈1.05×Voc
+ */
 export function generateIVCurve(
   isc: number,
   voc: number,
@@ -164,10 +187,23 @@ export interface ReferenceDeviceCalibration {
   traceabilityChain: string[];
 }
 
+/**
+ * Check whether a reference device calibration certificate is within its validity period.
+ *
+ * @param cal - Calibration record containing an expiryDate (ISO date string)
+ * @returns true if expiryDate is today or in the future
+ */
 export function isCalibrationValid(cal: ReferenceDeviceCalibration): boolean {
   return new Date(cal.expiryDate) > new Date();
 }
 
+/**
+ * Return the number of calendar days remaining until a calibration certificate expires.
+ * A negative result indicates the calibration has already lapsed.
+ *
+ * @param cal - Calibration record containing an expiryDate (ISO date string)
+ * @returns Ceiling of remaining days; negative if already expired
+ */
 export function daysUntilExpiry(cal: ReferenceDeviceCalibration): number {
   const diff = new Date(cal.expiryDate).getTime() - Date.now();
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
@@ -231,7 +267,18 @@ export interface CalibrationComparison {
   pass: boolean;
 }
 
-/** Calculate En number for inter-lab comparison */
+/**
+ * Calculate the normalised error (En number) for an inter-laboratory comparison.
+ * |En| ≤ 1.0 indicates satisfactory agreement per ISO 13528 §9.
+ *
+ * En = |x_lab − x_ref| / √(U_lab² + U_ref²)
+ *
+ * @param labValue - Participating laboratory measured value
+ * @param labUncertainty - Expanded uncertainty (k=2) of the lab measurement (same unit)
+ * @param refValue - Reference or assigned value
+ * @param refUncertainty - Expanded uncertainty (k=2) of the reference value (same unit)
+ * @returns |En|; returns Infinity if the combined denominator is zero
+ */
 export function calculateEnNumber(
   labValue: number,
   labUncertainty: number,
@@ -242,7 +289,14 @@ export function calculateEnNumber(
   return denom > 0 ? Math.abs(labValue - refValue) / denom : Infinity;
 }
 
-/** Evaluate inter-laboratory comparison results */
+/**
+ * Apply ISO 13528 En evaluation to a panel of participating laboratories.
+ *
+ * @param labs - Array of lab identities each with name, id, measured value, and expanded uncertainty
+ * @param refValue - Reference or assigned value for the proficiency test round
+ * @param refUncertainty - Expanded uncertainty (k=2) of the reference value
+ * @returns Array of CalibrationComparison with computed En numbers and pass/fail verdicts
+ */
 export function evaluateComparison(
   labs: { name: string; id: string; value: number; uncertainty: number }[],
   refValue: number,
@@ -274,7 +328,19 @@ export interface ECTResult {
   irradiance: number;   // Irradiance (W/m²)
 }
 
-/** Calculate ECT from Voc method per IEC 60904-5 */
+/**
+ * Determine Equivalent Cell Temperature (ECT) from the open-circuit voltage method
+ * per IEC 60904-5. The measured Voc is first corrected for irradiance using the
+ * Boltzmann-weighted logarithmic term before applying the linear β_Voc coefficient.
+ *
+ * @param vocMeasured - Voc measured under field conditions (V)
+ * @param vocSTC - Voc at standard test conditions (25°C, 1000 W/m²) in V
+ * @param betaVoc - Voc temperature coefficient in V/°C (negative for silicon)
+ * @param irradiance - Incident irradiance at measurement time in W/m²
+ * @param nCells - Number of series-connected cells (default 60)
+ * @param stcTemp - STC reference temperature in °C (default 25)
+ * @returns ECTResult with computed ECT and the intermediate irradiance-corrected Voc
+ */
 export function calculateECT(
   vocMeasured: number,
   vocSTC: number,
@@ -307,7 +373,7 @@ export interface SpectralMismatchResult {
   denominator2: number;
 }
 
-/** Trapezoidal integration */
+/** Trapezoidal integration over evenly-spaced x values */
 function trapIntegrate(x: number[], y: number[]): number {
   let sum = 0;
   for (let i = 0; i < x.length - 1; i++) {
@@ -316,7 +382,20 @@ function trapIntegrate(x: number[], y: number[]): number {
   return sum;
 }
 
-/** Calculate spectral mismatch factor M per IEC 60904-7 */
+/**
+ * Calculate spectral mismatch factor M per IEC 60904-7 §7 using trapezoidal integration
+ * over a common wavelength grid (5 nm step between the overlapping range of all four inputs).
+ *
+ * M = [∫E_ref·SR_dut dλ · ∫E_meas·SR_ref dλ] / [∫E_meas·SR_dut dλ · ∫E_ref·SR_ref dλ]
+ *
+ * M = 1.0 means perfect spectral match; corrections are applied as Isc_corr = Isc_meas / M.
+ *
+ * @param refSpectrum - Reference (AM1.5G) spectral irradiance {wavelength nm, irradiance W/m²/nm}
+ * @param measSpectrum - Simulator spectral irradiance {wavelength nm, irradiance W/m²/nm}
+ * @param dutSR - Device-under-test spectral responsivity {wavelength nm, response A/W}
+ * @param refSR - Reference cell spectral responsivity {wavelength nm, response A/W}
+ * @returns SpectralMismatchResult with M factor and the four constituent integrals
+ */
 export function calculateSpectralMismatch(
   refSpectrum: { wavelength: number; irradiance: number }[],
   measSpectrum: { wavelength: number; irradiance: number }[],
@@ -385,7 +464,16 @@ export interface SpectralResponsivityResult {
   integratedCurrent: number; // A/m² under AM1.5G
 }
 
-/** Analyze spectral responsivity data */
+/**
+ * Derive peak wavelength, estimated bandgap, and integrated short-circuit current
+ * density (Jsc) under AM1.5G for a measured spectral responsivity dataset.
+ *
+ * Bandgap is estimated from the long-wavelength 50%-of-peak cutoff: Eg = 1240 / λ_cutoff (eV).
+ * Jsc integration uses the AM15G_SPECTRUM constants defined in Part 3 of this module.
+ *
+ * @param data - Array of {wavelength (nm), response (A/W)} measurement points
+ * @returns SpectralResponsivityResult with peak wavelength/response, bandgap in eV, and integrated Jsc in A/m²
+ */
 export function analyzeSpectralResponsivity(
   data: SpectralResponsivityPoint[]
 ): SpectralResponsivityResult {
@@ -443,7 +531,15 @@ export interface LinearityResult {
   normalizedData: { irradiance: number; normalizedIsc: number; linearFit: number; deviation: number }[];
 }
 
-/** Analyze linearity of Isc vs irradiance per IEC 60904-10 */
+/**
+ * Fit Isc vs. irradiance data with ordinary linear regression and evaluate linearity
+ * per IEC 60904-10. The pass criterion is a maximum deviation from the fit of < 2%.
+ * Data is normalised to the fitted Isc at 1000 W/m² for the output table.
+ *
+ * @param data - Array of {irradiance (W/m²), isc (A)} measurement pairs
+ * @returns LinearityResult with regression slope/intercept, R², max deviation (%),
+ *          isLinear flag, and a per-point normalised data table
+ */
 export function analyzeLinearity(data: LinearityPoint[]): LinearityResult {
   const n = data.length;
   if (n < 2) {
@@ -505,6 +601,18 @@ export interface ELAnalysisResult {
   overallGrade: "pass" | "marginal" | "fail";
 }
 
+/**
+ * Aggregate EL defect findings into counts by type and severity, then assign
+ * an overall pass / marginal / fail grade:
+ *
+ * - pass:     no critical defects AND affected cells ≤ 5%
+ * - marginal: > 2 major defects OR affected cells > 5% and ≤ 10%
+ * - fail:     any critical defect OR affected cells > 10%
+ *
+ * @param defects - Array of ELDefect objects produced by image analysis
+ * @param totalCells - Total cell count in the module under test (used for % calculation)
+ * @returns ELAnalysisResult with type/severity tallies, affected-cell % and overall grade
+ */
 export function analyzeELResults(defects: ELDefect[], totalCells: number): ELAnalysisResult {
   const defectsByType: Record<ELDefectType, number> = {
     crack: 0, inactive_area: 0, shunt: 0, finger_break: 0,
@@ -535,6 +643,17 @@ export function analyzeELResults(defects: ELDefect[], totalCells: number): ELAna
 // ISO 17025 Document Numbering
 // ============================================================
 
+/**
+ * Generate an ISO 17025-style document number for an IEC 60904 procedure record.
+ * Format: IEC60904-{part}-{typeCode}-{YYYYMM}-{4-digit-random}
+ * Example: IEC60904-1-P-202606-0042
+ *
+ * Type codes: P = protocol, D = data, A = analysis, R = report
+ *
+ * @param part - IEC 60904 part number (1, 2, 3, 4, 5, 7, 8, 9, 10, 13)
+ * @param type - Document type: "protocol" | "data" | "analysis" | "report"
+ * @returns Formatted document number string
+ */
 export function generateDocNumber(part: number, type: "protocol" | "data" | "analysis" | "report"): string {
   const typeCode = { protocol: "P", data: "D", analysis: "A", report: "R" }[type];
   const date = new Date();
