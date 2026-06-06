@@ -1,7 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { requireAuth } from "@/lib/api-auth";
 import { auditPlans, auditFindings, carReports, auditMetrics } from "@/lib/data/audit-data";
 
+const AuditPostSchema = z.object({
+  action: z.enum(["create-plan", "create-finding", "create-car", "update-finding-status", "update-car-step"]),
+  findingId: z.string().max(50).optional(),
+  newStatus: z.string().max(50).optional(),
+  carId: z.string().max(50).optional(),
+  step: z.string().max(100).optional(),
+  title: z.string().max(300).optional(),
+  description: z.string().max(5000).optional(),
+  standard: z.string().max(100).optional(),
+  severity: z.enum(["minor", "major", "critical", "ofi"]).optional(),
+  auditor: z.string().max(200).optional(),
+  auditee: z.string().max(200).optional(),
+});
+
 export async function GET(request: NextRequest) {
+  const { error } = await requireAuth();
+  if (error) return error;
+
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type");
   const standard = searchParams.get("standard");
@@ -24,7 +43,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ metrics: auditMetrics });
   }
 
-  // Default: audit plans
   let plans = [...auditPlans];
   if (standard) plans = plans.filter((p) => p.standard === standard);
   if (status) plans = plans.filter((p) => p.status === status);
@@ -33,11 +51,17 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const { action } = body;
+  const { error } = await requireAuth();
+  if (error) return error;
 
-  if (action === "create-plan") {
-    // In production, this would save to database via Prisma
+  const raw = await request.json();
+  const parsed = AuditPostSchema.safeParse(raw);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid request", issues: parsed.error.issues }, { status: 400 });
+  }
+  const body = parsed.data;
+
+  if (body.action === "create-plan") {
     return NextResponse.json({
       success: true,
       message: "Audit plan created successfully",
@@ -45,7 +69,7 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  if (action === "create-finding") {
+  if (body.action === "create-finding") {
     return NextResponse.json({
       success: true,
       message: "Finding recorded successfully",
@@ -53,7 +77,7 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  if (action === "create-car") {
+  if (body.action === "create-car") {
     return NextResponse.json({
       success: true,
       message: "CAR/8D report initiated",
@@ -61,19 +85,17 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  if (action === "update-finding-status") {
-    const { findingId, newStatus } = body;
+  if (body.action === "update-finding-status") {
     return NextResponse.json({
       success: true,
-      message: `Finding ${findingId} status updated to ${newStatus}`,
+      message: `Finding status updated`,
     });
   }
 
-  if (action === "update-car-step") {
-    const { carId, step } = body;
+  if (body.action === "update-car-step") {
     return NextResponse.json({
       success: true,
-      message: `CAR ${carId} advanced to ${step}`,
+      message: `CAR advanced`,
     });
   }
 

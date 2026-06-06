@@ -1,12 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+import { requireAuth } from '@/lib/api-auth'
 import { mockTestExecutions } from '@/lib/mock-data'
 import { generateId } from '@/lib/utils'
 import { getTemplateById } from '@/lib/test-templates'
 import type { TestExecution } from '@/lib/types'
 
+const TestPostSchema = z.object({
+  sampleId: z.string().min(1).max(100),
+  protocolId: z.string().min(1).max(100),
+  protocolName: z.string().max(200).optional(),
+  standardReference: z.string().max(100).optional(),
+  technicianId: z.string().max(100).optional(),
+  technicianName: z.string().max(200).optional(),
+  inputData: z.record(z.unknown()).optional(),
+})
+
 const testExecutions = [...mockTestExecutions]
 
 export async function GET(request: NextRequest) {
+  const { error } = await requireAuth();
+  if (error) return error;
+
   const { searchParams } = new URL(request.url)
   const status = searchParams.get('status')
   const sampleId = searchParams.get('sampleId')
@@ -40,7 +55,15 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const body = await request.json()
+  const { error } = await requireAuth();
+  if (error) return error;
+
+  const raw = await request.json()
+  const parsed = TestPostSchema.safeParse(raw)
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid request', issues: parsed.error.issues }, { status: 400 })
+  }
+  const body = parsed.data
 
   const template = getTemplateById(body.protocolId)
 

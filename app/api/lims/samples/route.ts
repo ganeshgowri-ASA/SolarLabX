@@ -1,11 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+import { requireAuth } from '@/lib/api-auth'
 import { mockSamples } from '@/lib/mock-data'
 import { generateId } from '@/lib/utils'
 import type { Sample } from '@/lib/types'
 
+const SamplePostSchema = z.object({
+  clientName: z.string().min(1).max(200),
+  clientEmail: z.string().email().max(200).optional().or(z.literal('')),
+  clientOrganization: z.string().max(200).optional(),
+  sampleType: z.string().min(1).max(100),
+  manufacturer: z.string().min(1).max(200),
+  modelNumber: z.string().min(1).max(100),
+  serialNumber: z.string().min(1).max(100),
+  batchNumber: z.string().max(100).optional(),
+  testStandard: z.string().min(1).max(100),
+  priority: z.enum(['urgent', 'high', 'normal', 'low']).optional(),
+  notes: z.string().max(2000).optional(),
+  projectId: z.string().max(100).optional(),
+  lengthMm: z.number().positive().optional().nullable(),
+  widthMm: z.number().positive().optional().nullable(),
+  thicknessMm: z.number().positive().optional().nullable(),
+  weightKg: z.number().positive().optional().nullable(),
+  assignedProtocolIds: z.array(z.string().max(100)).max(50).optional(),
+})
+
 const samples = [...mockSamples]
 
 export async function GET(request: NextRequest) {
+  const { error } = await requireAuth();
+  if (error) return error;
+
   const { searchParams } = new URL(request.url)
   const status = searchParams.get('status')
   const standard = searchParams.get('standard')
@@ -46,7 +71,15 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const body = await request.json()
+  const { error } = await requireAuth();
+  if (error) return error;
+
+  const raw = await request.json()
+  const parsed = SamplePostSchema.safeParse(raw)
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid request', issues: parsed.error.issues }, { status: 400 })
+  }
+  const body = parsed.data
 
   const newSample: Sample = {
     id: String(samples.length + 1),
@@ -60,10 +93,10 @@ export async function POST(request: NextRequest) {
     modelNumber: body.modelNumber,
     serialNumber: body.serialNumber,
     batchNumber: body.batchNumber || '',
-    lengthMm: body.lengthMm || null,
-    widthMm: body.widthMm || null,
-    thicknessMm: body.thicknessMm || null,
-    weightKg: body.weightKg || null,
+    lengthMm: body.lengthMm ?? null,
+    widthMm: body.widthMm ?? null,
+    thicknessMm: body.thicknessMm ?? null,
+    weightKg: body.weightKg ?? null,
     status: 'received',
     currentLocation: 'Receiving Area',
     storageLocation: '',

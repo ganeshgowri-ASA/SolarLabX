@@ -1,12 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+import { requireAuth } from '@/lib/api-auth'
 import { mockCAPAs } from '@/lib/mock-data'
 import { generateId } from '@/lib/utils'
 import { EIGHT_D_STEPS } from '@/lib/constants'
 import type { CAPA } from '@/lib/types'
 
+const CAPAPostSchema = z.object({
+  title: z.string().min(1).max(300),
+  type: z.enum(['corrective', 'preventive']).optional(),
+  priority: z.enum(['critical', 'high', 'normal', 'low']).optional(),
+  source: z.string().max(200).optional(),
+  description: z.string().max(5000).optional(),
+  assignedTo: z.string().max(200).optional(),
+  targetCompletionDate: z.string().datetime({ offset: true }).optional().or(z.string().regex(/^\d{4}-\d{2}-\d{2}T/).optional()),
+  relatedDocuments: z.array(z.string().max(100)).max(20).optional(),
+})
+
 const capas = [...mockCAPAs]
 
 export async function GET(request: NextRequest) {
+  const { error } = await requireAuth();
+  if (error) return error;
+
   const { searchParams } = new URL(request.url)
   const status = searchParams.get('status')
   const type = searchParams.get('type')
@@ -39,7 +55,15 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const body = await request.json()
+  const { error } = await requireAuth();
+  if (error) return error;
+
+  const raw = await request.json()
+  const parsed = CAPAPostSchema.safeParse(raw)
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid request', issues: parsed.error.issues }, { status: 400 })
+  }
+  const body = parsed.data
 
   const newCAPA: CAPA = {
     id: String(capas.length + 1),

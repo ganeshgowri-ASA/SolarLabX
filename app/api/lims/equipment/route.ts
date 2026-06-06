@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth } from '@/lib/api-auth'
 import { mockEquipment } from '@/lib/mock-data'
 import { getDaysUntil } from '@/lib/utils'
 
 export async function GET(request: NextRequest) {
+  const { error } = await requireAuth();
+  if (error) return error;
+
   const { searchParams } = new URL(request.url)
   const status = searchParams.get('status')
   const category = searchParams.get('category')
