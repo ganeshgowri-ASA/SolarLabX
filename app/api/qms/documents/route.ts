@@ -1,10 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+import { requireAuth } from '@/lib/api-auth'
 import { mockDocuments } from '@/lib/mock-data'
 import type { QMSDocument } from '@/lib/types'
+
+const DocPostSchema = z.object({
+  documentNumber: z.string().min(1).max(50),
+  title: z.string().min(1).max(300),
+  category: z.enum(['procedure', 'work_instruction', 'form', 'policy', 'manual', 'record']).optional(),
+  author: z.string().max(200).optional(),
+  department: z.string().max(100).optional(),
+  standardReference: z.string().max(200).optional(),
+  content: z.string().max(50000).optional(),
+})
 
 const documents = [...mockDocuments]
 
 export async function GET(request: NextRequest) {
+  const { error } = await requireAuth();
+  if (error) return error;
+
   const { searchParams } = new URL(request.url)
   const status = searchParams.get('status')
   const category = searchParams.get('category')
@@ -41,13 +56,21 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const body = await request.json()
+  const { error } = await requireAuth();
+  if (error) return error;
+
+  const raw = await request.json()
+  const parsed = DocPostSchema.safeParse(raw)
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid request', issues: parsed.error.issues }, { status: 400 })
+  }
+  const body = parsed.data
 
   const newDoc: QMSDocument = {
     id: String(documents.length + 1),
     documentNumber: body.documentNumber,
     title: body.title,
-    category: body.category,
+    category: body.category || 'procedure',
     status: 'draft',
     version: '1.0',
     revision: 1,

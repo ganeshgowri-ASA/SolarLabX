@@ -1,7 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { requireAuth } from "@/lib/api-auth";
 import { projects, projectMetrics } from "@/lib/data/projects-data";
 
+const ProjectPostSchema = z.object({
+  action: z.enum(["create", "update-task", "add-milestone", "allocate-resource"]),
+  projectId: z.string().max(100).optional(),
+  taskId: z.string().max(100).optional(),
+  resourceType: z.string().max(100).optional(),
+  resourceName: z.string().max(200).optional(),
+  updates: z.record(z.unknown()).optional(),
+  title: z.string().max(300).optional(),
+  description: z.string().max(5000).optional(),
+});
+
 export async function GET(request: NextRequest) {
+  const { error } = await requireAuth();
+  if (error) return error;
+
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
   const status = searchParams.get("status");
@@ -36,10 +52,17 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const { action } = body;
+  const { error } = await requireAuth();
+  if (error) return error;
 
-  if (action === "create") {
+  const raw = await request.json();
+  const parsed = ProjectPostSchema.safeParse(raw);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid request", issues: parsed.error.issues }, { status: 400 });
+  }
+  const body = parsed.data;
+
+  if (body.action === "create") {
     return NextResponse.json({
       success: true,
       message: "Project created successfully",
@@ -47,27 +70,24 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  if (action === "update-task") {
-    const { projectId, taskId, updates } = body;
+  if (body.action === "update-task") {
     return NextResponse.json({
       success: true,
-      message: `Task ${taskId} in project ${projectId} updated`,
+      message: `Task updated`,
     });
   }
 
-  if (action === "add-milestone") {
-    const { projectId } = body;
+  if (body.action === "add-milestone") {
     return NextResponse.json({
       success: true,
-      message: `Milestone added to project ${projectId}`,
+      message: `Milestone added`,
     });
   }
 
-  if (action === "allocate-resource") {
-    const { projectId, resourceType, resourceName } = body;
+  if (body.action === "allocate-resource") {
     return NextResponse.json({
       success: true,
-      message: `${resourceType} "${resourceName}" allocated to project ${projectId}`,
+      message: `Resource allocated`,
     });
   }
 
