@@ -1,6 +1,8 @@
 // Protocol Form System Types for SolarLabX
 // ISO 17025 / ISO 9001 compliant protocol checksheet system
 
+export type StandardName = 'IEC 61215' | 'IEC 61730' | 'IEC 61853' | 'IEC 61701'
+
 export type ProtocolCategory = 'electrical' | 'environmental' | 'mechanical' | 'visual' | 'safety'
 export type RawDataType = 'flasher_iv' | 'el_image' | 'ir_image' | 'insulation_log' | 'chamber_log' | 'generic' | 'none'
 export type FieldType = 'number' | 'text' | 'boolean' | 'select' | 'textarea' | 'date'
@@ -50,7 +52,7 @@ export interface ProtocolDefinition {
   id: string
   code: string           // e.g. "MQT 10.2"
   name: string
-  standard: string       // e.g. "IEC 61215"
+  standard: StandardName
   standardYear: string
   clause: string         // e.g. "4.2"
   category: ProtocolCategory
