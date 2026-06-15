@@ -1,11 +1,13 @@
 // NMOT/NOCT Calculator per IEC 61215 and IEC 61853
 
+export type MountingType = "open_rack" | "close_roof" | "bipv";
+
 export interface NMOTInput {
   nocTmeasured: number;   // Measured NOCT (°C) from IEC 61215 MQT 05
   windSpeed: number;      // m/s (default 1 m/s for NMOT)
   ambientTemp: number;    // °C
   irradiance: number;     // W/m² (typically 800 for NMOT, 800 for NOCT)
-  mountingType: "open_rack" | "close_roof" | "bipv";
+  mountingType: MountingType;
 }
 
 export interface NMOTResult {
@@ -34,15 +36,20 @@ export interface ModuleSpecs {
 }
 
 // Mounting correction factors per IEC 61853-2
-const MOUNTING_CORRECTIONS: Record<string, number> = {
+const MOUNTING_CORRECTIONS: Record<MountingType, number> = {
   open_rack: 0,
   close_roof: 3,
   bipv: 6,
 };
 
+// Apply a linear temperature coefficient: 1 + (alpha%/°C) × ΔT
+function applyTempCoeff(alphaPct: number, dT: number): number {
+  return 1 + (alphaPct / 100) * dT;
+}
+
 // Calculate NMOT per IEC 61215:2021 (replaces NOCT)
 export function calculateNMOT(input: NMOTInput): number {
-  const correction = MOUNTING_CORRECTIONS[input.mountingType] || 0;
+  const correction = MOUNTING_CORRECTIONS[input.mountingType];
   // NMOT = NOCT_measured + correction - (for wind speed difference)
   // IEC 61215:2021 defines NMOT conditions: 800 W/m², 20°C, 1 m/s wind
   const windCorrection = (input.windSpeed - 1) * -2; // approximate correction
@@ -50,8 +57,8 @@ export function calculateNMOT(input: NMOTInput): number {
 }
 
 // Calculate NOCT (legacy per IEC 61215:2005)
-export function calculateNOCT(measuredNOCT: number, mountingType: string): number {
-  return measuredNOCT + (MOUNTING_CORRECTIONS[mountingType] || 0);
+export function calculateNOCT(measuredNOCT: number, mountingType: MountingType): number {
+  return measuredNOCT + MOUNTING_CORRECTIONS[mountingType];
 }
 
 // Calculate cell temperature at any operating conditions
@@ -77,12 +84,12 @@ export function calculatePerformanceAtNMOT(
   const cellTemp = calculateCellTemp(ambientTemp, irradiance, nmot);
   const dT = cellTemp - 25; // Difference from STC (25°C)
 
-  const tempDerate = 1 + moduleSpecs.tempCoefficients.alphaPmax / 100 * dT;
+  const tempDerate = applyTempCoeff(moduleSpecs.tempCoefficients.alphaPmax, dT);
   const irradianceFactor = irradiance / 1000;
 
   const correctedPmax = moduleSpecs.pmaxSTC * irradianceFactor * tempDerate;
-  const correctedVoc = moduleSpecs.vocSTC * (1 + moduleSpecs.tempCoefficients.alphaVoc / 100 * dT);
-  const correctedIsc = moduleSpecs.iscSTC * irradianceFactor * (1 + moduleSpecs.tempCoefficients.alphaIsc / 100 * dT);
+  const correctedVoc = moduleSpecs.vocSTC * applyTempCoeff(moduleSpecs.tempCoefficients.alphaVoc, dT);
+  const correctedIsc = moduleSpecs.iscSTC * irradianceFactor * applyTempCoeff(moduleSpecs.tempCoefficients.alphaIsc, dT);
   const performanceRatio = correctedPmax / (moduleSpecs.pmaxSTC * irradianceFactor);
 
   return {
@@ -125,7 +132,7 @@ export function generatePRCurve(
   return tempRange.map((ta) => {
     const cellTemp = calculateCellTemp(ta, 800, nmot);
     const dT = cellTemp - 25;
-    const tempDerate = 1 + moduleSpecs.tempCoefficients.alphaPmax / 100 * dT;
+    const tempDerate = applyTempCoeff(moduleSpecs.tempCoefficients.alphaPmax, dT);
     const power = moduleSpecs.pmaxSTC * 0.8 * tempDerate; // 800/1000 irradiance factor
     return {
       ambient: ta,
