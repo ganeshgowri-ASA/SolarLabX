@@ -1,454 +1,391 @@
-// @ts-nocheck
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { ArrowLeft, CheckCircle2, XCircle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import ClassificationBadge from "@/components/sun-simulator/ClassificationBadge";
-import {
-  calculateSpectralMatch,
-  calculateUniformity,
-  calculateTemporalStability,
-  overallClassification,
-  type SpectralDataPoint,
-  type SpectralMatchResult,
-  type UniformityResult,
-  type TemporalStabilityResult,
-  type ClassificationGrade,
-} from "@/lib/sun-simulator";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
-  Cell,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar,
-} from "recharts";
+import { WAVELENGTH_BANDS, overallClassification, type ClassificationGrade } from "@/lib/sun-simulator";
 
-const DEFAULT_SPECTRAL_DATA = `400,1.08
-420,1.42
-440,1.65
-460,1.72
-480,1.78
-500,1.82
-520,1.80
-540,1.75
-560,1.70
-580,1.68
-600,1.62
-620,1.58
-640,1.54
-660,1.50
-680,1.44
-700,1.30
-720,1.28
-740,1.26
-760,1.24
-780,1.22
-800,1.10
-820,1.05
-840,1.00
-860,0.95
-880,0.90
-900,0.84
-920,0.60
-940,0.20
-960,0.65
-980,0.72
-1000,0.70
-1020,0.66
-1040,0.62
-1060,0.58
-1080,0.54
-1100,0.50`;
+const GRADE_ORDER: ClassificationGrade[] = ["A+", "A", "B", "C", "Fail"];
 
-function generateSampleGrid(): number[][] {
-  const grid: number[][] = [];
-  for (let r = 0; r < 5; r++) {
-    const row: number[] = [];
-    for (let c = 0; c < 5; c++) {
-      const distFromCenter = Math.sqrt((r - 2) ** 2 + (c - 2) ** 2);
-      row.push(Math.round(1000 - distFromCenter * 5 + (Math.random() - 0.5) * 8));
-    }
-    grid.push(row);
-  }
-  return grid;
+function worstGrade(grades: ClassificationGrade[]): ClassificationGrade {
+  return grades.reduce((worst, g) =>
+    GRADE_ORDER.indexOf(g) > GRADE_ORDER.indexOf(worst) ? g : worst,
+    "A+" as ClassificationGrade
+  );
 }
 
-const DEFAULT_STI = "1000.2,1000.5,1000.1,1000.8,1000.3,1000.6,1000.0,1000.4,1000.7,1000.2,1000.5,1000.1,1000.9,1000.3,1000.6,1000.2,1000.4,1000.8,1000.1,1000.5";
-const DEFAULT_LTI = "1000.0,999.8,1000.2,1000.5,999.5,1000.1,1000.3,999.7,1000.4,1000.0,999.9,1000.6,999.6,1000.2,1000.1";
+function gradeFromRatio(ratio: number): ClassificationGrade {
+  if (ratio >= 0.875 && ratio <= 1.125) return "A+";
+  if (ratio >= 0.75 && ratio <= 1.25) return "A";
+  if (ratio >= 0.6 && ratio <= 1.4) return "B";
+  if (ratio >= 0.4 && ratio <= 2.0) return "C";
+  return "Fail";
+}
 
-const gradeToScore: Record<ClassificationGrade, number> = {
-  "A+": 100,
-  A: 80,
-  B: 60,
-  C: 40,
-  Fail: 10,
+function gradeFromNonUniformity(nu: number): ClassificationGrade {
+  if (nu <= 1) return "A+";
+  if (nu <= 2) return "A";
+  if (nu <= 5) return "B";
+  if (nu <= 10) return "C";
+  return "Fail";
+}
+
+function gradeFromSTI(sti: number): ClassificationGrade {
+  if (sti <= 0.5) return "A+";
+  if (sti <= 2) return "A";
+  if (sti <= 5) return "B";
+  if (sti <= 10) return "C";
+  return "Fail";
+}
+
+function gradeFromLTI(lti: number): ClassificationGrade {
+  if (lti <= 1) return "A+";
+  if (lti <= 2) return "A";
+  if (lti <= 5) return "B";
+  if (lti <= 10) return "C";
+  return "Fail";
+}
+
+const GRADE_BORDER: Record<ClassificationGrade, string> = {
+  "A+": "border-emerald-500",
+  "A": "border-green-500",
+  "B": "border-yellow-400",
+  "C": "border-orange-500",
+  "Fail": "border-red-600",
 };
 
+interface FormState {
+  simulatorName: string;
+  serialNo: string;
+  testDate: string;
+  irradiance: string;
+  bandRatios: string[];
+  nonUniformity: string;
+  sti: string;
+  lti: string;
+}
+
+interface ClassifyResult {
+  spectralGrade: ClassificationGrade;
+  uniformityGrade: ClassificationGrade;
+  temporalGrade: ClassificationGrade;
+  overallGrade: ClassificationGrade;
+  bandResults: { band: string; ratio: number; grade: ClassificationGrade }[];
+  nu: number;
+  sti: number;
+  lti: number;
+}
+
 export default function ClassifyPage() {
-  const [spectralText, setSpectralText] = useState(DEFAULT_SPECTRAL_DATA);
-  const [spectralResult, setSpectralResult] = useState<SpectralMatchResult | null>(null);
+  const [form, setForm] = useState<FormState>({
+    simulatorName: "",
+    serialNo: "",
+    testDate: new Date().toISOString().slice(0, 10),
+    irradiance: "1000",
+    bandRatios: ["1.02", "0.98", "1.01", "0.97", "1.03", "0.99"],
+    nonUniformity: "1.5",
+    sti: "0.8",
+    lti: "1.2",
+  });
 
-  const [gridRows, setGridRows] = useState(5);
-  const [gridCols, setGridCols] = useState(5);
-  const [uniformityGrid, setUniformityGrid] = useState<number[][]>(generateSampleGrid);
-  const [uniformityResult, setUniformityResult] = useState<UniformityResult | null>(null);
+  const [result, setResult] = useState<ClassifyResult | null>(null);
 
-  const [stiText, setStiText] = useState(DEFAULT_STI);
-  const [ltiText, setLtiText] = useState(DEFAULT_LTI);
-  const [temporalResult, setTemporalResult] = useState<TemporalStabilityResult | null>(null);
-
-  function handleSpectralCalc() {
-    const lines = spectralText.trim().split("\n");
-    const data: SpectralDataPoint[] = lines
-      .map((l) => {
-        const parts = l.split(",").map((s) => parseFloat(s.trim()));
-        return parts.length >= 2 ? { wavelength: parts[0], irradiance: parts[1] } : null;
-      })
-      .filter(Boolean) as SpectralDataPoint[];
-    if (data.length > 0) {
-      setSpectralResult(calculateSpectralMatch(data));
-    }
+  function classify() {
+    const ratios = form.bandRatios.map(parseFloat);
+    const bandResults = ratios.map((r, i) => ({
+      band: WAVELENGTH_BANDS[i].range,
+      ratio: isNaN(r) ? 0 : r,
+      grade: gradeFromRatio(isNaN(r) ? 0 : r),
+    }));
+    const spectralGrade = worstGrade(bandResults.map((b) => b.grade));
+    const nu = parseFloat(form.nonUniformity) || 0;
+    const sti = parseFloat(form.sti) || 0;
+    const lti = parseFloat(form.lti) || 0;
+    const uniformityGrade = gradeFromNonUniformity(nu);
+    const temporalGrade = worstGrade([gradeFromSTI(sti), gradeFromLTI(lti)]);
+    setResult({
+      spectralGrade,
+      uniformityGrade,
+      temporalGrade,
+      overallGrade: overallClassification(spectralGrade, uniformityGrade, temporalGrade),
+      bandResults,
+      nu,
+      sti,
+      lti,
+    });
   }
 
-  function handleUniformityCalc() {
-    if (uniformityGrid.length > 0) {
-      setUniformityResult(calculateUniformity(uniformityGrid));
-    }
+  function setBandRatio(i: number, val: string) {
+    const next = [...form.bandRatios];
+    next[i] = val;
+    setForm({ ...form, bandRatios: next });
   }
-
-  function handleTemporalCalc() {
-    const stiVals = stiText.split(",").map((s) => parseFloat(s.trim())).filter((n) => !isNaN(n));
-    const ltiVals = ltiText.split(",").map((s) => parseFloat(s.trim())).filter((n) => !isNaN(n));
-    if (stiVals.length > 1 && ltiVals.length > 1) {
-      setTemporalResult(
-        calculateTemporalStability(
-          stiVals.map((v, i) => ({ time: i * 0.1, irradiance: v })),
-          ltiVals.map((v, i) => ({ time: i * 60, irradiance: v }))
-        )
-      );
-    }
-  }
-
-  function updateGridCell(r: number, c: number, value: string) {
-    const v = parseFloat(value);
-    if (isNaN(v)) return;
-    const newGrid = uniformityGrid.map((row) => [...row]);
-    newGrid[r][c] = v;
-    setUniformityGrid(newGrid);
-  }
-
-  function regenerateGrid() {
-    const grid: number[][] = [];
-    for (let r = 0; r < gridRows; r++) {
-      const row: number[] = [];
-      for (let c = 0; c < gridCols; c++) {
-        const cr = (gridRows - 1) / 2;
-        const cc = (gridCols - 1) / 2;
-        const dist = Math.sqrt((r - cr) ** 2 + (c - cc) ** 2);
-        row.push(Math.round(1000 - dist * 4 + (Math.random() - 0.5) * 8));
-      }
-      grid.push(row);
-    }
-    setUniformityGrid(grid);
-    setUniformityResult(null);
-  }
-
-  const overallGrade =
-    spectralResult && uniformityResult && temporalResult
-      ? overallClassification(spectralResult.grade, uniformityResult.grade, temporalResult.overallGrade)
-      : null;
-
-  const radarData =
-    spectralResult && uniformityResult && temporalResult
-      ? [
-          { parameter: "Spectral", score: gradeToScore[spectralResult.grade], grade: spectralResult.grade },
-          { parameter: "Uniformity", score: gradeToScore[uniformityResult.grade], grade: uniformityResult.grade },
-          { parameter: "STI", score: gradeToScore[temporalResult.stiGrade], grade: temporalResult.stiGrade },
-          { parameter: "LTI", score: gradeToScore[temporalResult.ltiGrade], grade: temporalResult.ltiGrade },
-        ]
-      : null;
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Full Classification</h1>
-        <p className="text-muted-foreground mt-1">
-          Complete IEC 60904-9 Ed.3 classification: spectral match, spatial uniformity, and temporal stability
-        </p>
+      <div className="flex items-center gap-3">
+        <Link href="/sun-simulator">
+          <Button variant="ghost" size="sm">
+            <ArrowLeft className="w-4 h-4 mr-1" />
+            Back
+          </Button>
+        </Link>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">IEC 60904-9 Classifier</h1>
+          <p className="text-sm text-muted-foreground">
+            Full 3-parameter classification: spectral match, spatial uniformity, temporal stability
+          </p>
+        </div>
       </div>
 
-      <Tabs defaultValue="spectral">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="spectral">Spectral Match</TabsTrigger>
-          <TabsTrigger value="uniformity">Spatial Uniformity</TabsTrigger>
-          <TabsTrigger value="temporal">Temporal Stability</TabsTrigger>
-        </TabsList>
-
-        {/* Spectral Tab */}
-        <TabsContent value="spectral">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Input panel */}
+        <div className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Spectral Match Data</CardTitle>
-              <CardDescription>Paste wavelength,irradiance CSV data (nm, W/m2/nm)</CardDescription>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Simulator Details</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <textarea
-                className="w-full h-48 font-mono text-sm border rounded-md p-3 bg-background"
-                value={spectralText}
-                onChange={(e) => setSpectralText(e.target.value)}
-              />
-              <Button onClick={handleSpectralCalc}>Calculate Spectral Match</Button>
+            <CardContent className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Simulator Name</Label>
+                <Input
+                  value={form.simulatorName}
+                  onChange={(e) => setForm({ ...form, simulatorName: e.target.value })}
+                  placeholder="e.g. Pasan 3c SunSim"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Serial No.</Label>
+                <Input
+                  value={form.serialNo}
+                  onChange={(e) => setForm({ ...form, serialNo: e.target.value })}
+                  placeholder="SN-12345"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Test Date</Label>
+                <Input
+                  type="date"
+                  value={form.testDate}
+                  onChange={(e) => setForm({ ...form, testDate: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Irradiance (W/m²)</Label>
+                <Input
+                  type="number"
+                  value={form.irradiance}
+                  onChange={(e) => setForm({ ...form, irradiance: e.target.value })}
+                />
+              </div>
+            </CardContent>
+          </Card>
 
-              {spectralResult && (
-                <div className="space-y-4 mt-4">
-                  <div className="flex items-center gap-4">
-                    <ClassificationBadge grade={spectralResult.grade} size="md" label="Spectral Grade" />
-                    <div className="text-sm space-y-1">
-                      <p>Weighted Deviation: {spectralResult.weightedDeviationPct.toFixed(2)}%</p>
-                      <p>Ratio Range: {spectralResult.minRatio.toFixed(3)} - {spectralResult.maxRatio.toFixed(3)}</p>
-                    </div>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Spectral Band Ratios</CardTitle>
+              <CardDescription className="text-xs">
+                Measured fraction / AM1.5G reference fraction per wavelength interval (IEC 60904-9 §5.2)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {WAVELENGTH_BANDS.map((band, i) => (
+                <div key={band.range} className="flex items-center gap-3">
+                  <span className="text-xs font-mono w-24 text-muted-foreground shrink-0">
+                    {band.range}
+                  </span>
+                  <span className="text-xs text-muted-foreground w-12 shrink-0">
+                    {band.am15gFraction}%
+                  </span>
+                  <Input
+                    type="number"
+                    step="0.001"
+                    min="0"
+                    max="3"
+                    className="w-28 text-sm"
+                    value={form.bandRatios[i]}
+                    onChange={(e) => setBandRatio(i, e.target.value)}
+                  />
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Uniformity &amp; Stability</CardTitle>
+              <CardDescription className="text-xs">
+                (E_max − E_min) / (E_max + E_min) × 100 % for each parameter
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Non-Uniformity (%)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={form.nonUniformity}
+                  onChange={(e) => setForm({ ...form, nonUniformity: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">STI (%)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={form.sti}
+                  onChange={(e) => setForm({ ...form, sti: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">LTI (%)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={form.lti}
+                  onChange={(e) => setForm({ ...form, lti: e.target.value })}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Button className="w-full" onClick={classify}>
+            Classify Simulator
+          </Button>
+        </div>
+
+        {/* Results panel */}
+        {result ? (
+          <div className="space-y-4">
+            <Card className={`border-2 ${GRADE_BORDER[result.overallGrade]}`}>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">Overall Classification</CardTitle>
+                  <ClassificationBadge grade={result.overallGrade} size="lg" />
+                </div>
+                {(form.simulatorName || form.serialNo) && (
+                  <CardDescription>
+                    {form.simulatorName}
+                    {form.serialNo ? ` · ${form.serialNo}` : ""}
+                    {form.testDate ? ` · ${form.testDate}` : ""}
+                  </CardDescription>
+                )}
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Spectral</p>
+                    <ClassificationBadge grade={result.spectralGrade} size="md" />
                   </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Uniformity</p>
+                    <ClassificationBadge grade={result.uniformityGrade} size="md" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Temporal</p>
+                    <ClassificationBadge grade={result.temporalGrade} size="md" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Band</TableHead>
-                        <TableHead>Measured %</TableHead>
-                        <TableHead>Reference %</TableHead>
-                        <TableHead>Ratio</TableHead>
-                        <TableHead>Grade</TableHead>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Spectral Band Breakdown</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Band (nm)</TableHead>
+                      <TableHead className="text-xs text-right">Ratio</TableHead>
+                      <TableHead className="text-xs text-center">Grade</TableHead>
+                      <TableHead className="text-xs text-center">In Spec</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {result.bandResults.map((b) => (
+                      <TableRow key={b.band}>
+                        <TableCell className="text-xs font-mono">{b.band}</TableCell>
+                        <TableCell className="text-xs text-right font-mono">
+                          {b.ratio.toFixed(3)}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <ClassificationBadge grade={b.grade} size="sm" />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {b.grade !== "Fail" ? (
+                            <CheckCircle2 className="w-4 h-4 text-green-500 inline-block" />
+                          ) : (
+                            <XCircle className="w-4 h-4 text-red-500 inline-block" />
+                          )}
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {spectralResult.intervals.map((iv) => {
-                        const bandGrade = iv.inSpecAPlus ? "A+" : iv.inSpecA ? "A" : iv.inSpecB ? "B" : iv.inSpecC ? "C" : "Fail";
-                        return (
-                          <TableRow key={iv.band}>
-                            <TableCell className="font-mono">{iv.band}</TableCell>
-                            <TableCell>{iv.measuredFraction.toFixed(2)}</TableCell>
-                            <TableCell>{iv.referenceFraction.toFixed(1)}</TableCell>
-                            <TableCell className="font-mono">{iv.ratio.toFixed(4)}</TableCell>
-                            <TableCell>
-                              <ClassificationBadge grade={bandGrade} size="sm" />
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
 
-                  <ResponsiveContainer width="100%" height={250}>
-                    <BarChart data={spectralResult.intervals.map((iv) => ({ band: iv.band, ratio: iv.ratio }))}>
-                      <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                      <XAxis dataKey="band" tick={{ fontSize: 11 }} />
-                      <YAxis domain={[0, 2]} tick={{ fontSize: 11 }} />
-                      <Tooltip formatter={(v: number) => v.toFixed(4)} />
-                      <Bar dataKey="ratio" name="Ratio">
-                        {spectralResult.intervals.map((iv, i) => (
-                          <Cell
-                            key={i}
-                            fill={iv.inSpecAPlus ? "#10b981" : iv.inSpecA ? "#22c55e" : iv.inSpecB ? "#eab308" : "#f97316"}
-                          />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Uniformity Tab */}
-        <TabsContent value="uniformity">
-          <Card>
-            <CardHeader>
-              <CardTitle>Spatial Uniformity Data</CardTitle>
-              <CardDescription>Enter irradiance values measured across the test area</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-4 items-end">
-                <div>
-                  <Label>Rows</Label>
-                  <Input
-                    type="number"
-                    min={3}
-                    max={15}
-                    value={gridRows}
-                    onChange={(e) => setGridRows(parseInt(e.target.value) || 5)}
-                    className="w-20"
-                  />
-                </div>
-                <div>
-                  <Label>Cols</Label>
-                  <Input
-                    type="number"
-                    min={3}
-                    max={15}
-                    value={gridCols}
-                    onChange={(e) => setGridCols(parseInt(e.target.value) || 5)}
-                    className="w-20"
-                  />
-                </div>
-                <Button variant="outline" onClick={regenerateGrid}>
-                  Generate Sample Grid
-                </Button>
-              </div>
-
-              <div className="overflow-auto">
-                <div
-                  className="inline-grid gap-1"
-                  style={{ gridTemplateColumns: `repeat(${uniformityGrid[0]?.length || 5}, 70px)` }}
-                >
-                  {uniformityGrid.map((row, ri) =>
-                    row.map((val, ci) => (
-                      <Input
-                        key={`${ri}-${ci}`}
-                        type="number"
-                        value={val}
-                        onChange={(e) => updateGridCell(ri, ci, e.target.value)}
-                        className="text-center text-sm h-9 font-mono"
-                      />
-                    ))
-                  )}
-                </div>
-              </div>
-
-              <Button onClick={handleUniformityCalc}>Calculate Uniformity</Button>
-
-              {uniformityResult && (
-                <div className="space-y-3 mt-4">
-                  <div className="flex items-center gap-4">
-                    <ClassificationBadge grade={uniformityResult.grade} size="md" label="Uniformity Grade" />
-                    <div className="text-sm space-y-1">
-                      <p>Non-Uniformity: {uniformityResult.nonUniformity.toFixed(3)}%</p>
-                      <p>Mean: {uniformityResult.mean.toFixed(1)} W/m2 | CV: {uniformityResult.cv.toFixed(2)}%</p>
-                      <p>Min: {uniformityResult.min.toFixed(1)} | Max: {uniformityResult.max.toFixed(1)}</p>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Uniformity &amp; Stability Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {[
+                    {
+                      label: "Non-Uniformity",
+                      value: `${result.nu.toFixed(2)}%`,
+                      grade: gradeFromNonUniformity(result.nu),
+                      limit: "≤ 1% for A+, ≤ 2% for A",
+                    },
+                    {
+                      label: "STI (Short-Term)",
+                      value: `${result.sti.toFixed(2)}%`,
+                      grade: gradeFromSTI(result.sti),
+                      limit: "≤ 0.5% for A+, ≤ 2% for A",
+                    },
+                    {
+                      label: "LTI (Long-Term)",
+                      value: `${result.lti.toFixed(2)}%`,
+                      grade: gradeFromLTI(result.lti),
+                      limit: "≤ 1% for A+, ≤ 2% for A",
+                    },
+                  ].map((row) => (
+                    <div
+                      key={row.label}
+                      className="flex items-center justify-between py-2 border-b last:border-0"
+                    >
+                      <div>
+                        <p className="text-sm font-medium">{row.label}</p>
+                        <p className="text-xs text-muted-foreground">{row.limit}</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-mono">{row.value}</span>
+                        <ClassificationBadge grade={row.grade} size="sm" />
+                      </div>
                     </div>
-                  </div>
+                  ))}
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Temporal Tab */}
-        <TabsContent value="temporal">
-          <Card>
-            <CardHeader>
-              <CardTitle>Temporal Stability Data</CardTitle>
-              <CardDescription>Enter comma-separated irradiance readings over time</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label>STI - Short Term Irradiance Values (W/m2)</Label>
-                <textarea
-                  className="w-full h-20 font-mono text-sm border rounded-md p-3 bg-background mt-1"
-                  value={stiText}
-                  onChange={(e) => setStiText(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label>LTI - Long Term Irradiance Values (W/m2)</Label>
-                <textarea
-                  className="w-full h-20 font-mono text-sm border rounded-md p-3 bg-background mt-1"
-                  value={ltiText}
-                  onChange={(e) => setLtiText(e.target.value)}
-                />
-              </div>
-
-              <Button onClick={handleTemporalCalc}>Calculate Temporal Stability</Button>
-
-              {temporalResult && (
-                <div className="flex gap-6 mt-4">
-                  <div className="flex items-center gap-3">
-                    <ClassificationBadge grade={temporalResult.stiGrade} size="md" label="STI Grade" />
-                    <span className="text-sm">STI: {temporalResult.sti.toFixed(3)}%</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <ClassificationBadge grade={temporalResult.ltiGrade} size="md" label="LTI Grade" />
-                    <span className="text-sm">LTI: {temporalResult.lti.toFixed(3)}%</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <ClassificationBadge grade={temporalResult.overallGrade} size="md" label="Temporal" />
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      {/* Overall Classification */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Overall Classification</CardTitle>
-          <CardDescription>Combined result based on worst grade across all three parameters</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {overallGrade ? (
-            <div className="flex flex-col items-center gap-6">
-              <ClassificationBadge grade={overallGrade} size="lg" label="Overall Grade" />
-
-              <div className="grid grid-cols-3 gap-8 text-center">
-                <div>
-                  <ClassificationBadge grade={spectralResult!.grade} size="md" label="Spectral" />
-                </div>
-                <div>
-                  <ClassificationBadge grade={uniformityResult!.grade} size="md" label="Uniformity" />
-                </div>
-                <div>
-                  <ClassificationBadge grade={temporalResult!.overallGrade} size="md" label="Temporal" />
-                </div>
-              </div>
-
-              {radarData && (
-                <div className="w-full max-w-md">
-                  <ResponsiveContainer width="100%" height={300}>
-                    <RadarChart data={radarData}>
-                      <PolarGrid />
-                      <PolarAngleAxis dataKey="parameter" tick={{ fontSize: 12 }} />
-                      <PolarRadiusAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
-                      <Radar
-                        name="Score"
-                        dataKey="score"
-                        stroke="#2563eb"
-                        fill="#2563eb"
-                        fillOpacity={0.3}
-                      />
-                      <Tooltip formatter={(v: number, _: string, props: any) => [props.payload.grade, "Grade"]} />
-                    </RadarChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center h-80 rounded-lg border-2 border-dashed text-muted-foreground">
+            <div className="text-center space-y-2">
+              <p className="font-medium">Enter parameters and click Classify</p>
+              <p className="text-sm">IEC 60904-9 Ed.3 results will appear here</p>
             </div>
-          ) : (
-            <p className="text-center text-muted-foreground py-8">
-              Complete all three assessments (Spectral, Uniformity, Temporal) to see the overall classification.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
