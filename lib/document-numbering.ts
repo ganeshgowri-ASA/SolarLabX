@@ -46,34 +46,47 @@ const DOCUMENT_PREFIXES: Record<DocumentType, string> = {
   audit_report: 'AR',
 }
 
-// Standard code mapping for document numbering
+// Standard code mapping — module-level constant (no per-call object allocation)
+const STANDARD_CODES: Record<string, string> = {
+  'IEC 61215': '61215',
+  'IEC 61730': '61730',
+  'IEC 61853': '61853',
+  'IEC 60904': '60904',
+  'IEC 62716': '62716',
+  'IEC 61701': '61701',
+  'IEC 62804': '62804',
+  'ISO 17025': '17025',
+  'ISO 9001': '9001',
+}
+
 function getStandardCode(standard: string): string {
-  const mapping: Record<string, string> = {
-    'IEC 61215': '61215',
-    'IEC 61730': '61730',
-    'IEC 61853': '61853',
-    'IEC 60904': '60904',
-    'IEC 62716': '62716',
-    'IEC 61701': '61701',
-    'IEC 62804': '62804',
-    'ISO 17025': '17025',
-    'ISO 9001': '9001',
-  }
-  return mapping[standard] || standard.replace(/[^0-9]/g, '')
+  return STANDARD_CODES[standard] ?? standard.replace(/[^0-9]/g, '')
+}
+
+// Format families — adding a new DocumentType requires one entry here and
+// one in DOCUMENT_PREFIXES; no switch case needed.
+type DocFormat = 'std' | 'std_test' | 'equip' | 'dept' | 'plain'
+
+const DOCUMENT_FORMATS: Record<DocumentType, DocFormat> = {
+  test_report: 'std',        // TR-[STD]-[YYYY]-[SEQ]
+  analysis_report: 'std',    // DA-[STD]-[YYYY]-[SEQ]
+  test_protocol: 'std_test', // TP-[STD]-[TEST]-[YYYY]-[SEQ]
+  raw_data: 'std_test',      // RD-[STD]-[TEST]-[YYYY]-[SEQ]
+  calibration_cert: 'equip', // CAL-[EQUIP]-[YYYY]-[SEQ]
+  sop: 'dept',               // SOP-[DEPT]-[YYYY]-[SEQ]
+  ncr: 'plain',              // NCR-[YYYY]-[SEQ]
+  capa: 'plain',             // CAPA-[YYYY]-[SEQ]
+  audit_report: 'plain',     // AR-[YYYY]-[SEQ]
 }
 
 /**
- * Generate a document number based on type and parameters
- * Patterns:
- *   Test Reports:      TR-[STD]-[YYYY]-[SEQ]
- *   Test Protocols:    TP-[STD]-[TEST]-[YYYY]-[SEQ]
- *   Analysis Reports:  DA-[STD]-[YYYY]-[SEQ]
- *   Raw Data:          RD-[STD]-[TEST]-[YYYY]-[SEQ]
- *   Calibration Certs: CAL-[EQUIP]-[YYYY]-[SEQ]
- *   SOPs:              SOP-[DEPT]-[YYYY]-[SEQ]
- *   NCRs:              NCR-[YYYY]-[SEQ]
- *   CAPAs:             CAPA-[YYYY]-[SEQ]
- *   Audit Reports:     AR-[YYYY]-[SEQ]
+ * Generate a document number based on type and parameters.
+ * Format families:
+ *   std      — prefix-[STD]-[YYYY]-[SEQ]        (test_report, analysis_report)
+ *   std_test — prefix-[STD]-[TEST]-[YYYY]-[SEQ] (test_protocol, raw_data)
+ *   equip    — prefix-[EQUIP]-[YYYY]-[SEQ]      (calibration_cert)
+ *   dept     — prefix-[DEPT]-[YYYY]-[SEQ]       (sop)
+ *   plain    — prefix-[YYYY]-[SEQ]              (ncr, capa, audit_report)
  */
 export function generateDocumentNumber(
   type: DocumentType,
@@ -87,31 +100,15 @@ export function generateDocumentNumber(
   } = {}
 ): string {
   const prefix = DOCUMENT_PREFIXES[type]
-  const year = options.year || new Date().getFullYear()
+  const year = options.year ?? new Date().getFullYear()
   const seq = String(sequence).padStart(3, '0')
+  const fmt = DOCUMENT_FORMATS[type]
 
-  switch (type) {
-    case 'test_report':
-      return `${prefix}-${getStandardCode(options.standard || '')}-${year}-${seq}`
-    case 'test_protocol':
-      return `${prefix}-${getStandardCode(options.standard || '')}-${options.testCode || 'GEN'}-${year}-${seq}`
-    case 'analysis_report':
-      return `${prefix}-${getStandardCode(options.standard || '')}-${year}-${seq}`
-    case 'raw_data':
-      return `${prefix}-${getStandardCode(options.standard || '')}-${options.testCode || 'GEN'}-${year}-${seq}`
-    case 'calibration_cert':
-      return `${prefix}-${options.equipmentCode || 'EQ'}-${year}-${seq}`
-    case 'sop':
-      return `${prefix}-${options.department || 'GEN'}-${year}-${seq}`
-    case 'ncr':
-      return `${prefix}-${year}-${seq}`
-    case 'capa':
-      return `${prefix}-${year}-${seq}`
-    case 'audit_report':
-      return `${prefix}-${year}-${seq}`
-    default:
-      return `DOC-${year}-${seq}`
-  }
+  if (fmt === 'std') return `${prefix}-${getStandardCode(options.standard ?? '')}-${year}-${seq}`
+  if (fmt === 'std_test') return `${prefix}-${getStandardCode(options.standard ?? '')}-${options.testCode ?? 'GEN'}-${year}-${seq}`
+  if (fmt === 'equip') return `${prefix}-${options.equipmentCode ?? 'EQ'}-${year}-${seq}`
+  if (fmt === 'dept') return `${prefix}-${options.department ?? 'GEN'}-${year}-${seq}`
+  return `${prefix}-${year}-${seq}` // plain: ncr, capa, audit_report
 }
 
 /**
@@ -156,9 +153,9 @@ const sequenceCounters: Record<string, number> = {
  * Get the next available sequence number for a document type
  */
 export function getNextSequence(type: DocumentType, year?: number): number {
-  const y = year || new Date().getFullYear()
+  const y = year ?? new Date().getFullYear()
   const key = `${DOCUMENT_PREFIXES[type]}-${y}`
-  const current = sequenceCounters[key] || 0
+  const current = sequenceCounters[key] ?? 0
   const next = current + 1
   sequenceCounters[key] = next
   return next
