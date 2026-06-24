@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client";
 
 import { toast } from "sonner";
@@ -29,19 +28,13 @@ export interface TemplateExportConfig {
 /* ── Word Export ──────────────────────────────────────────────────────────────── */
 
 export async function exportToWord(config: TemplateExportConfig) {
-  window.alert('exportToWord called');
-  console.error('[DEBUG exportToWord] Function called with config:', config?.reportNo);
   try {
-   try {
-    console.error('[DEBUG exportToWord] About to dynamically import docx...');
     const {
       Document, Packer, Paragraph, Table, TableRow, TableCell,
       TextRun, HeadingLevel, AlignmentType, WidthType,
       BorderStyle, ShadingType, Header, Footer, PageNumber,
     } = await import("docx");
-    console.error('[DEBUG exportToWord] docx imported successfully. ShadingType:', typeof ShadingType, ShadingType);
 
-    const accent = "#0f4c81";
     const date = config.date || new Date().toISOString().slice(0, 10);
 
     // Helper to create a bordered table cell
@@ -81,7 +74,6 @@ export async function exportToWord(config: TemplateExportConfig) {
       new Table({
         width: { size: 100, type: WidthType.PERCENTAGE },
         rows: [
-          // Header row with white text on dark blue background
           new TableRow({
             children: tbl.headers.map(h =>
               new TableCell({
@@ -111,10 +103,9 @@ export async function exportToWord(config: TemplateExportConfig) {
         ],
       });
 
-    // Build sections
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const children: any[] = [];
 
-    // Cover / Title
     children.push(
       new Paragraph({ spacing: { after: 200 } }),
       new Paragraph({
@@ -156,7 +147,6 @@ export async function exportToWord(config: TemplateExportConfig) {
       }),
     );
 
-    // Module Specifications
     if (config.moduleSpecs && config.moduleSpecs.length > 0) {
       children.push(
         new Paragraph({
@@ -169,7 +159,6 @@ export async function exportToWord(config: TemplateExportConfig) {
       );
     }
 
-    // Test Conditions
     if (config.testConditions && config.testConditions.length > 0) {
       children.push(
         new Paragraph({
@@ -182,7 +171,6 @@ export async function exportToWord(config: TemplateExportConfig) {
       );
     }
 
-    // Purpose
     if (config.purpose) {
       children.push(
         new Paragraph({
@@ -197,7 +185,6 @@ export async function exportToWord(config: TemplateExportConfig) {
       );
     }
 
-    // Criterion
     if (config.criterion) {
       children.push(
         new Paragraph({
@@ -212,7 +199,6 @@ export async function exportToWord(config: TemplateExportConfig) {
       );
     }
 
-    // Data Tables
     for (const tbl of config.tables) {
       children.push(
         new Paragraph({
@@ -225,7 +211,6 @@ export async function exportToWord(config: TemplateExportConfig) {
       );
     }
 
-    // Equipment
     if (config.equipment && config.equipment.length > 0) {
       children.push(
         new Paragraph({
@@ -243,7 +228,6 @@ export async function exportToWord(config: TemplateExportConfig) {
       );
     }
 
-    // Overall Result
     children.push(
       new Paragraph({
         text: "CONCLUSION",
@@ -259,7 +243,6 @@ export async function exportToWord(config: TemplateExportConfig) {
       }),
     );
 
-    // Signatories
     children.push(
       new Paragraph({
         text: "SIGNATORIES",
@@ -291,7 +274,6 @@ export async function exportToWord(config: TemplateExportConfig) {
       }),
     );
 
-    // Footer
     children.push(
       new Paragraph({ spacing: { after: 200 } }),
       new Paragraph({
@@ -341,9 +323,7 @@ export async function exportToWord(config: TemplateExportConfig) {
       }],
     });
 
-    console.error('[DEBUG exportToWord] About to call Packer.toBlob...');
     const blob = await Packer.toBlob(doc);
-    console.error('[DEBUG exportToWord] Blob created, size:', blob.size);
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -352,32 +332,21 @@ export async function exportToWord(config: TemplateExportConfig) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    console.error('[DEBUG exportToWord] Download triggered successfully');
     toast.success("Word document exported successfully");
-   } catch (err: any) {
-    console.error("[DEBUG exportToWord] INNER error:", err);
-    toast.error(`Word export failed: ${err?.message || "Unknown error"}`);
-   }
-  } catch (e: any) {
-    window.alert('ERROR: ' + e.message);
-    console.error("[DEBUG exportToWord] OUTER error:", e);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    toast.error(`Word export failed: ${msg}`);
   }
 }
 
 /* ── Excel Export ─────────────────────────────────────────────────────────────── */
 
 export async function exportToExcel(config: TemplateExportConfig) {
-  window.alert('exportToExcel called');
-  console.error('[DEBUG exportToExcel] Function called with config:', config?.reportNo);
   try {
-   try {
-    console.error('[DEBUG exportToExcel] About to dynamically import xlsx...');
     const XLSX = await import("xlsx");
-    console.error('[DEBUG exportToExcel] xlsx imported successfully. utils:', typeof XLSX.utils);
 
     const wb = XLSX.utils.book_new();
 
-    // Summary sheet
     const summaryData: (string | undefined)[][] = [
       ["SolarLabX - Test Report"],
       [],
@@ -424,21 +393,16 @@ export async function exportToExcel(config: TemplateExportConfig) {
     summarySheet["!cols"] = [{ wch: 30 }, { wch: 50 }];
     XLSX.utils.book_append_sheet(wb, summarySheet, "Summary");
 
-    // Data sheets
     for (const tbl of config.tables) {
       const sheetData: (string | number | boolean)[][] = [tbl.headers, ...tbl.rows];
       const ws = XLSX.utils.aoa_to_sheet(sheetData);
       ws["!cols"] = tbl.headers.map(() => ({ wch: 18 }));
-      // Sanitize sheet name: remove invalid chars and truncate to 31 chars (Excel limit)
       const sheetName = tbl.title.replace(/[[\]:*?/\\]/g, "").slice(0, 31) || "Sheet";
       XLSX.utils.book_append_sheet(wb, ws, sheetName);
     }
 
-    console.error('[DEBUG exportToExcel] About to write workbook...');
     const wbOut = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-    console.error('[DEBUG exportToExcel] Workbook written, creating blob...');
     const blob = new Blob([wbOut], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-    console.error('[DEBUG exportToExcel] Blob created, size:', blob.size);
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -447,15 +411,10 @@ export async function exportToExcel(config: TemplateExportConfig) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    console.error('[DEBUG exportToExcel] Download triggered successfully');
     toast.success("Excel file exported successfully");
-   } catch (err: any) {
-    console.error("[DEBUG exportToExcel] INNER error:", err);
-    toast.error(`Excel export failed: ${err?.message || "Unknown error"}`);
-   }
-  } catch (e: any) {
-    window.alert('ERROR: ' + e.message);
-    console.error("[DEBUG exportToExcel] OUTER error:", e);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    toast.error(`Excel export failed: ${msg}`);
   }
 }
 
