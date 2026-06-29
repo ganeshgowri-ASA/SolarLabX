@@ -3,18 +3,14 @@
 
 import { AuditPlan } from "@/lib/types/audit";
 import { cn } from "@/lib/utils";
+import { LIFECYCLE_COLORS } from "@/lib/colors";
 
 interface AuditCalendarProps {
   audits: AuditPlan[];
   currentMonth?: Date;
 }
 
-const statusColors: Record<string, string> = {
-  Planned: "bg-blue-200 text-blue-800 border-blue-300",
-  "In Progress": "bg-yellow-200 text-yellow-800 border-yellow-300",
-  Completed: "bg-green-200 text-green-800 border-green-300",
-  Cancelled: "bg-gray-200 text-gray-800 border-gray-300",
-};
+const statusColors = LIFECYCLE_COLORS;
 
 export default function AuditCalendar({ audits, currentMonth = new Date(2026, 2, 1) }: AuditCalendarProps) {
   const year = currentMonth.getFullYear();

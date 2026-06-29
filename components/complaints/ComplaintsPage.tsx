@@ -3,6 +3,7 @@
 
 import { useState } from 'react'
 import { cn, formatDate } from '@/lib/utils'
+import { SEVERITY_COLORS } from '@/lib/colors'
 import { toast } from 'sonner'
 import { customerComplaints, complaintAnalytics } from '@/lib/data/complaints-data'
 import type { CustomerComplaint } from '@/lib/types'
@@ -15,12 +16,7 @@ const tabs: { key: TabKey; label: string }[] = [
   { key: 'analytics', label: 'Analytics' },
 ]
 
-const severityColors: Record<string, string> = {
-  low: 'bg-blue-100 text-blue-700',
-  medium: 'bg-yellow-100 text-yellow-700',
-  high: 'bg-orange-100 text-orange-700',
-  critical: 'bg-red-100 text-red-700',
-}
+const severityColors = SEVERITY_COLORS
 
 const statusColors: Record<string, string> = {
   registered: 'bg-blue-100 text-blue-700',
