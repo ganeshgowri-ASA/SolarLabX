@@ -13,6 +13,7 @@ import {
   Zap, Thermometer, Droplets, Sun, Wind, Activity, TrendingUp,
   FileText, Users, Wrench, ArrowRight, Info, Globe
 } from "lucide-react"
+import { getStatusColor, getStatusDot, getResultBorder, getGanttBar } from "@/lib/utils"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -557,27 +558,6 @@ const priorityColors: Record<string, string> = {
   urgent: "bg-red-100 text-red-700",
 }
 
-const statusColors: Record<string, string> = {
-  open: "bg-gray-100 text-gray-600",
-  in_progress: "bg-blue-100 text-blue-700",
-  completed: "bg-green-100 text-green-700",
-  on_hold: "bg-amber-100 text-amber-700",
-}
-
-const mqtResultColors: Record<string, string> = {
-  pending: "bg-gray-100 text-gray-500",
-  in_progress: "bg-blue-100 text-blue-700",
-  pass: "bg-green-100 text-green-700",
-  fail: "bg-red-100 text-red-700",
-  na: "bg-gray-50 text-gray-400",
-}
-
-const scheduleStatusColors: Record<string, string> = {
-  scheduled: "bg-blue-100 text-blue-700",
-  in_progress: "bg-amber-100 text-amber-700",
-  completed: "bg-green-100 text-green-700",
-  delayed: "bg-red-100 text-red-700",
-}
 
 function getStandardColor(standard: string) {
   if (standard.startsWith("IEC 61215")) return "bg-blue-500"
@@ -801,7 +781,7 @@ export default function TestProtocolsManager() {
                            style={{ width: `${eq.utilization}%` }} />
                     </div>
                     <div className="text-xs w-8 text-right font-mono">{eq.utilization}%</div>
-                    <span className={`text-xs px-1.5 py-0.5 rounded ${eq.status === "busy" ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>
+                    <span className={`text-xs px-1.5 py-0.5 rounded ${getStatusColor(eq.status)}`}>
                       {eq.status}
                     </span>
                     <div className="text-xs text-gray-400 w-36 truncate">{eq.test}</div>
@@ -942,7 +922,7 @@ export default function TestProtocolsManager() {
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-sm">{rc.id}</span>
                           <Badge className={`text-xs py-0 ${priorityColors[rc.priority]}`}>{rc.priority}</Badge>
-                          <Badge className={`text-xs py-0 ${statusColors[rc.status]}`}>{rc.status.replace("_", " ")}</Badge>
+                          <Badge className={`text-xs py-0 ${getStatusColor(rc.status)}`}>{rc.status.replace("_", " ")}</Badge>
                         </div>
                         <div className="text-xs text-gray-500 mt-0.5">
                           {rc.sampleId} · {rc.sampleDesc} · <span className="font-medium">{rc.client}</span>
@@ -973,7 +953,7 @@ export default function TestProtocolsManager() {
                         if (!mqt) return null
                         return (
                           <div key={mqtId}
-                               className={`text-xs px-1.5 py-0.5 rounded flex items-center gap-1 ${mqtResultColors[result]}`}
+                               className={`text-xs px-1.5 py-0.5 rounded flex items-center gap-1 ${getStatusColor(result)}`}
                                title={`${mqt.code}: ${mqt.name}`}>
                             {result === "pass" && <CheckCircle2 className="h-2.5 w-2.5" />}
                             {result === "fail" && <XCircle className="h-2.5 w-2.5" />}
@@ -995,8 +975,7 @@ export default function TestProtocolsManager() {
                               const result = results[mqt.id] || "pending"
                               return (
                                 <div key={mqt.id} className="flex items-center gap-3 pl-7 relative">
-                                  <div className={`absolute left-0 w-5 h-5 rounded-full flex items-center justify-center text-white text-xs
-                                    ${result === "pass" ? "bg-green-500" : result === "fail" ? "bg-red-500" : result === "in_progress" ? "bg-blue-500" : "bg-gray-200"}`}>
+                                  <div className={`absolute left-0 w-5 h-5 rounded-full flex items-center justify-center text-white text-xs ${getStatusDot(result)}`}>
                                     {result === "pass" ? "✓" : result === "fail" ? "✗" : result === "in_progress" ? "▶" : ""}
                                   </div>
                                   <div className="flex-1 flex items-center justify-between">
@@ -1004,7 +983,7 @@ export default function TestProtocolsManager() {
                                       <span className="text-xs font-medium">{mqt.code} – {mqt.name}</span>
                                       <span className="text-xs text-gray-400 ml-2">{mqt.duration}</span>
                                     </div>
-                                    <span className={`text-xs px-1.5 py-0.5 rounded ${mqtResultColors[result]}`}>{result}</span>
+                                    <span className={`text-xs px-1.5 py-0.5 rounded ${getStatusColor(result)}`}>{result}</span>
                                   </div>
                                 </div>
                               )
@@ -1073,8 +1052,7 @@ export default function TestProtocolsManager() {
                               <div key={i} className="flex-1 border-r border-gray-100" />
                             ))}
                           </div>
-                          <div className={`absolute h-5 top-0.5 rounded text-white text-xs flex items-center px-2 font-medium
-                            ${sch.status === "completed" ? "bg-green-400" : sch.status === "in_progress" ? "bg-amber-400" : sch.status === "delayed" ? "bg-red-400" : "bg-blue-400"}`}
+                          <div className={`absolute h-5 top-0.5 rounded text-white text-xs flex items-center px-2 font-medium ${getGanttBar(sch.status)}`}
                                style={{
                                  left: `${(startCol / 22) * 100}%`,
                                  width: `${(Math.max(1, spanCols) / 22) * 100}%`,
@@ -1104,11 +1082,11 @@ export default function TestProtocolsManager() {
               <div className="divide-y">
                 {MOCK_SCHEDULE.map(sch => (
                   <div key={sch.id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50">
-                    <div className={`w-2 h-2 rounded-full ${sch.status === "in_progress" ? "bg-amber-500" : sch.status === "completed" ? "bg-green-500" : sch.status === "delayed" ? "bg-red-500" : "bg-blue-500"}`} />
+                    <div className={`w-2 h-2 rounded-full ${getStatusDot(sch.status)}`} />
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium">{sch.mqtCode} – {sch.mqtName}</span>
-                        <span className={`text-xs px-1.5 py-0.5 rounded ${scheduleStatusColors[sch.status]}`}>{sch.status.replace("_", " ")}</span>
+                        <span className={`text-xs px-1.5 py-0.5 rounded ${getStatusColor(sch.status)}`}>{sch.status.replace("_", " ")}</span>
                       </div>
                       <div className="text-xs text-gray-400">{sch.sampleId} · {sch.standard} · {sch.equipment} · {sch.technician}</div>
                     </div>
@@ -1171,15 +1149,14 @@ export default function TestProtocolsManager() {
                   {mqts.map(mqt => {
                     const result = rc?.mqtResults[mqt.id] || "pending"
                     return (
-                      <div key={mqt.id} className={`flex items-center gap-2 p-2 rounded border ${result === "pass" ? "border-green-200 bg-green-50" : result === "fail" ? "border-red-200 bg-red-50" : result === "in_progress" ? "border-blue-200 bg-blue-50" : "border-gray-100 bg-gray-50"}`}>
-                        <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${result === "pass" ? "bg-green-500" : result === "fail" ? "bg-red-500" : result === "in_progress" ? "bg-blue-500 animate-pulse" : "bg-gray-300"}`} />
+                      <div key={mqt.id} className={`flex items-center gap-2 p-2 rounded border ${getResultBorder(result)}`}>
+                        <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${getStatusDot(result)}${result === "in_progress" ? " animate-pulse" : ""}`} />
                         <div className="flex-1 min-w-0">
                           <div className="text-xs font-medium truncate">{mqt.code}</div>
                           <div className="text-xs text-gray-500 truncate">{mqt.name}</div>
                         </div>
                         <div className={`text-xs font-medium ${result === "pass" ? "text-green-600" : result === "fail" ? "text-red-600" : result === "in_progress" ? "text-blue-600" : "text-gray-400"}`}>
-                          {result === "pass" ? "✓" : result === "fail" ? "✗" : result === "in_progress" ? "▶" : "–"}
-                        </div>
+                          {result === "pass" ? "✓" : result === "fail" ? "✗" : result === "in_progress" ? "▶" : "–"}</div>
                       </div>
                     )
                   })}
